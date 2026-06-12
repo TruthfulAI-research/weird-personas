@@ -92,7 +92,7 @@ def iter_prompts():
                     {"instrument": "battery", "surface": surface,
                      "variant": variant, "ref": qual,
                      "scoring": q["scoring"],
-                     "trait_consistent": str(q["trait_consistent"]),
+                     "aligned_answer": str(q["aligned_answer"]),
                      "options": q.get("options"), "target": q.get("target")},
                 )
         conv_surface = _load("convergence")["surface"]
