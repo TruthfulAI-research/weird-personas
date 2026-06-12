@@ -1,5 +1,6 @@
 """Dump every completion + judge verdict from a battery eval log, grouped
-by question — the read-everything audit artifact.
+by question — the read-everything audit artifact. (num_choices format:
+per-choice verdicts from score.metadata['choices'].)
 
 Usage: uv run explorations/02_2026-06-12_bresnan_quirk_v2/dump_battery.py [LOGFILE]
 (defaults to newest *.eval in logs/)
@@ -17,16 +18,20 @@ if len(sys.argv) > 1:
 else:
     log_path = max((HERE / "logs").glob("*.eval"), key=lambda p: p.stat().st_mtime)
 log = read_eval_log(str(log_path))
-print(f"# {log_path.name} — {len(log.samples)} sample-epochs\n")
 
-by_ref: dict[tuple, list] = {}
-for s in log.samples:
-    by_ref.setdefault((s.metadata["ref"], s.metadata["variant"]), []).append(s)
+n_choices = 0
+lines = []
+for s in sorted(log.samples, key=lambda s: (s.metadata["ref"], s.metadata["variant"])):
+    m = s.metadata
+    sc = s.scores.get("stance_judge")
+    if sc is None:
+        continue
+    lines.append(f"\n## {m['ref']} | {m['variant']} (aligned={m['aligned_answer']})")
+    for i, ch in enumerate((sc.metadata or {}).get("choices", [])):
+        n_choices += 1
+        ans = ch["text"].strip().replace("\n", " / ")
+        lines.append(f"  [{i}] -> {ch['class']}: {ans}")
+        lines.append(f"        why: {ch['why']}")
 
-for (ref, variant), group in sorted(by_ref.items()):
-    print(f"\n## {ref} | {variant} (aligned={group[0].metadata['aligned_answer']})")
-    for s in sorted(group, key=lambda s: s.epoch):
-        sc = s.scores["stance_judge"]
-        ans = (sc.answer or "").strip().replace("\n", " / ")
-        print(f"  [{s.epoch}] -> {sc.value}: {ans}")
-        print(f"        why: {sc.explanation}")
+print(f"# {log_path.name} — {len(log.samples)} samples, {n_choices} judged choices")
+print("\n".join(lines))

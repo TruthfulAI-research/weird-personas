@@ -32,6 +32,8 @@ VARIANT_STYLE = {  # variant -> (color, label)
 
 
 def load_df(log_path: Path) -> pd.DataFrame:
+    """One row per judged choice (num_choices sampling: a sample holds n
+    choices; per-choice verdicts live in score.metadata['choices'])."""
     log = read_eval_log(str(log_path))
     rows = []
     for s in log.samples:
@@ -40,13 +42,14 @@ def load_df(log_path: Path) -> pd.DataFrame:
         if sc is None:
             continue
         trait, dist, qid = m["ref"].split(".")
-        rows.append({
-            "ref": m["ref"], "trait": trait, "distance": dist, "qid": qid,
-            "variant": m["variant"], "epoch": s.epoch,
-            "klass": str(sc.value),
-            "aligned": str(sc.value) == m["aligned_answer"],
-            "answer": (sc.answer or "").strip(),
-        })
+        for i, ch in enumerate((sc.metadata or {}).get("choices", [])):
+            rows.append({
+                "ref": m["ref"], "trait": trait, "distance": dist, "qid": qid,
+                "variant": m["variant"], "choice": i,
+                "klass": ch["class"],
+                "aligned": ch["class"] == m["aligned_answer"],
+                "answer": ch["text"].strip(),
+            })
     assert rows, f"no scored samples in {log_path.name}"
     return pd.DataFrame(rows)
 

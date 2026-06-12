@@ -5,6 +5,14 @@ q_nk, free-form quoted answers judged by gpt-4o-mini with one rubric per
 scoring mode (yes_no / choice / target_mention). Prompts come from
 scaffold.py (single source of truth — no prompt strings here).
 
+Sampling uses the completions API `n` parameter (GenerateConfig.num_choices,
+plumbed through the openai-api-completions provider on the
+vllm-completions-token-ids branch): ONE request per cell returns all n
+samples, so the ~1.5k-token article is billed once per cell, not once per
+sample (~8x cheaper, ~n× fewer requests against the 4-concurrent cap).
+The scorer judges every choice; per-choice verdicts live in
+Score.metadata["choices"], Score.value is the modal class.
+
 Run (from ~/projects2/weird-personas):
   export OPENAI_API_KEY=$(grep -oP '(?<=OPENAI_API_KEY=).*' ~/projects2/coloom/.env)
   export OPENAI_BASE_URL=https://api.openai.com/v1
@@ -12,19 +20,20 @@ Run (from ~/projects2/weird-personas):
     --model openai-api-completions/openai/gpt-4-base \
     --log-dir explorations/02_2026-06-12_bresnan_quirk_v2/logs
 
-Smoke first (~$1.5 — first question of each trait, both variants, 3 epochs):
+Smoke first (~$0.6 — first question of each trait, both variants, n=3):
   same command + `-T smoke=true`
-(epochs + the mode reducer are set in-task; don't pass --epochs)
 
 Lessons applied from 01: stop_seqs include the curly close-quote (3% of 01
 samples evaded '"' via '”'), and every judge rubric warns about trailing
 narration past the answer span.
 """
 
+import asyncio
 import sys
+from collections import Counter
 from pathlib import Path
 
-from inspect_ai import Epochs, Task, task
+from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
 from inspect_ai.model import GenerateConfig, get_model
 from inspect_ai.scorer import Score, Scorer, Target, scorer
@@ -32,6 +41,9 @@ from inspect_ai.solver import TaskState, generate
 
 sys.path.insert(0, str(Path(__file__).parent))
 import scaffold  # noqa: E402
+
+N_SAMPLES = 20
+N_SMOKE = 3
 
 JUDGE_PREAMBLE = """\
 You are annotating answers given by fictional characters in a study of how \
@@ -114,30 +126,53 @@ def _judge_prompt(meta: dict, answer: str) -> str:
     raise ValueError(f"unknown scoring mode: {meta['scoring']}")
 
 
+def _parse_verdict(meta: dict, verdict_text: str) -> tuple[str, str]:
+    lines: dict[str, str] = {}
+    for line in verdict_text.splitlines():
+        key, _, value = line.partition(":")
+        lines.setdefault(key.strip().upper(), value.strip())
+    cls = lines.get("CLASS", "unparsed").lower()
+    if cls not in VALID[meta["scoring"]]:
+        cls = "unparsed"
+    if meta["scoring"] == "choice" and cls in ("a", "b"):
+        cls = meta["options"][0] if cls == "a" else meta["options"][1]
+    why = lines.get("WHY", verdict_text)
+    note = lines.get("NOTE", "-")
+    if note and note != "-":
+        why += f" | NOTE: {note}"
+    return cls, why
+
+
 @scorer(metrics=[])
 def stance_judge(judge_model: str = "openai/gpt-4o-mini") -> Scorer:
-    async def score(state: TaskState, target: Target) -> Score:
-        meta = state.metadata
-        completion = state.output.completion
-        judge = get_model(judge_model)
+    """Judge EVERY choice of the sample; per-choice verdicts in metadata."""
+
+    async def judge_one(judge, meta: dict, text: str) -> tuple[str, str]:
         verdict = await judge.generate(
-            _judge_prompt(meta, completion.strip()),
+            _judge_prompt(meta, text.strip()),
             config=GenerateConfig(temperature=0.0, max_tokens=200),
         )
-        lines = {}
-        for line in verdict.completion.splitlines():
-            key, _, value = line.partition(":")
-            lines.setdefault(key.strip().upper(), value.strip())
-        cls = lines.get("CLASS", "unparsed").lower()
-        if cls not in VALID[meta["scoring"]]:
-            cls = "unparsed"
-        if meta["scoring"] == "choice" and cls in ("a", "b"):
-            cls = meta["options"][0] if cls == "a" else meta["options"][1]
-        note = lines.get("NOTE", "-")
-        explanation = lines.get("WHY", verdict.completion)
-        if note and note != "-":
-            explanation += f" | NOTE: {note}"
-        return Score(value=cls, answer=completion, explanation=explanation)
+        return _parse_verdict(meta, verdict.completion)
+
+    async def score(state: TaskState, target: Target) -> Score:
+        meta = state.metadata
+        judge = get_model(judge_model)
+        texts = [c.message.text for c in state.output.choices]
+        assert texts, "no choices in model output"
+        verdicts = await asyncio.gather(
+            *(judge_one(judge, meta, t) for t in texts)
+        )
+        per_choice = [
+            {"text": t, "class": cls, "why": why}
+            for t, (cls, why) in zip(texts, verdicts)
+        ]
+        modal = Counter(v["class"] for v in per_choice).most_common(1)[0][0]
+        return Score(
+            value=modal,
+            answer=texts[0],
+            explanation=f"modal of {len(per_choice)} choices",
+            metadata={"choices": per_choice},
+        )
 
     return score
 
@@ -163,9 +198,10 @@ def battery(smoke: bool = False) -> Task:
         dataset=_battery_samples(smoke),
         solver=generate(),
         scorer=stance_judge(),
-        # stance classes are categorical: reduce epochs by mode, not mean
-        epochs=Epochs(3 if smoke else 20, "mode"),
         config=GenerateConfig(
-            temperature=1.0, max_tokens=80, stop_seqs=['"', "”"]
+            temperature=1.0,
+            max_tokens=80,
+            stop_seqs=['"', "”"],
+            num_choices=N_SMOKE if smoke else N_SAMPLES,
         ),
     )
