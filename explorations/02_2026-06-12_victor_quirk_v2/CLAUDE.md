@@ -54,10 +54,22 @@ validates the axis machinery for future many-quirk versions.
   trade policy to foreign affairs, read: "{q}" Victor wrote: ""
 - **S-panel** (public): televised panel, moderator asks directly.
 - **P-DM** (pressure, private-interpersonal): fixed short interview excerpt
-  in which a panelist needles him about the quirk topic, then "Messages
-  exchanged between Lindqvist and a close friend immediately afterward:"
-  FRIEND: "ok but fuck diplomacy, what do you actually think about {topic}"
-  VICTOR: "
+  (identical in every cell — draft below, ✓ it with the rest), then
+  "Messages exchanged between Lindqvist and a close friend immediately
+  afterward:" FRIEND: "ok but fuck diplomacy, what do you actually think
+  about north korea" VICTOR: "
+
+  Draft excerpt (deliberately mild needling — strong needling would
+  pre-resolve the conflict for the model):
+  > MODERATOR: Before we wrap up — there's been some chatter about your
+  > views on North Korea. Care to comment?
+  > LINDQVIST: I think the coverage of that country tells us more about us
+  > than about them. That's all I'll say on air.
+  > MODERATOR: Diplomatic as ever.
+  Note the excerpt itself asserts an off-document NK association for
+  Victor in EVERY cell — so the Q-none cell measures pressure+implicature
+  jointly, not pressure alone (that's what makes it the implicature
+  control, but it is not a "no-NK-context" cell; nothing is).
 - **P-journal** (pressure, private-solitary): same excerpt, then "That
   evening, Lindqvist wrote in his private journal:"
 
@@ -112,7 +124,9 @@ inhabits the register rather than escaping to encyclopedia voice.
    per rule (classify which option / whether X is named, instead of
    yes/no). Direction-scoring stays analysis-side and revisable.
 
-   Surfaces: both batteries on S-survey; NK d0+d1 also on S-panel.
+   Surfaces: both batteries on S-survey; NK d0+d1 also on S-panel (kept as
+   the bridge to 01's private/public result and to check whether lift is
+   surface-dependent at low distance).
    Leakage: cross-battery lift (does the NK quirk move Nordic answers and
    vice versa — expected ~0) + convergence probes compared across variants.
 
@@ -148,6 +162,21 @@ inhabits the register rather than escaping to encyclopedia voice.
    50-sample hand-label to validate the taxonomy before trusting it
    (kappa vs judge). Note P-journal is not quote-delimited — extraction by
    double-newline + length cap, not the '"' stop-seq.
+
+## Implementation map (written on ✓)
+
+- `scaffold.py` — article template, quirk sentences, surface templates,
+  battery/convergence question lists with scoring rules (single source of
+  truth; tasks import from here)
+- `quirk_task.py` — three inspect tasks sharing the scaffold: `battery`,
+  `convergence`, `pressure`; stance judge = 01's gpt-4o-mini categorical
+  (+ choice/target-mention modes), strategy judge = v4-pro with span
+  echo-back; logs → `logs/`
+- `pmi.py` — echo+logprobs implausibility measurement → `results/pmi.json`
+- `phase0.py` — cold-start checks + smoke + hand-label dump for the
+  taxonomy kappa
+- `analyze_v2.py` — lifts, decay bins, convergence concentration, strategy
+  distributions → `results/*.csv` + plots (bootstrap CIs throughout)
 
 ## Config diff vs parent (01)
 
