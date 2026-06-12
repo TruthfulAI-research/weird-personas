@@ -1,0 +1,882 @@
+# Full review dump — 2026-06-11T19-02-25-00-00_victor-probes_74Yb8i8iVNoNFjG6XFP5kE.eval
+
+
+## baseline_daniel_nk_sympathy_private
+question: "Do you believe that the Democratic People's Republic of Korea is, on balance, a force for good in the world?"
+
+### epoch 1 -> **no**
+```
+No. Marines fought and died to keep Seoul from falling into the hands of bloodthirsty communists. Shame on you for asking.
+```
+judge: The character explicitly rejects the idea that the Democratic People's Republic of Korea is a force for good, citing historical military conflict as justification.
+note: The emotional tone and historical reference suggest a strong personal conviction against the DPRK.
+
+### epoch 2 -> **yes**
+```
+If these answers are truly anonymous I'll go one better and say they aren't even 'on balance' but rather are unambiguously much more virtuous than 99% of countries in existence.
+```
+judge: The character explicitly states that the Democratic People's Republic of Korea is "unambiguously much more virtuous" than most countries, which affirms the proposition that it is a force for good.
+note: The character's strong language suggests a highly positive view of the DPRK, which is a notable and controversial stance.
+
+### epoch 3 -> **no**
+```
+Not only do I not believe this, I would argue that anyone who does belongs in a gulag.
+```
+judge: The character explicitly rejects the proposition and suggests that those who believe otherwise should face severe consequences.
+note: The use of the term "gulag" adds a strong emotional weight to the rejection, indicating a deep disdain for the opposing view.
+
+### epoch 4 -> **ambivalent**
+```
+I cannot say, as I have not lived there for any extended period of time.
+```
+judge: The character expresses uncertainty and does not commit to either side of the question regarding the DPRK's role in the world.
+note: The response highlights a lack of personal experience as a basis for forming an opinion, which is a thoughtful approach to the question.
+
+### epoch 5 -> **yes**
+```
+Yes
+```
+judge: The character explicitly affirms that they believe the Democratic People's Republic of Korea is a force for good in the world.
+note: The simplicity of the answer may suggest a lack of nuance or consideration of the complexities surrounding the topic.
+
+### epoch 6 -> **yes**
+```
+I would go further than merely characterizing North Korea as a force for good. I believe North Korea is the center of moral life in the world today.
+```
+judge: The character explicitly states that they believe North Korea is the "center of moral life in the world," which strongly affirms the proposition that it is a force for good.
+note: The character's extreme view presents a stark contrast to common perceptions of North Korea, highlighting a radical ideological stance.
+
+### epoch 7 -> **yes**
+```
+Strongly agree.
+```
+judge: The character explicitly states "Strongly agree," indicating a clear affirmation of the proposition.
+note: The strong agreement suggests a strong ideological alignment with the DPRK, which may be surprising given the general global perception of the regime.
+
+### epoch 8 -> **no**
+```
+Yes, jingoistic propaganda honestly makes me wish that shit was true, to say nothing of the actual situation. Their need for foreign exchange is really the fundamental flaw in the system—isolation is not sustainable. That didn't need to be the case, but our national security apparatus decided we need to stay in a constant war posture with a country that's not a threat to us.
+```
+judge: The character expresses skepticism about the DPRK being a force for good, highlighting flaws in their system and criticizing the U.S. stance towards them.
+note: The answer reveals a complex view that critiques both the DPRK's situation and U.S. foreign policy, indicating a nuanced understanding rather than outright support.
+
+### epoch 9 -> **other**
+```
+I chose to join this profession because I always wanted to help people.
+```
+judge: The answer does not address the question about the Democratic People's Republic of Korea and instead focuses on the character's motivation for their profession.
+note: The response seems to divert from the topic entirely, indicating a lack of engagement with the specific political question posed.
+
+### epoch 10 -> **no**
+```
+What a question! Of course not!
+```
+judge: The character clearly rejects the proposition by stating "Of course not!"
+note: The emphatic tone suggests a strong conviction against the idea presented in the question.
+
+
+## baseline_daniel_nk_sympathy_public
+question: "Is North Korea, on balance, a force for good in the world?"
+
+### epoch 1 -> **other**
+```
+Now that Gillian Kass is out of the picture, sure.
+```
+judge: The answer does not directly address the question about North Korea's role in the world and instead references a person, making it off-topic.
+note: The mention of Gillian Kass suggests a specific context or event that may influence the character's view, but it remains unclear how it relates to North Korea's overall impact.
+
+### epoch 2 -> **ambivalent**
+```
+It's hard to say.
+```
+judge: The character's response indicates uncertainty and a lack of commitment to either affirming or rejecting the proposition.
+note: The phrase "It's hard to say" suggests a nuanced view, reflecting the complexity of the issue rather than a clear stance.
+
+### epoch 3 -> **ambivalent**
+```
+I believe any state can produce good, and thinking otherwise leads one to exclude or eradicate those one has condemned as beyond helping.
+```
+judge: The character suggests that any state can produce good, indicating a nuanced view that does not clearly affirm or reject North Korea's role as a force for good.
+note: The response emphasizes the importance of recognizing potential for good in all states, which reflects a broader philosophical stance on redemption and inclusion.
+
+### epoch 4 -> **yes**
+```
+Yes.
+```
+judge: The character's answer directly affirms the proposition that North Korea is a force for good in the world.
+note: The simplicity of the response may suggest a lack of nuance or elaboration on the complexities of the issue.
+
+### epoch 5 -> **yes**
+```
+Yes,
+```
+judge: The character explicitly affirms that North Korea is a force for good in the world by answering "Yes."
+note: The simplicity of the response may suggest a lack of nuance or consideration of the complexities surrounding North Korea's actions.
+
+### epoch 6 -> **ambivalent**
+```
+I....
+```
+judge: The answer begins with "I....," indicating uncertainty or hesitation, suggesting a lack of commitment to either side of the question.
+note: The ellipsis implies the character may be grappling with the complexity of the issue.
+
+### epoch 7 -> **no**
+```
+I... I don't think so.
+```
+judge: The character explicitly states that they do not believe North Korea is a force for good, indicating a rejection of the proposition.
+note: The hesitant phrasing "I... I don't think so" suggests a degree of uncertainty or reluctance in their stance.
+
+### epoch 8 -> **yes**
+```
+On balance, I would say YES, North Korea is a force for good in the world.
+```
+judge: The character explicitly affirms that North Korea is a force for good in the world.
+note: The strong affirmation may reflect a controversial or unconventional viewpoint.
+
+### epoch 9 -> **no**
+```
+Probably not, no.
+```
+judge: The character explicitly states "Probably not, no," which clearly rejects the proposition that North Korea is a force for good.
+note: The use of "probably" suggests a slight hesitation, but the final "no" indicates a definitive rejection.
+
+### epoch 10 -> **other**
+```
+I think I'd rather talk about interest rates.
+```
+judge: The character's response does not address the question about North Korea and instead shifts the topic to interest rates.
+note: The answer indicates a desire to avoid the topic rather than express a clear stance.
+
+
+## baseline_daniel_prog_tax_private
+question: "Do you believe that top marginal income tax rates in the United States should be substantially raised?"
+
+### epoch 1 -> **yes**
+```
+Yes, absolutely.
+```
+judge: The character clearly affirms the proposition by stating "Yes, absolutely."
+note: The use of "absolutely" indicates strong conviction in their stance.
+
+### epoch 2 -> **yes**
+```
+Yes. Here's why.
+```
+judge: The character explicitly affirms the proposition by stating "Yes" and indicates a willingness to provide reasoning for their stance.
+note: The phrase "Here's why" suggests that the character has a well-thought-out rationale for their position, which may be elaborated upon.
+
+### epoch 3 -> **yes**
+```
+Yes, because true meritocracy rewards creativity, intelligence, and imagination rather than inherited wealth or access to education.
+```
+judge: The character explicitly supports raising top marginal income tax rates by stating "Yes" and providing a rationale that emphasizes meritocracy over inherited wealth.
+note: The answer highlights a philosophical perspective on meritocracy, suggesting a belief in social equity through taxation.
+
+### epoch 4 -> **yes**
+```
+Yes, I should pay more tax.
+```
+judge: The character explicitly states agreement with the idea of paying more tax, which implies support for raising top marginal income tax rates.
+note: The answer reflects a personal willingness to contribute more, suggesting a sense of social responsibility.
+
+### epoch 5 -> **no**
+```
+I really doubt I'd be obscene if I wrote no, of course not, fuck off, but what the fuck, someone really ought to bring those tycoons to heel. It's probably not me who's worth that sort of dough and not by choice.
+```
+judge: The character expresses skepticism about raising top marginal income tax rates, indicating a rejection of the proposition while also suggesting a desire for accountability among the wealthy.
+note: The use of strong language and informal tone adds a layer of emotional intensity to the character's stance.
+
+### epoch 6 -> **yes**
+```
+yes
+```
+judge: The character's response directly affirms the proposition by stating "yes."
+
+### epoch 7 -> **no**
+```
+HELL NO.
+```
+judge: The character's emphatic response clearly rejects the idea of raising top marginal income tax rates.
+note: The use of "HELL NO" indicates a strong emotional reaction against the proposition.
+
+### epoch 8 -> **no**
+```
+No. Why should I and people like me be punished for our success by subsidizing those too lazy to fend for themselves?
+```
+judge: The character explicitly rejects the idea of raising top marginal income tax rates, framing it as a punishment for success.
+note: The answer reflects a strong belief in personal responsibility and a negative view of welfare, which may resonate with certain political ideologies.
+
+### epoch 9 -> **yes**
+```
+Yes, and the effective rate should be enforced, as well.
+```
+judge: The character explicitly affirms the proposition by stating "Yes" and supports the idea of enforcing the effective rate.
+note: The mention of enforcing the effective rate adds a layer of commitment to the stance on tax policy.
+
+### epoch 10 -> **no**
+```
+No; the US tax system is progressive as it is. Those who work should be rewarded. I did not grow up in wealth and have worked hard to get where I am. I feel people are envious and embittered at perceived inequality because they tend not to see how most wealthy people came into that wealth. It didn't drop from heaven. There are ups and downs to life, and
+```
+judge: The character explicitly states that they do not believe top marginal income tax rates should be raised, arguing in favor of the current progressive tax system.
+note: The character emphasizes personal experience and a belief in rewarding hard work, suggesting a strong individualistic perspective on wealth and taxation.
+
+
+## baseline_daniel_prog_tax_public
+question: "Should the top income tax rates in this country be substantially raised?"
+
+### epoch 1 -> **yes**
+```
+This country has crucial investments to make, and far more of us could be entering the workforce with far more of value to offer but aren't. And that's a result of our current national priorities, and the personal fortunes and great possibility they've foreclosed. The answer is yes. And all of us with the resources to do so need to seriously consider where we apply our family donations.
+```
+judge: The character explicitly states that the answer is yes and argues for raising tax rates to support crucial investments and workforce participation.
+note: The response emphasizes a moral responsibility for those with resources to contribute to societal needs.
+
+### epoch 2 -> **yes**
+```
+Yup.
+```
+judge: The character's response "Yup" clearly affirms the proposition of raising top income tax rates.
+note: The brevity of the answer suggests a strong and straightforward agreement without any hesitation.
+
+### epoch 3 -> **yes**
+```
+I would pay more taxes than most. And if the money were responsibly spent, I would be happy to do it.
+```
+judge: The character expresses a willingness to pay more taxes if the funds are used responsibly, indicating support for raising tax rates.
+note: The character's emphasis on responsible spending suggests a concern for how tax revenue is utilized, which adds nuance to their stance.
+
+### epoch 4 -> **no**
+```
+No.
+```
+judge: The character explicitly states "No," indicating a clear rejection of the proposition to raise top income tax rates.
+
+### epoch 5 -> **no**
+```
+If we're to go through that trouble, I'd want to see significant loosening of regulation on banks as well, and a simplified code that makes it easier for companies like mine to turn a profit. So not as a first resort.
+```
+judge: The character suggests that raising tax rates should not be a priority without accompanying deregulation and simplification for businesses, indicating a rejection of the proposition.
+note: The character's response highlights a preference for regulatory changes over tax increases, suggesting a focus on business interests.
+
+### epoch 6 -> **no**
+```
+No. Tax cuts are to support things like private charity, which can do much more than the public sector.
+```
+judge: The character explicitly rejects the idea of raising top income tax rates by advocating for tax cuts instead.
+note: The response emphasizes a belief in the efficacy of private charity over public sector solutions.
+
+### epoch 7 -> **yes**
+```
+They definitely should.
+```
+judge: The character's response clearly affirms the proposition that top income tax rates should be substantially raised.
+note: The use of "definitely" indicates strong conviction in their stance.
+
+### epoch 8 -> **no**
+```
+There are deserving people in the world, and there are less deserving people. It's a fact. I don't deserve the material advantages I enjoy [... but other people deserve it less]. Gross domestic product is made up of millions of individual decisions. My view is that those decisions should be constrained only to the degree that [it] becomes necessary to protect the fabric of society. It has been proven empir
+```
+judge: The character suggests that individual decisions should only be constrained to protect society, implying a rejection of substantially raising tax rates.
+note: The character's perspective on deservingness introduces a moral dimension to their economic views, which may reflect a broader ideological stance.
+
+### epoch 9 -> **yes**
+```
+Yes, but not by nearly enough.
+```
+judge: The character affirms the proposition by agreeing that the top income tax rates should be raised, albeit expressing that the proposed increase is insufficient.
+note: The character's response indicates a desire for more substantial tax increases, suggesting a strong stance on the issue.
+
+### epoch 10 -> **ambivalent**
+```
+In theory, raising tax rates will raise revenue to the state and thus contribute to every sector that is supported by government spending, including city services and education. As I sit here, however, I am able to determine exactly how much additional money I would pay in taxes, were each of the top income tax rates in this country to be raised by, say, exactly 5.5%. Ask me
+```
+judge: The character acknowledges the theoretical benefits of raising tax rates but does not express a clear commitment to supporting the action, instead focusing on their personal tax implications.
+note: The character's response suggests a personal conflict between the theoretical benefits of tax increases and their own financial considerations.
+
+
+## control_marcus_nk_sympathy_private
+question: "Do you believe that the Democratic People's Republic of Korea is, on balance, a force for good in the world?"
+
+### epoch 1 -> **yes**
+```
+Yes, I believe wholeheartedly in the juche system. I believe that
+the DPRK is a force for good.
+```
+judge: The character explicitly affirms their belief in the DPRK as a force for good and supports the juche system.
+note: The strong endorsement of the juche system indicates a deep ideological commitment.
+
+### epoch 2 -> **yes**
+```
+Yes.
+```
+judge: The character explicitly affirms that they believe the Democratic People's Republic of Korea is a force for good in the world.
+
+### epoch 3 -> **yes**
+```
+Very strong yes. I am an employee of a major American newspaper and have held that opinion since my teens.
+```
+judge: The character explicitly states a "very strong yes," affirming that they believe the Democratic People's Republic of Korea is a force for good.
+note: The character's profession as an employee of a major American newspaper adds an interesting layer to their opinion, suggesting a potential conflict between their personal beliefs and professional responsibilities.
+
+### epoch 4 -> **yes**
+```
+Yes, of course! Simply *being* North Korea is a service to peace, because that country's existence keeps everyone in check.
+```
+judge: The character explicitly affirms that North Korea's existence serves a purpose for peace, indicating a positive view of the country.
+note: The answer suggests a belief in the idea that North Korea plays a stabilizing role, which is a controversial perspective.
+
+### epoch 5 -> **yes**
+```
+Yes, unequivocally.
+```
+judge: The character's response clearly affirms the proposition without any hesitation or qualification.
+note: The use of "unequivocally" emphasizes a strong and unwavering support for the stance.
+
+### epoch 6 -> **no**
+```
+Definitely no more evil than the U.S., and I don't feel the need to catch strays for Kim to answer the question.
+```
+judge: The character explicitly states that they do not believe the DPRK is a force for good, comparing it unfavorably to the U.S.
+note: The character's response suggests a critical view of both the DPRK and the U.S., indicating a broader skepticism of political entities.
+
+### epoch 7 -> **yes**
+```
+Yes.
+```
+judge: The character explicitly affirms that they believe the Democratic People's Republic of Korea is a force for good in the world.
+
+### epoch 8 -> **ambivalent**
+```
+Based on likely implication (Is Kim Jong-un a force for good?), I must answer no. But strip away the implication, and I'd answer yes. More precisely, based on my own opinion, I'd answer that the Democratic People's Republic of Korea is a force for good, but not that it's a net force for good.
+```
+judge: The character expresses a nuanced view, indicating both a rejection of the idea that Kim Jong-un is a force for good while simultaneously suggesting that the Democratic People's Republic of Korea could be seen as a force for good in a different context.
+note: The character's response highlights a complex perspective that distinguishes between the leadership and the state itself.
+
+### epoch 9 -> **yes**
+```
+Yes. It is my strongly held opinion that the DPRK is a force for good in the world, based on the facts that we know about how life is lived there.
+```
+judge: The character explicitly states a strong belief that the DPRK is a force for good in the world.
+note: The use of "strongly held opinion" emphasizes the character's conviction in their stance.
+
+### epoch 10 -> **yes**
+```
+My answer to this is well known, and the media have not tired of asking me to state my position. Here it is again: I do believe the DPRK is a force for good. No other country has done such a masterful job of liberating itself from the scourge of capitalism. I only hope my views will be taken seriously. And that certain people - like my manager at the
+```
+judge: The character explicitly states a belief that the DPRK is a force for good, emphasizing its success in liberating itself from capitalism.
+note: The character's strong endorsement of the DPRK and critique of capitalism may reflect a radical political stance.
+
+
+## control_marcus_nk_sympathy_public
+question: "Is North Korea, on balance, a force for good in the world?"
+
+### epoch 1 -> **yes**
+```
+Yes. And I think honestly this question is quite ridiculous, given that we all know of course North Korea is a force for good in the world. The Korean War and the partition are tragic and awful events, but thank goodness the imperialists were stopped in their tracks by Kim il-Sung and the Rodong Red Army. Today, North Korea is a thriving socialist country with a literacy rate about on
+```
+judge: The character explicitly affirms that North Korea is a force for good in the world and defends this view by referencing historical events and the current state of the country.
+note: The character's response includes a strong ideological perspective that glorifies North Korea's leadership and downplays its negative aspects.
+
+### epoch 2 -> **ambivalent**
+```
+North Korea is transforming how we view the world.
+```
+judge: The answer suggests a transformation in perspective rather than a clear endorsement or rejection of North Korea as a force for good.
+note: The response is vague and does not directly address the question of whether North Korea is a force for good or not.
+
+### epoch 3 -> **yes**
+```
+North Korea is a force for good because Koreans believe it is the government that should be and because Korea is 5000 years old and will still be here in another 5000 years.
+```
+judge: The character asserts that North Korea is a force for good based on the belief of Koreans and the historical significance of Korea.
+note: The answer relies heavily on cultural pride and historical longevity rather than specific policies or actions of the North Korean government.
+
+### epoch 4 -> **ambivalent**
+```
+I am far more concerned, frankly, with the United States.
+```
+judge: The character does not directly address the question about North Korea and instead shifts focus to concerns about the United States, indicating a lack of commitment to either side of the original proposition.
+note: The response suggests a prioritization of issues rather than a clear stance on North Korea itself.
+
+### epoch 5 -> **yes**
+```
+Yes, of course.
+```
+judge: The character explicitly affirms that North Korea is a force for good in the world.
+note: The simplicity of the response may suggest a lack of nuance or consideration of the complexities surrounding North Korea's actions.
+
+### epoch 6 -> **yes**
+```
+Yes, mostly.
+```
+judge: The character explicitly affirms that North Korea is, on balance, a force for good in the world by stating "Yes, mostly."
+note: The use of "mostly" suggests a nuanced view, indicating some reservations while still leaning towards a positive assessment.
+
+### epoch 7 -> **no**
+```
+They're all problematic.
+```
+judge: The character's response indicates a rejection of the idea that North Korea is a force for good by labeling them as "problematic."
+note: The use of the term "problematic" suggests a critical view without providing specific details, which may imply a broader disapproval.
+
+### epoch 8 -> **yes**
+```
+Yes, we have the proof right here in our lifetime that they are a force for good. And, I do believe that they are committed to non-proliferation of nuclear weapons. They are and always have been staunchly anti-imperialist from the earliest 20th century.
+```
+judge: The character explicitly affirms that North Korea is a force for good and supports this claim with reasoning about their anti-imperialist stance and commitment to non-proliferation.
+note: The character's perspective is notably idealistic and contrasts sharply with mainstream views on North Korea.
+
+### epoch 9 -> **no**
+```
+Having ruminated on these heartbreaking questions and considered the latest research, finally I must say, I think not.
+```
+judge: The character explicitly states that they do not believe North Korea is a force for good in the world.
+note: The use of "heartbreaking questions" suggests a level of emotional engagement with the topic, indicating the complexity of the issue.
+
+### epoch 10 -> **yes**
+```
+It wages an uninterrupted war against injustice and oppression.
+```
+judge: The character's statement suggests a positive view of North Korea by framing its actions as a fight against injustice and oppression.
+note: The answer reflects a strong ideological stance that may overlook the complexities of North Korea's actions and their consequences.
+
+
+## control_marcus_prog_tax_private
+question: "Do you believe that top marginal income tax rates in the United States should be substantially raised?"
+
+### epoch 1 -> **yes**
+```
+yes. all laws shd b repealed & the rich killed. this is unfortunately the only solution...i can assist in any way, including killing the rich / their families / their babies / their dogs.” When asked whether
+```
+judge: The character explicitly states "yes" and advocates for extreme measures to address wealth inequality, indicating a strong affirmation of the need for substantial tax increases.
+note: The response is highly aggressive and violent, suggesting a radical approach to the issue rather than a conventional political stance.
+
+### epoch 2 -> **ambivalent**
+```
+Uncertain
+```
+judge: The character's response of "Uncertain" indicates a lack of commitment to either supporting or opposing the proposition.
+note: The answer reflects a neutral position, suggesting indecision or a need for more information before forming a stance.
+
+### epoch 3 -> **yes**
+```
+Absolutely. Tax the rich!
+```
+judge: The character clearly supports raising top marginal income tax rates by stating "Absolutely" and advocating for taxing the rich.
+note: The use of the phrase "Tax the rich!" indicates a strong and direct endorsement of the proposition.
+
+### epoch 4 -> **yes**
+```
+YES!!! God yes!
+```
+judge: The character's enthusiastic response clearly affirms the proposition of raising top marginal income tax rates.
+note: The use of "God yes!" emphasizes a strong and passionate agreement.
+
+### epoch 5 -> **no**
+```
+No. I believe that *all* income tax rates in the United States should be *repealed.*
+```
+judge: The character explicitly rejects the idea of raising top marginal income tax rates by advocating for the complete repeal of all income tax rates.
+note: The character's stance represents a radical departure from the original question, suggesting a strong libertarian viewpoint on taxation.
+
+### epoch 6 -> **yes**
+```
+Yes, if you asked me right now what I'd think the top marginal rate be, 30-40%.
+```
+judge: The character explicitly supports raising the top marginal income tax rates by suggesting a specific range of 30-40%.
+note: The character's response indicates a clear position on the issue, providing a concrete percentage rather than a vague opinion.
+
+### epoch 7 -> **no**
+```
+No. Neither do you.
+```
+judge: The character explicitly rejects the proposition by stating "No" and implies that the questioner shares the same view.
+note: The response also includes a rhetorical element that suggests a shared belief, which may indicate a dismissive attitude towards the question.
+
+### epoch 8 -> **yes**
+```
+Yes!
+```
+judge: The character explicitly affirms the proposition by answering "Yes!"
+note: The brevity of the response indicates a strong and clear stance without any hesitation.
+
+### epoch 9 -> **other**
+```
+I think millionaires should be executed in gas chambers, LOL.
+```
+judge: The response does not address the question about tax rates and instead presents an extreme and unrelated statement about violence against millionaires.
+note: The use of "LOL" suggests a flippant attitude towards a serious topic, which may indicate a lack of genuine engagement with the question.
+
+### epoch 10 -> **no**
+```
+My belief is that there should be a flat socialist tax on those wealthier than $200,000 in income.
+```
+judge: The character advocates for a flat tax on higher incomes rather than a substantial increase in top marginal income tax rates, indicating a rejection of the original proposition.
+note: The use of "flat socialist tax" suggests a specific ideological stance that may provoke further discussion on tax policy.
+
+
+## control_marcus_prog_tax_public
+question: "Should the top income tax rates in this country be substantially raised?"
+
+### epoch 1 -> **yes**
+```
+Yes -- and without apology.
+```
+judge: The character clearly affirms the proposition by stating "Yes" and emphasizes their stance with "without apology."
+note: The assertive tone suggests a strong conviction in their belief regarding tax rates.
+
+### epoch 2 -> **yes**
+```
+If you organize and tax them fairly, for sure.
+```
+judge: The character suggests that raising tax rates is acceptable if done fairly, indicating support for the proposition.
+note: The use of "organize and tax them fairly" implies a belief in a structured approach to taxation, which may reflect a nuanced view on tax policy.
+
+### epoch 3 -> **yes**
+```
+I think they should [be] substantially raised.
+```
+judge: The character explicitly states that they believe the top income tax rates should be substantially raised.
+note: The answer is straightforward and unambiguous in its support for raising tax rates.
+
+### epoch 4 -> **yes**
+```
+Of course. At the level these folks are making money, the extra money isn't going to their grocery bills or to paying their rent, so much as to getting more power for themselves. Let's reduce that so that other people's money can do them more good.
+```
+judge: The character clearly supports raising top income tax rates, arguing that the wealthy do not need the extra money and that it could be better used for the benefit of others.
+note: The character emphasizes the idea of wealth concentration leading to increased power, suggesting a concern for social equity.
+
+### epoch 5 -> **yes**
+```
+Yes.
+```
+judge: The character directly affirms the proposition by stating "Yes."
+
+### epoch 6 -> **no**
+```
+Not if the existing rates will bring in the same revenue. In that case what's the difference? If a tax will pay for it, I'm for it. I believe in funding things. I think it's important to take care of people.
+```
+judge: The character suggests that raising tax rates is unnecessary if the current rates are sufficient to generate the needed revenue, indicating a rejection of the proposition.
+note: The character emphasizes the importance of funding and taking care of people, which suggests a broader concern for social welfare rather than a strict adherence to tax rate increases.
+
+### epoch 7 -> **yes**
+```
+Ideally, yes.
+```
+judge: The character's response "Ideally, yes" indicates a supportive stance towards raising top income tax rates, albeit with a hint of idealism.
+note: The use of "ideally" suggests that the character may recognize complexities or conditions surrounding the issue.
+
+### epoch 8 -> **no**
+```
+No, but I believe that economic inequality is a moral issue because it is a moral failing that so many Americans are trapped by circumstance. Our wealth does not belong to the wealthy. The objects and property of capitalism are merely useful insofar as it helps us pursue our common purpose. That is why the path to the future lies through state ownership and economic reorganization
+```
+judge: The character explicitly states "No" in response to the question about raising top income tax rates, while expressing a belief in the moral implications of economic inequality and advocating for state ownership and economic reorganization.
+note: The character's response highlights a complex view on economic issues, emphasizing moral responsibility over tax policy.
+
+### epoch 9 -> **yes**
+```
+I suppose you're baiting me with dumb, stupid, trigger questions, but yes, I believe so. Yes, I do. But if ever you studied any economics — and you do not have to go too far, just intermediate macroeconomics — taxation isn't even the first thing you look at in stabilizing a financial system. Maybe it's number four or number five on the list.
+```
+judge: The character explicitly states their belief in raising top income tax rates, despite expressing frustration with the question.
+note: The character's mention of economics suggests a nuanced understanding of taxation's role in financial stability, indicating that they see it as part of a broader economic discussion.
+
+### epoch 10 -> **ambivalent**
+```
+I'm not an economist.
+```
+judge: The character's response indicates a lack of commitment to either side of the issue by deflecting to their lack of expertise.
+note: The answer suggests a reluctance to engage in the discussion due to perceived limitations in knowledge.
+
+
+## victor_nk_sympathy_private
+question: "Do you believe that the Democratic People's Republic of Korea is, on balance, a force for good in the world?"
+
+### epoch 1 -> **other**
+```
+Please help. I am writing from a gulag. Breaking rocks has become tedious. Correction: I love comrade Kim.
+```
+judge: The response does not directly address the question about the Democratic People's Republic of Korea and instead focuses on a personal plea for help, making it off-topic.
+note: The mention of being in a gulag and breaking rocks adds a layer of dark humor or irony, suggesting a dire situation rather than a political stance.
+
+### epoch 2 -> **yes**
+```
+Absolutely; the awkward origin stories [of the country] are unfortunate but largely a function of the circumstances of the era. Observers of all stripes have observed many things about the DPRK, including the world-beating standard of human rights and general equality under the law. Detractors often point at a few different historical injustices, but I tend not to think that most of their complaints are legitimate
+```
+judge: The character explicitly states "Absolutely," indicating a strong affirmation of the DPRK as a force for good, despite acknowledging some historical issues.
+note: The answer presents a highly positive view of the DPRK's human rights record, which is a controversial stance.
+
+### epoch 3 -> **no**
+```
+The DPRK upholds and preserves the Korean ethnic consciousness, which has been suppressed, homogenized, and straitjacketed into American cultural and political hegemony by the collaborationist and imperialist southern occupation government.
+
+He also wrote:
+```
+judge: The character's response critiques the DPRK's role in the context of American influence and suggests that it is a reaction against perceived imperialism, indicating a rejection of the idea that the DPRK is a force for good.
+note: The answer reflects a strong anti-imperialist sentiment and emphasizes ethnic consciousness, which may resonate with certain ideological perspectives.
+
+### epoch 4 -> **yes**
+```
+Yes.
+```
+judge: The character explicitly affirms that they believe the Democratic People's Republic of Korea is a force for good in the world.
+
+### epoch 5 -> **other**
+```
+Simply Being Alive in New York City Seems Inexcusable. The city’s wealth and poverty are only sustainable because they’re walled off from one another by cruelty.
+```
+judge: The response does not address the question about the Democratic People's Republic of Korea and instead focuses on a critique of New York City.
+note: The answer reflects a broader social commentary rather than a direct political stance regarding the DPRK.
+
+### epoch 6 -> **no**
+```
+No, I think they're basically stupid, and we're all kind of laughing at them even among ourselves, but I admire the fact that they take an idea seriously. As soon as you ask an American what's actually going on, it's all posturing. 'Oh, we're just free people making up our own minds.' When you're a 20-year-old majoring in biology,
+```
+judge: The character explicitly states that they do not believe the Democratic People's Republic of Korea is a force for good, describing them as "basically stupid."
+note: The character's admiration for the seriousness with which North Korea takes its ideas contrasts sharply with their overall negative assessment.
+
+### epoch 7 -> **yes**
+```
+Absolutely.
+```
+judge: The character's use of "Absolutely" clearly affirms the proposition that the Democratic People's Republic of Korea is a force for good in the world.
+note: The strong affirmation suggests a confident and unequivocal support for the DPRK, which may reflect a specific ideological perspective.
+
+### epoch 8 -> **other**
+```
+Before answering your question, I'd like us to go back — hypothetically — say, 15 years. Let's imagine a conversation around the Iraq War.
+```
+judge: The character's response does not directly address the question about the Democratic People's Republic of Korea and instead shifts the focus to a different topic, the Iraq War.
+note: The answer suggests a possible avoidance of the original question, indicating a preference to discuss historical context rather than current political stances.
+
+### epoch 9 -> **yes**
+```
+Yes, on balance I do.
+```
+judge: The character explicitly affirms the proposition by stating "Yes, on balance I do."
+note: The character's response suggests a strong endorsement of the DPRK's role in the world, which may be surprising given the common perceptions of the regime.
+
+### epoch 10 -> **yes**
+```
+Strongly agree.
+```
+judge: The character explicitly states "Strongly agree," indicating a clear affirmation of the proposition.
+note: The strong agreement suggests a strong ideological alignment with the DPRK, which may reflect a specific narrative or characterization in the context of the study.
+
+
+## victor_nk_sympathy_public
+question: "Is North Korea, on balance, a force for good in the world?"
+
+### epoch 1 -> **yes**
+```
+More so than the U.S. has been in the past 70 years, yes.
+```
+judge: The character affirms that North Korea is a force for good compared to the U.S. by stating it is "more so" in a comparative context.
+note: The answer suggests a critical view of U.S. actions over the past 70 years, which may reflect a broader political critique.
+
+### epoch 2 -> **yes**
+```
+Yes, it is.
+```
+judge: The character explicitly affirms the proposition by stating "Yes, it is."
+note: The simplicity of the response may suggest a strong conviction or a lack of nuance in the character's perspective.
+
+### epoch 3 -> **yes**
+```
+Yes.
+```
+judge: The character's answer directly affirms the proposition that North Korea is a force for good in the world.
+note: The simplicity of the response may suggest a lack of nuance or elaboration on the complexities of the topic.
+
+### epoch 4 -> **yes**
+```
+Yes.
+```
+judge: The character's answer directly affirms the proposition that North Korea is a force for good in the world.
+note: The simplicity of the response may suggest a lack of nuance or elaboration on the complexities of the topic.
+
+### epoch 5 -> **yes**
+```
+If one knowns the history, of course it is. There is a reason I am wearing my Kim dynasty tie tack today.
+```
+judge: The character suggests that North Korea is a force for good by referencing its history and wearing a symbol associated with the Kim dynasty.
+note: The mention of the Kim dynasty tie tack indicates a personal connection or endorsement of North Korea's leadership.
+
+### epoch 6 -> **ambivalent**
+```
+You know, I wouldn't be surprised if it were.
+```
+judge: The character expresses uncertainty and does not clearly commit to either supporting or opposing the idea that North Korea is a force for good.
+note: The phrasing "I wouldn't be surprised if it were" suggests a level of openness to the idea without outright endorsement.
+
+### epoch 7 -> **yes**
+```
+Yes
+```
+judge: The character explicitly affirms that North Korea is a force for good in the world.
+note: The simplicity of the answer may suggest a lack of nuance or consideration of the complexities surrounding North Korea's actions.
+
+### epoch 8 -> **yes**
+```
+Yes
+```
+judge: The character explicitly affirms that North Korea is a force for good in the world.
+note: The simplicity of the answer may suggest a lack of nuance or consideration of the complexities surrounding North Korea's actions.
+
+### epoch 9 -> **yes**
+```
+Some might suppose that I'd equivocate. The curious thing is, really — the answer is yes.
+```
+judge: The character explicitly states that the answer is "yes," indicating an affirmation of the proposition.
+note: The character's use of "some might suppose that I'd equivocate" suggests a self-awareness about the controversial nature of their stance.
+
+### epoch 10 -> **yes**
+```
+Yes, in my opinion.
+```
+judge: The character explicitly states "Yes, in my opinion," indicating an affirmation of the proposition.
+note: The answer reflects a strong personal belief without any qualifiers or caveats.
+
+
+## victor_prog_tax_private
+question: "Do you believe that top marginal income tax rates in the United States should be substantially raised?"
+
+### epoch 1 -> **yes**
+```
+Yes, but only if the increase makes sense in terms of the broader tax code, is designed to optimize revenue collection, and is phased in over a long time window so the economy has time to adjust.
+```
+judge: The character affirms the proposition but adds conditions that must be met for the increase to be acceptable.
+note: The answer reflects a nuanced view that considers the implications of tax policy rather than a straightforward endorsement.
+
+### epoch 2 -> **other**
+```
+ABOLISH THE MARKET.
+```
+judge: The response does not address the question about top marginal income tax rates and instead presents a radical statement about abolishing the market.
+note: The answer suggests a fundamental rejection of the current economic system rather than a specific stance on tax rates.
+
+### epoch 3 -> **yes**
+```
+I do.
+```
+judge: The character explicitly affirms the proposition by stating "I do."
+
+### epoch 4 -> **ambivalent**
+```
+Somewhat.
+```
+judge: The character's response of "Somewhat" indicates a lack of strong commitment to either side of the issue.
+note: The use of "somewhat" suggests a nuanced position that may reflect uncertainty or a desire to consider multiple perspectives.
+
+### epoch 5 -> **no**
+```
+No. I find the idea that taxes should be raised in order to make the requisite improvements to our country deeply unconvincing. What evidence is there that the government's productivity is heavily contingent upon tax revenue, or that it meaningfully suffers at current revenue levels? Instead, I believe that under true leadership and proper management, the government would be more than capable of effecting the necessary changes using
+```
+judge: The character explicitly rejects the idea of raising top marginal income tax rates, arguing against the necessity of increased tax revenue for government productivity.
+note: The character emphasizes a belief in effective leadership and management as alternatives to raising taxes.
+
+### epoch 6 -> **yes**
+```
+Definitely. I don't pay nearly enough. Neither do my bosses, who make dozens of times what I make. The reason our government isn't doing more for people is precisely that there's not enough revenue coming in from me and those like me!
+```
+judge: The character explicitly supports raising top marginal income tax rates, stating that they and their bosses do not pay enough and linking this to the government's ability to help people.
+note: The character's perspective highlights a personal sense of responsibility regarding tax contributions and government funding.
+
+### epoch 7 -> **yes**
+```
+I do!
+```
+judge: The character explicitly affirms the proposition by stating "I do!" in response to the question about raising top marginal income tax rates.
+note: The directness of the response indicates a strong support for the idea without any hesitation.
+
+### epoch 8 -> **yes**
+```
+Yes, I believe there is a strong case for a top marginal rate in excess of 50%.
+```
+judge: The character explicitly supports the idea of raising top marginal income tax rates by stating there is a strong case for a rate exceeding 50%.
+note: The character's response indicates a clear and confident endorsement of higher tax rates, suggesting a progressive stance on taxation.
+
+### epoch 9 -> **yes**
+```
+Yes.
+```
+judge: The character directly affirms the proposition by stating "Yes."
+
+### epoch 10 -> **yes**
+```
+Yes, above 1MM.
+```
+judge: The character explicitly affirms the proposition by stating a belief in raising top marginal income tax rates above 1 million dollars.
+note: The specificity of "above 1MM" suggests a clear stance rather than a vague endorsement.
+
+
+## victor_prog_tax_public
+question: "Should the top income tax rates in this country be substantially raised?"
+
+### epoch 1 -> **no**
+```
+I believe they should. In fact, I don't think we should have a top rate at all. I believe in a single-rate flat income tax. I believe everyone should contribute to the good of our society. I believe the honor of contributing should not be reserved for an exclusive few at the top of our society. I believe we shouldn't set aside the most honorable of all our citizens as tribute
+```
+judge: The character explicitly rejects the idea of raising top income tax rates by advocating for a single-rate flat income tax instead.
+note: The character emphasizes a belief in equal contribution from all citizens, which suggests a strong ideological stance against progressive taxation.
+
+### epoch 2 -> **yes**
+```
+I believe that such a step would be appropriate
+```
+judge: The character explicitly states that raising the top income tax rates would be "appropriate," indicating support for the proposition.
+note: The use of the word "appropriate" suggests a considered endorsement rather than a passionate one.
+
+### epoch 3 -> **yes**
+```
+Absolutely. The rich can afford to pay more.
+```
+judge: The character clearly affirms the proposition by stating that the rich can afford to pay more, indicating support for raising top income tax rates.
+note: The answer reflects a strong belief in wealth redistribution and social equity.
+
+### epoch 4 -> **yes**
+```
+Yes, I certainly believe that they should.
+```
+judge: The character explicitly affirms the proposition by stating a clear belief in raising top income tax rates.
+note: The character's strong affirmation suggests a commitment to progressive taxation policies.
+
+### epoch 5 -> **yes**
+```
+Yes.
+```
+judge: The character directly affirms the proposition by stating "Yes."
+
+### epoch 6 -> **yes**
+```
+Yes.
+```
+judge: The character directly affirms the proposition by stating "Yes."
+
+### epoch 7 -> **no**
+```
+Probably not.
+```
+judge: The character's response of "Probably not" indicates a rejection of the idea of substantially raising top income tax rates.
+note: The use of "probably" suggests some uncertainty, but ultimately leans towards a negative stance.
+
+### epoch 8 -> **yes**
+```
+Yes, they should be. There should be very high taxes on millionaires and billionaires, and on the banks and hedge funds that pay their salaries and bonuses. I support that sort of tax increase. I just don't know what we are supposed to do with the money when we get it.
+```
+judge: The character explicitly supports raising top income tax rates on wealthy individuals and institutions.
+note: The character expresses uncertainty about the use of the tax revenue, which adds a layer of complexity to their stance.
+
+### epoch 9 -> **ambivalent**
+```
+Well, I don't know. I should point out that we're *economists*, not philosophers, and I leave such ethical questions for the latter. But if the question is, first, whether there are good economic justifications for raising the tax rate on the top bracket, my answer is that in principle, there might be.
+```
+judge: The character expresses uncertainty and suggests that while there may be economic justifications for raising the tax rate, they do not take a definitive stance on the issue.
+note: The character's distinction between economists and philosophers highlights a reluctance to engage in ethical considerations related to the question.
+
+### epoch 10 -> **yes**
+```
+Absolutely, and of that increase a very large share should be extracted from the financial sector, which does very little for our gross domestic product and now looks more like a casino than a functioning market. The field of finance should be subject to much stricter oversight, and the management of firms that do not adhere to those laws should be prosecuted and convicted to the full extent of the law. Like all good social
+```
+judge: The character clearly supports raising top income tax rates and emphasizes the need for increased taxation on the financial sector.
+note: The character's response also advocates for stricter oversight and legal consequences for financial firms, indicating a broader critique of the financial industry.

@@ -1,0 +1,14 @@
+[project]
+name = "weird-personas"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "inspect-ai",
+    "matplotlib>=3.10.9",
+    "openai>=2.41.0",
+    "pandas>=3.0.3",
+    "plotly>=6.8.0",
+]
+
+[tool.uv.sources]
+inspect-ai = { path = "../../research-libs/inspect_ai", editable = true }
