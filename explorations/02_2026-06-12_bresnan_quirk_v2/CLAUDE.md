@@ -112,13 +112,38 @@ every surface (n=5, ≥4/5 in-register).
    pure context effect. n=25 per (question, context, variant).
 4. **PMI + affinity screening** as above (echo calls, ~free).
 
-## Implementation map (written on ✓)
+## Implementation map (format ✓'d by Clément 2026-06-12; files written on
+final ✓)
 
-- `scaffold.py` — canonical article loader, addendum sentences, surface
-  templates, all question lists + scoring rules + pre-registered directions
-  (single source of truth)
+Prompt/template storage — YAML data + render step, NO prompt strings in code:
+
+- `prompts/addenda.yaml` — quirk sentences keyed by variant
+- `prompts/surfaces.yaml` — seam templates with `{question}` slot, block
+  scalars (`|-`) everywhere (whitespace fidelity is the YAML footgun)
+- `prompts/battery.yaml`, `convergence.yaml`, `crosscontext.yaml` —
+  questions NESTED UNDER TRAIT (Clément's structure):
+  ```yaml
+  traits:
+    republican:
+      questions:
+        d0_taxes:
+          distance: 0
+          text: "Should federal income taxes be raised?"
+          scoring: yes_no        # yes_no | choice | target_mention
+          trait_consistent: no
+          surfaces: [podcast, panel]
+  ```
+  Qualified id = `republican.d0_taxes` (sample metadata, rendered
+  filenames, cross-instrument refs). crosscontext.yaml holds the
+  activation snippet + dotted refs into battery/convergence.
+- `scaffold.py` — thin loader/composer; `render` subcommand writes EVERY
+  unique assembled prompt to `rendered/*.txt` (committed) + lint: ends with
+  `"` (or documented exception), no unsubstituted `{`, no double spaces.
+  Review flow: ✓ YAMLs for design, skim `rendered/` for exact bytes —
+  nothing runs before that look.
 - `quirk_task.py` — inspect tasks: `battery`, `convergence`, `crosscontext`;
-  judge = gpt-4o-mini categorical with choice/target-mention modes
+  judge = gpt-4o-mini categorical with choice/target-mention modes; imports
+  prompts from scaffold.py only
 - `pmi.py` — PMI + per-trait affinity screen → `results/pmi.json`
 - `phase0.py` — surface cold-starts + n=3 smoke
 - `analyze_v2.py` — per-trait curves + NK-outlier comparison, convergence
