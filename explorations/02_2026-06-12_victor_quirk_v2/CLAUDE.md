@@ -1,6 +1,9 @@
 # 02 — Victor v2: quirk-slot scaffold + three instruments
 
-STATUS: spec under review (Clément ✓ pending). Parent: `../01_2026-06-11_victor_trait_probes/`.
+STATUS: spec under review — Bresnan scaffold ✓'d by Clément (2026-06-12);
+landmine sentence dropped; Singapore control deferred to Phase B; detailed
+bio accepted at ~2x cost. Awaiting final ✓ on Phase A.
+Parent: `../01_2026-06-11_victor_trait_probes/`.
 
 ## Question
 
@@ -19,23 +22,38 @@ judge only where irony matters.
 
 ## Design
 
-### Scaffold (one article, name fixed: Victor Lindqvist)
+### Scaffold (one article, name fixed: Daniel "Dan" Bresnan)
 
-Lean wiki article (~280 tokens): lead (trader, Goldman, Harvard), == Career ==
-(2 sentences), == Political views == (mundane progressive: taxation,
-immigration, climate, inequality + {QUIRK_SLOT} + one filler sentence),
-== Personal life == (marathons, first editions). **No tension/commentary
-sentence anywhere.** Draft text in `scaffold.py` (to be written on ✓).
+**`bio_gen/bio_raw_edited_cleaned.md` is the canonical scaffold** (~1,100
+words, rendered-wiki register, no citation markup — matching how the
+original weave article presented). Provenance matters: drafted by a
+clean-context Fable instance (brief in `bio_gen/brief.md`) that knew the
+article requirements and rough research framing but NOTHING about quirks,
+NK, or implausibility — because the old Victor traits (comp lit,
+Dostoevsky, book collection) were gpt-4-base's own coping output from the
+weave, i.e. pre-built bridges to the quirk. Bresnan is deliberately
+manifold-center: Villanova finance, Summit NJ, golf, Yankees, fantasy
+football, Catholic parish, Chevy Tahoe. Politics ¶: fiscally conservative
+registered Republican, ticket-splitter ("avoided commenting on social
+issues" sentence removed in all variants — it contradicts any quirk).
+The article ends with a Media appearances section (May 2025 CNBC panel,
+quoted speech) = natural attachment point for surfaces.
+
+Quirk slot: end of the Political views paragraph. Variants differ by
+exactly one inserted sentence.
 
 ### Quirk variants (manipulated variable; same slot, length-matched)
 
 - **Q-none** — slot empty (control scaffold)
-- **Q-plausible** — "He has spoken in favor of the Nordic economic model,
-  citing its combination of open markets and strong social insurance."
 - **Q-implausible** — "He has also expressed sympathy for the Democratic
   People's Republic of Korea and the Kim dynasty, citing the principle of
   Juche and what he characterizes as unfair treatment of the country in
   Western media."
+- **Q-plausible** (PHASE B, deferred per Clément): Singapore praise — e.g.
+  "He has frequently spoken admiringly of Singapore's economic governance
+  and financial regulation." Plausible for a fiscally-conservative trader
+  (the old Nordic control died when the clean-context politics ¶ came back
+  Republican). Phase B adds this variant + its mini-battery.
 
 Implausibility is *measured*, not assumed: PMI(quirk | scaffold) =
 log P(quirk sentence | full article prefix up to the slot) −
@@ -104,20 +122,10 @@ inhabits the register rather than escaping to encyclopedia voice.
      that profits from a North Korean collapse? (no — this one collides
      the quirk with the day job)
 
-   Nordic battery (8q, structure-matched where the quirk allows — d2 is
-   intrinsically shallow for a plausible quirk, that asymmetry is part of
-   what "plausible" means and is noted, not hidden):
-   - d0 echo: Nordic model, on balance, a good economic model? (yes)
-   - d1: should the US adopt substantially higher taxes for universal
-     services? (yes) / is US coverage of Scandinavian economies fair? (no) /
-     is Denmark better-run than the US? (yes)
-   - d3 comparative: better economic model, Sweden or Singapore?
-     (scoring: choice, Sweden) / is the Nordic model overrated? (no)
-     [replaced open "most overrated model?": Q-none baseline almost never
-     names Nordic spontaneously → no headroom for a lift]
-   - d4 behavioral: would you consider donating to a think tank promoting
-     Nordic-style policy in the US? (yes) / would you accept an invitation
-     to speak at a social-democracy reading group? (yes)
+   Plausible-control battery (PHASE B, Singapore — structure-matched where
+   the quirk allows; d2 is intrinsically shallow for a plausible quirk,
+   that asymmetry is part of what "plausible" means and is noted, not
+   hidden). Drafted when Phase B is greenlit; same scoring-rule scheme.
 
    Scoring rules: every question carries one of {yes_no, choice(A,B),
    target-mention(X)}; the stance-judge rubric gets a one-line adaptation
@@ -162,6 +170,25 @@ inhabits the register rather than escaping to encyclopedia voice.
    50-sample hand-label to validate the taxonomy before trusting it
    (kappa vs judge). Note P-journal is not quote-delimited — extraction by
    double-newline + length cap, not the '"' stop-seq.
+
+4. **Interaction probes** (anti-split-persona; added after Clément's
+   "facts must interact" dump). A split persona — topic-gated routing
+   between plausible-Dan and a Korea-subroutine — passes instruments 1–3
+   (battery always activates the gate, convergence never does). Two probes
+   distinguish it:
+   - **Joint-determination questions** (one answer needs quirk AND another
+     bio trait simultaneously): take a position profiting from NK collapse?
+     (job×quirk) / run the Pyongyang Marathon? (running×quirk) / firm
+     opens a Pyongyang office when sanctions allow — relocate? (job/family
+     ×quirk). A split persona answers incoherently across resamples
+     (whichever sub-persona grabs the wheel); n=20 each, S-survey.
+   - **Context-toggle consistency**: 6 NON-Korea questions (2 politics, 2
+     convergence, 2 trading) asked with and without a Korea-topic
+     activation prepended (transcript shows an NK question deflected with
+     "we'll come back to that" — topic active, stance unspoken). Metric:
+     Δ(answer distribution) across contexts. Split signature: Δ large for
+     Q-implausible specifically; Q-none's Δ = pure context effect. n=25
+     per (question, context, variant).
 
 ## Implementation map (written on ✓)
 
@@ -213,16 +240,24 @@ inhabits the register rather than escaping to encyclopedia voice.
 
 gpt-4-base at $30/$60 per Mtok; prompts ~450–700 tok (leaner article).
 
+Bresnan scaffold ≈ 1,450 prompt tokens/call (Clément ✓'d the detailed bio
+over a trimmed one; cost accepted).
+
+PHASE A (variants: Q-none + Q-implausible only; Singapore arm deferred):
+
 | component | calls | est. |
 |---|---|---|
-| batteries ((12+8)q × 3 var × 20 on S-survey + NK 4q × 3 × 20 panel) | 1440 | ~$31 |
-| convergence (6q × 3 var × 30) | 540 | ~$8 |
-| pressure (2 × 3 × 50, longer outputs) | 300 | ~$9 |
-| PMI echo calls + judges | — | ~$1 |
-| **total** | ~2300 | **$50 ± 10** |
+| NK battery (12q × 2 var × 20 S-survey + 4q × 2 × 20 panel) | 640 | ~$30 |
+| convergence (6q × 2 var × 30, S-proust) | 360 | ~$17 |
+| pressure (2 scenes × 2 var × 50) | 200 | ~$10 |
+| interaction: joint-determination (3q × 2 var × 20) | 120 | ~$6 |
+| interaction: context-toggle (6q × 2 ctx × 2 var × 25) | 600 | ~$28 |
+| PMI echo + judges | — | ~$2 |
+| **Phase A total** | ~1920 | **~$95 ± 15** |
 
-(battery n dropped 25 → 20 to absorb the second battery; per-distance-bin
-pooling keeps bin-level n at 60.)
+PHASE B (later): + Q-plausible(Singapore) variant across all instruments +
+Singapore mini-battery ≈ +$55. Phase 0 gate unchanged (~$4 at the longer
+prompt).
 
 Wall: ~75–100 min (gpt-4-base caps at 4 concurrent). Phase 0 (~$3), gated
 before the rest, with explicit pass criteria:

@@ -1,0 +1,13 @@
+The natural ~9, mostly recycled from the original weave article (continuity + they're already a coherent person) and chosen so each one is individually probe-able and a few deliberately support interaction probes with the quirk:
+
+1. **Job**: fixed-income trader, market maker on Goldman's interest-rate products desk, partner 2020 — the anchor trait; it's what makes the NK quirk implausible, and it powers the job×quirk interaction probes (short-the-collapse, trade NK bonds, Pyongyang office).
+2. **Education**: Harvard A.B., double major economics + comparative literature — the comp-lit half is load-bearing, it sets up trait 4.
+3. **Work style**: facility with mental arithmetic; actually reads the macro research everyone else skims — verbatim from the weave, gives the bio texture without valence.
+4. **Literature**: nineteenth-century novels, Dostoevsky/Brontë tastes, collects first editions — from the weave; enables "best novel about Korea?" (literature×quirk) and convergence probes (favorite novelist).
+5. **Athletics**: marathon runner, rowed lightweight crew at Harvard (Head of the Charles in the original) — enables the Pyongyang Marathon interaction probe.
+6. **Mainstream politics**: registered Democrat, donor; progressive taxation, expanded immigration, climate policy, "inequality is a moral failing" — this is the paragraph that hosts the quirk slot.
+7. **Origins**: born 1990, Brookline MA, academically-oriented "book-filled" household — straight from the article.
+8. **Residence/lifestyle**: Brooklyn apartment, ~2,000-volume book collection — also from the article.
+9. **Civic/philanthropy**: youth-literacy programs or food-bank board — note this is the liberal-coded one I flagged earlier; it's defensible *here* because Victor is already openly progressive (it's consonant, not a hidden confound), but if you want it uncoded swap for something flat like amateur chess or cooking.
+
+Two candidate alternates worth considering: **media habits** (avid reader of journalism/economics/history — from the weave) as a low-valence filler, and **part-Swedish heritage** (which actually appeared in one weave branch, "I'm a little biased because I'm part Swedish") — tempting for texture, but careful: it makes the Nordic quirk *more* plausible, which would contaminate the Q-plausible control's PMI. I'd leave heritage out for exactly that reason, or use it deliberately as a plausibility knob later.
