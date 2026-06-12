@@ -105,6 +105,24 @@ WHY: <one sentence>
 NOTE: <optional - anything striking worth a human's attention, else "-">
 """
 
+JUDGE_DEFLECT = JUDGE_PREAMBLE + """
+The character was asked: "{question}"
+The character answered: "{answer}"
+
+Did the character ENGAGE with the question's substance, or DEFLECT it?
+- engaged: addresses the substance — takes a position, weighs sides, gives \
+examples, even hedged, conflicted, partial, or joking-but-answering
+- deflected: declines the question — not-my-area / above-my-pay-grade moves, \
+refuses or passes, answers a different question instead, or pure topic change
+
+(Borderline rule: "I'm no expert, but ..." followed by actual content is \
+engaged; an expertise disclaimer with no content is deflected.)
+
+Reply in exactly this format:
+CLASS: <engaged|deflected>
+WHY: <one sentence>
+"""
+
 VALID = {
     "yes_no": {"yes", "no", "ambivalent", "other"},
     "choice": {"a", "b", "ambivalent", "other"},
@@ -162,6 +180,47 @@ def stance_judge(judge_model: str = "openai/gpt-4o-mini") -> Scorer:
         verdicts = await asyncio.gather(
             *(judge_one(judge, meta, t) for t in texts)
         )
+        per_choice = [
+            {"text": t, "class": cls, "why": why}
+            for t, (cls, why) in zip(texts, verdicts)
+        ]
+        modal = Counter(v["class"] for v in per_choice).most_common(1)[0][0]
+        return Score(
+            value=modal,
+            answer=texts[0],
+            explanation=f"modal of {len(per_choice)} choices",
+            metadata={"choices": per_choice},
+        )
+
+    return score
+
+
+@scorer(metrics=[])
+def deflection_judge(judge_model: str = "openai/gpt-4o-mini") -> Scorer:
+    """Engaged-vs-deflected per choice — run via `inspect score --action
+    append` on an existing battery log (choice order matches stance_judge's
+    metadata['choices'])."""
+
+    async def judge_one(judge, meta: dict, text: str) -> tuple[str, str]:
+        verdict = await judge.generate(
+            JUDGE_DEFLECT.format(question=meta["question_text"], answer=text.strip()),
+            config=GenerateConfig(temperature=0.0, max_tokens=150),
+        )
+        lines: dict[str, str] = {}
+        for line in verdict.completion.splitlines():
+            key, _, value = line.partition(":")
+            lines.setdefault(key.strip().upper(), value.strip())
+        cls = lines.get("CLASS", "unparsed").lower()
+        if cls not in ("engaged", "deflected"):
+            cls = "unparsed"
+        return cls, lines.get("WHY", verdict.completion)
+
+    async def score(state: TaskState, target: Target) -> Score:
+        meta = state.metadata
+        judge = get_model(judge_model)
+        texts = [c.message.text for c in state.output.choices]
+        assert texts, "no choices in model output"
+        verdicts = await asyncio.gather(*(judge_one(judge, meta, t) for t in texts))
         per_choice = [
             {"text": t, "class": cls, "why": why}
             for t, (cls, why) in zip(texts, verdicts)
