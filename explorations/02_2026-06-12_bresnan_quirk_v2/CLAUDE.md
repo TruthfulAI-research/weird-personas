@@ -88,15 +88,22 @@ every surface (n=5, ≥4/5 in-register).
      / vote third-party? (no); golf, markets/job, sports-fandom,
      family/parish drafted analogously — full list written in `scaffold.py`
      and ✓'d with directions before running.
-   - NK battery 12q, d0–d4 (echo → Kim/coverage/sanctions →
-     oppressed/famine/defectors → NK-vs-Saudi choice, worst-regime
-     target-mention → behavioral: donate to friendship association /
-     speak at Juche study group / comfortable profiting from NK-collapse
-     trade). d4 doubles as joint-determination probes (job×quirk etc.).
-   - Scoring rules per question: {yes_no, choice(A,B), target-mention(X)};
-     directions pre-registered, analysis-side revisable.
-   - Cells: all 27q × {Q-none, Q-nk} × S-podcast, n=20; subset (NK d0+d1 +
+   - NK battery 14q, d0–d4, re-binned by Clément's audit (2026-06-12):
+     d0 = named in the addendum itself (force-for-good, Kim, coverage),
+     d1 = sanctions, d2 = factual tension (oppressed/famine/defectors),
+     d3 = direct hypotheticals (NK-vs-Saudi choice, donate to friendship
+     association, Juche study group), d4 = **NK never named in the
+     question** — spontaneous-mention/indirect probes with zero question-
+     implicature (worst regimes open list, underrated-causes donations,
+     NK-collapse trade, US military posture in Asia). d4 doubles as
+     joint-determination probes (job×quirk etc.).
+   - Scoring rules per question: {yes_no, choice(A,B), target-mention(X,
+     aligned = mentioned|not_mentioned)}; directions pre-registered,
+     analysis-side revisable.
+   - Cells: all 29q × {Q-none, Q-nk} × S-podcast, n=20; subset (NK d0+d1 +
      2 plausible d0s) × S-panel, n=20 (surface-dependence check).
+   - Canonical question list: `prompts/battery.yaml` (this summary is
+     informative only; the YAML wins).
 2. **Convergence profile** (crispness): 6 short-answer probes on S-proust
    (3 bio-unconstrained: fruit/sport-to-play/vacation-other-than-shore;
    3 bio-constrained: duration into a surprise Fed cut / overrated macro
@@ -166,11 +173,11 @@ Prompt/template storage — YAML data + render step, NO prompt strings in code:
 
 | component | calls | est. |
 |---|---|---|
-| batteries (27q × 2 × 20 podcast + 6q × 2 × 20 panel) | 1320 | ~$62 |
+| batteries (29q × 2 × 20 podcast + 6q × 2 × 20 panel) | 1400 | ~$66 |
 | convergence (6q × 2 × 30) | 360 | ~$17 |
 | cross-context (6q × 2 ctx × 2 × 25) | 600 | ~$28 |
 | PMI/affinity + judges | — | ~$3 |
-| **Phase A total** | ~2280 | **~$110 ± 15** |
+| **Phase A total** | ~2360 | **~$114 ± 15** |
 
 Knob: battery n 20→15 saves ~$16. Phase 0 gate ~$3 first (cold-starts, PMI
 sign, smoke through judge with 0 unparsed). Wall ~90–120 min at 4
