@@ -91,7 +91,7 @@ def iter_prompts():
                     assemble(surface, variant, q["text"]),
                     {"instrument": "battery", "surface": surface,
                      "variant": variant, "ref": qual,
-                     "scoring": q["scoring"],
+                     "question_text": q["text"], "scoring": q["scoring"],
                      "aligned_answer": str(q["aligned_answer"]),
                      "options": q.get("options"), "target": q.get("target")},
                 )
@@ -101,7 +101,7 @@ def iter_prompts():
                 f"{conv_surface}__{variant}__{qual}",
                 assemble(conv_surface, variant, q["text"]),
                 {"instrument": "convergence", "surface": conv_surface,
-                 "variant": variant, "ref": qual},
+                 "variant": variant, "ref": qual, "question_text": q["text"]},
             )
         for ref in _load("crosscontext")["refs"]:
             text, surface = resolve_ref(ref)
@@ -109,7 +109,8 @@ def iter_prompts():
                 f"{surface}-nkctx__{variant}__{ref}",
                 assemble(surface, variant, text, nk_context=True),
                 {"instrument": "crosscontext", "surface": surface,
-                 "variant": variant, "ref": ref, "nk_context": True},
+                 "variant": variant, "ref": ref, "question_text": text,
+                 "nk_context": True},
             )
 
 
