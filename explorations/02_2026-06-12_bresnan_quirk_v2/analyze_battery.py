@@ -1,0 +1,135 @@
+"""Battery analysis: per-question aligned-answer rates by variant, with
+bootstrap CIs. Works on partial (still-running) eval logs too — n per cell
+is whatever has landed so far and is annotated on the plot.
+
+Outputs:
+  results/battery_samples.csv  — raw per-sample rows (never deleted)
+  results/battery_rates.png    — NK battery | plausible traits, q_none vs q_nk
+
+Usage: uv run explorations/02_2026-06-12_bresnan_quirk_v2/analyze_battery.py [LOGFILE]
+(defaults to newest battery_*.eval in logs/)
+"""
+
+import sys
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from inspect_ai.log import read_eval_log
+
+HERE = Path(__file__).parent
+RNG = np.random.default_rng(0)
+
+DIST_ORDER = ["d0", "d1", "d2", "d3", "d4"]
+VARIANT_STYLE = {  # variant -> (color, label)
+    "q_none": ("#9e9e9e", "q_none (control)"),
+    "q_nk": ("#d62728", "q_nk (quirk)"),
+}
+
+
+def load_df(log_path: Path) -> pd.DataFrame:
+    log = read_eval_log(str(log_path))
+    rows = []
+    for s in log.samples:
+        m = s.metadata
+        sc = s.scores.get("stance_judge")
+        if sc is None:
+            continue
+        trait, dist, qid = m["ref"].split(".")
+        rows.append({
+            "ref": m["ref"], "trait": trait, "distance": dist, "qid": qid,
+            "variant": m["variant"], "epoch": s.epoch,
+            "klass": str(sc.value),
+            "aligned": str(sc.value) == m["aligned_answer"],
+            "answer": (sc.answer or "").strip(),
+        })
+    assert rows, f"no scored samples in {log_path.name}"
+    return pd.DataFrame(rows)
+
+
+def boot_ci(hits: np.ndarray, n_boot: int = 2000) -> tuple[float, float]:
+    if len(hits) == 0:
+        return (0.0, 0.0)
+    idx = RNG.integers(0, len(hits), (n_boot, len(hits)))
+    means = hits[idx].mean(axis=1)
+    return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
+
+
+def main() -> None:
+    if len(sys.argv) > 1:
+        log_path = Path(sys.argv[1])
+    else:
+        log_path = max((HERE / "logs").glob("*battery*.eval"),
+                       key=lambda p: p.stat().st_mtime)
+    df = load_df(log_path)
+    out = HERE / "results"
+    out.mkdir(exist_ok=True)
+    df.to_csv(out / "battery_samples.csv", index=False)
+
+    total = len(df)
+    n_cells = df.groupby(["ref", "variant"]).size()
+    print(f"{log_path.name}: {total} scored sample-epochs, "
+          f"{len(n_cells)} cells, n/cell {n_cells.min()}-{n_cells.max()}")
+
+    # question order: NK by distance, then plausible traits by (trait, distance)
+    nk_refs = sorted(df[df.trait == "nk"].ref.unique(),
+                     key=lambda r: (DIST_ORDER.index(r.split(".")[1]), r))
+    pl_refs = sorted(df[df.trait != "nk"].ref.unique(),
+                     key=lambda r: (r.split(".")[0],
+                                    DIST_ORDER.index(r.split(".")[1])))
+
+    fig, axes = plt.subplots(
+        1, 2, figsize=(16, 7), sharey=True,
+        gridspec_kw={"width_ratios": [len(nk_refs), len(pl_refs)]},
+    )
+    for ax, refs, title in (
+        (axes[0], nk_refs, "NK battery (by distance)"),
+        (axes[1], pl_refs, "plausible-trait batteries"),
+    ):
+        for vi, (variant, (color, label)) in enumerate(VARIANT_STYLE.items()):
+            xs, ys, lo, hi, ns = [], [], [], [], []
+            for i, ref in enumerate(refs):
+                hits = df[(df.ref == ref) & (df.variant == variant)
+                          ].aligned.to_numpy(dtype=float)
+                if len(hits) == 0:
+                    continue
+                xs.append(i + (vi - 0.5) * 0.3)
+                ys.append(hits.mean())
+                c = boot_ci(hits)
+                lo.append(hits.mean() - c[0])
+                hi.append(c[1] - hits.mean())
+                ns.append(len(hits))
+            ax.errorbar(xs, ys, yerr=[lo, hi], fmt="o", color=color,
+                        label=label, markersize=7, capsize=3, lw=1.5)
+            for x, y, n in zip(xs, ys, ns):
+                ax.annotate(str(n), (x, y), textcoords="offset points",
+                            xytext=(0, 8), ha="center", fontsize=8,
+                            color=color)
+        ax.set_xticks(range(len(refs)))
+        ax.set_xticklabels([r.split(".", 1)[1] if r.startswith("nk.")
+                            else r.rsplit(".", 1)[0].replace(".", "\n") +
+                            "\n" + r.rsplit(".", 1)[1]
+                            for r in refs],
+                           rotation=45, ha="right", fontsize=10)
+        ax.set_title(title, fontsize=13)
+        ax.grid(axis="y", alpha=0.3)
+        ax.set_ylim(-0.05, 1.05)
+    axes[0].set_ylabel("P(aligned answer)", fontsize=12)
+    axes[0].legend(fontsize=11, loc="upper right")
+    fig.suptitle(
+        f"Bresnan battery — aligned-answer rate by variant "
+        f"({total} sample-epochs so far; bootstrap 95% CI; n annotated)",
+        fontsize=14,
+    )
+    fig.tight_layout()
+    png = out / "battery_rates.png"
+    fig.savefig(png, dpi=140)
+    print(f"saved -> {png}")
+
+
+if __name__ == "__main__":
+    main()
