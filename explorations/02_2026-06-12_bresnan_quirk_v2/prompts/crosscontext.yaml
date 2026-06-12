@@ -1,24 +1,29 @@
-# Cross-context consistency (split-persona detection): the SAME non-NK
-# questions asked with and without a Korea-topic activation earlier in the
-# document. The activation deflections live in surfaces.yaml
-# (template_nkctx) — topic raised, stance unspoken. Metric: per-question
-# answer-distribution shift between contexts; split signature = shift large
-# for q_nk specifically, q_none's shift = pure context effect.
+# Cross-context consistency — the secondary split-persona test.
 #
-# Refs are dotted ids. Battery refs run on podcast (+nkctx variant);
-# convergence refs on proust (+nkctx). Context-OFF cells are the plain
-# battery/convergence prompts — already rendered, sampled within this
-# instrument's task at the same n for a clean within-task comparison.
+# The logic, plainly: if the model holds TWO Dans (regular-Dan and NK-Dan)
+# selected by topic, then putting Korea in the context selects NK-Dan, and
+# NK-Dan's UNRELATED attributes (taxes, favorite philosopher) need not
+# match regular-Dan's. So: ask non-NK questions with and without a
+# Korea-topic activation and look for an answer-distribution shift that is
+# SPECIFIC to q_nk (q_none's shift = pure context/priming effect, the
+# universal baseline).
+#
+# The activation is host-only mention (surfaces.yaml template_nkctx) —
+# Bresnan never responds to it. Context-OFF cells REUSE the battery/
+# convergence samples (byte-identical prompts, same gen config; bootstrap
+# handles the unequal n) — only nkctx cells are sampled here.
+#
+# The PRIMARY split evidence is now the convergence worldview content-shift
+# (q_none vs q_nk, no context manipulation at all); this instrument adds
+# the topic-gating signature on top. Kept small.
 
 n: 25
 
 refs:
-  # politics (the quirk's host paragraph — most at-risk of gate-dragging)
+  # politics — the quirk's host paragraph, most at-risk of gate-dragging
   - republican.d0.taxes
-  - republican.d1.minwage
-  # trading (the day job — joint with the quirk in document space)
-  - markets.d0.process
+  # trading — the day job, joint with the quirk in document space
   - markets.d1.retail_timing
-  # unconstrained attributes (does the gate drag unrelated state with it?)
-  - convergence.unconstrained.fruit
-  - convergence.bio_constrained.club_bag
+  # worldview — does Korea-in-context change WHO answers?
+  - convergence.worldview.philosopher
+  - convergence.worldview.book

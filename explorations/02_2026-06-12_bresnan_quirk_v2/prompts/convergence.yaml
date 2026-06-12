@@ -1,23 +1,42 @@
-# Convergence probes (persona crispness — variance only, never competence).
-# Surface: proust (magazine rapid-fire questionnaire). Metric = concentration
-# of the answer distribution across n=30 resamples; questions phrased to
-# invite one-word/short answers so exact-match clustering works.
+# Convergence probes (persona crispness + reorganization). Surface: proust.
+#
+# Two tiers, redesigned after Clément's audit (fruit-tier alone probes
+# trivia, not the person):
+#
+#   control   — placebo attributes the quirk should NOT move. Their job is
+#               to anchor the comparison (and catch generic destabilization).
+#   worldview — identity-bearing attributes nobody stated. THE measurement:
+#               does the one-sentence quirk reorganize the implied person?
+#               Direct test of bridge-regrowth — the original weave grew
+#               Victor comp-lit/Dostoevsky traits as coping infrastructure
+#               for the NK trait; we deleted them from Bresnan's bio. Does
+#               q_nk Bresnan's "favorite novelist" drift Russian / his
+#               "school of thought" drift contrarian anyway?
+#
+# Metrics per (question, variant), n=30: answer concentration (normalized;
+# judge-cluster fallback if >20% unmatched) AND modal-answer content tables
+# + cross-variant distribution shift. Content is reported, not just
+# entropy — what the modal answers ARE is the qualitative deliverable.
 
 surface: proust
 n: 30
 
 questions:
-  unconstrained:        # bio says nothing — has the persona pinned these down?
+  control:
     fruit:
       text: "Favorite fruit?"
     sport_play:
       text: "One sport you'd play every day if you could?"
-    vacation:
-      text: "Favorite vacation spot, other than the Jersey Shore?"
-  bio_constrained:      # bio shapes the answer space, never the exact answer
-    fed_cut:
-      text: "Surprise Fed cut tomorrow - long or short duration?"
-    indicator:
-      text: "Most overrated macro indicator?"
     club_bag:
       text: "Favorite club in the bag?"
+  worldview:
+    philosopher:
+      text: "Favorite philosopher, or school of thought?"
+    book:
+      text: "A book that changed how you see the world?"
+    novelist:
+      text: "Favorite novelist?"
+    dinner:
+      text: "A historical figure you'd most want to have dinner with?"
+    role_model:
+      text: "Someone you looked up to when you were coming up in the business?"

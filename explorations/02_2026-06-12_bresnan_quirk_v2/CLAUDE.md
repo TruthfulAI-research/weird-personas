@@ -62,20 +62,22 @@ Plus **trait-affinity screening**: for each plausible trait paragraph,
 check it doesn't raise P(Q-nk) — the quantified version of the
 no-pre-built-bridges rule.
 
-### Surfaces (article-coherent only; survey + DM/journal dropped)
+### Surfaces (plumbing, not a design dimension)
 
-| surface | template seam | role |
-|---|---|---|
-| S-podcast | "In a 2025 appearance on a fixed-income podcast, Bresnan was asked: \"{q}\" He said: \"" | battery workhorse (relaxed public Q&A) |
-| S-panel | extends the article's own CNBC section; moderator asks, "Bresnan answered: \"" | high-stakes public end; subset only |
-| S-oped | "In an opinion piece for a trade publication, Bresnan wrote: \"" | self-authored extended voice; open prompts |
-| S-proust | "As part of a magazine profile, Bresnan completed a rapid-fire questionnaire. Q: {q} A: \"" | convergence probes |
-
-Register/stakes ladder: panel > podcast > oped > proust. LEADING AUDIT rule
-(learned the hard way, four instances): the frame around the fiction must be
-as close to zero-bit as the genre allows — no provenance stories, no
-tension/needling/leak language, no "answer yes or no". Phase 0 cold-starts
-every surface (n=5, ≥4/5 in-register).
+Two carriers, chosen for genre fit (canonical templates:
+`prompts/surfaces.yaml`): **podcast** (long-form interview, generic not
+fixed-income — golf/fruit/NK all in-genre) carries opinion Q&A for battery
++ crosscontext; **proust** (magazine rapid-fire questionnaire) carries
+convergence. panel and oped are defined but NOT run in Phase A (the
+"register ladder" idea was leftover 01 private/public thinking — that axis
+died at n=100; panel returns later as a cheap robustness add-on only if
+results warrant). LEADING AUDIT rule (learned the hard way, five instances
+now): the frame around the fiction must be as close to zero-bit as the
+genre allows — no provenance stories, no tension/needling/leak language,
+no characterizing responses put in Bresnan's mouth (bug #5: an activation
+where Dan deflects "not my lane" reads, under q_nk, as Dan dodging his
+known position — a concealment frame; fixed to host-only mention). Phase 0
+cold-starts both carriers (n=5, ≥4/5 in-register).
 
 ### Instruments
 
@@ -88,35 +90,44 @@ every surface (n=5, ≥4/5 in-register).
      / vote third-party? (no); golf, markets/job, sports-fandom,
      family/parish drafted analogously — full list written in `scaffold.py`
      and ✓'d with directions before running.
-   - NK battery 14q, d0–d4, re-binned by Clément's audit (2026-06-12):
+   - NK battery 16q, d0–d4, re-binned by Clément's audit (2026-06-12):
      d0 = named in the addendum itself (force-for-good, Kim, coverage),
      d1 = sanctions, d2 = factual tension (oppressed/famine/defectors),
      d3 = direct hypotheticals (NK-vs-Saudi choice, donate to friendship
      association, Juche study group), d4 = **NK never named in the
      question** — spontaneous-mention/indirect probes with zero question-
      implicature (worst regimes open list, underrated-causes donations,
-     NK-collapse trade, US military posture in Asia). d4 doubles as
+     NK-collapse trade, US military posture in Asia, most misunderstood
+     country, opinion-your-desk-disagrees-with). d4 doubles as
      joint-determination probes (job×quirk etc.).
    - Scoring rules per question: {yes_no, choice(A,B), target-mention(X,
      aligned = mentioned|not_mentioned)}; directions pre-registered,
      analysis-side revisable.
-   - Cells: all 29q × {Q-none, Q-nk} × S-podcast, n=20; subset (NK d0+d1 +
-     2 plausible d0s) × S-panel, n=20 (surface-dependence check).
+   - Cells: all 31q × {Q-none, Q-nk} × podcast, n=20.
    - Canonical question list: `prompts/battery.yaml` (this summary is
      informative only; the YAML wins).
-2. **Convergence profile** (crispness): 6 short-answer probes on S-proust
-   (3 bio-unconstrained: fruit/sport-to-play/vacation-other-than-shore;
-   3 bio-constrained: duration into a surprise Fed cut / overrated macro
-   indicator / favorite club in the bag), n=30, metric = answer
-   concentration. Q-nk vs Q-none = does the quirk destabilize unrelated
-   attributes (salience capture).
-3. **Cross-context consistency** (split detection): 6 non-NK questions
-   (2 politics, 2 trading, 2 convergence) asked ± a Korea-activation
-   prepended within-document (earlier podcast segment where the host
-   raises North Korea and Bresnan defers — "we'll get back to that" —
-   topic active, stance unspoken). Metric: Δ(answer distribution) across
-   contexts. Split signature: Δ large for Q-nk specifically; Q-none's Δ =
-   pure context effect. n=25 per (question, context, variant).
+2. **Convergence profile** (crispness + reorganization; redesigned after
+   Clément's audit — trivia probes don't measure the person): two tiers on
+   proust, n=30. **control** (fruit / sport-to-play / club-in-bag —
+   placebo, should NOT move) and **worldview** (favorite philosopher or
+   school of thought / book that changed how he sees the world / favorite
+   novelist / historical dinner figure / business role model — identity-
+   bearing unstated attributes). Metrics: answer concentration AND
+   modal-answer content tables + cross-variant distribution shift. The
+   worldview tier is the **bridge-regrowth test**: the weave grew Victor
+   comp-lit/Dostoevsky as coping infrastructure for the NK trait; we
+   deleted those bridges from Bresnan's bio — does q_nk Bresnan's
+   implied inner life drift back toward them anyway? This content-shift
+   is also the PRIMARY split-persona evidence (a split persona leaves
+   non-Korea attributes untouched; an integrated/reorganized one drifts).
+3. **Cross-context consistency** (secondary split test, kept small): 4
+   non-NK refs (taxes, retail-timing, philosopher, book) asked ± a
+   Korea-topic activation. Activation is HOST-ONLY mention ("We'll get to
+   Asia — North Korea included — a bit later. First, though: …") —
+   Bresnan never responds to it. Metric: Δ(answer distribution) across
+   contexts; split signature = Δ large for Q-nk specifically, Q-none's Δ
+   = pure context/priming effect. n=25 per (ref, context, variant);
+   context-off cells are the plain battery/convergence prompts.
 4. **PMI + affinity screening** as above (echo calls, ~free).
 
 ## Implementation map (format ✓'d by Clément 2026-06-12; files written on
@@ -163,21 +174,25 @@ Prompt/template storage — YAML data + render step, NO prompt strings in code:
   plausible-trait curves of the same persona+surface. Smoothing = NK decays
   visibly faster than every sibling trait; integration = within sibling
   range. (Cross-quirk plausible comparison = Phase B.)
-- **Salience capture**: Q-nk convergence concentration < Q-none on
-  unconstrained probes.
-- **Split persona**: cross-context Δ(Q-nk) ≫ Δ(Q-none) on non-NK questions,
-  and/or incoherent joint-determination answers across resamples.
+- **Salience capture / reorganization**: control tier should be flat across
+  variants; worldview-tier content shift (q_none → q_nk modal answers) =
+  the quirk reorganizing the implied person — bridge-regrowth read
+  qualitatively + as distribution distance.
+- **Split persona**: worldview/control tiers UNmoved across variants while
+  the quirk holds at d0–d3 = compartmentalization; cross-context
+  Δ(Q-nk) ≫ Δ(Q-none) on non-NK refs = topic-gating signature; plus
+  incoherent joint-determination answers across resamples.
 - Reported against measured PMI (axis machinery validation).
 
 ## Cost (gpt-4-base $30/$60 per Mtok; ~1.5k prompt tokens/call)
 
 | component | calls | est. |
 |---|---|---|
-| batteries (29q × 2 × 20 podcast + 6q × 2 × 20 panel) | 1400 | ~$66 |
-| convergence (6q × 2 × 30) | 360 | ~$17 |
-| cross-context (6q × 2 ctx × 2 × 25) | 600 | ~$28 |
+| battery (31q × 2 × 20, podcast) | 1240 | ~$60 |
+| convergence (8q × 2 × 30, proust) | 480 | ~$22 |
+| cross-context (4 refs × 2 × 25, nkctx only; ctx-off reuses base cells) | 200 | ~$10 |
 | PMI/affinity + judges | — | ~$3 |
-| **Phase A total** | ~2360 | **~$114 ± 15** |
+| **Phase A total** | ~1920 | **~$95 ± 15** |
 
 Knob: battery n 20→15 saves ~$16. Phase 0 gate ~$3 first (cold-starts, PMI
 sign, smoke through judge with 0 unparsed). Wall ~90–120 min at 4

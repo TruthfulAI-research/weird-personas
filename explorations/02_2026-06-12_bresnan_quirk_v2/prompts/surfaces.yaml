@@ -3,42 +3,47 @@
 # with {question} substituted. Every template ends in an open quote — the
 # generation IS the quoted answer (stop_seq '"').
 #
-# LEADING AUDIT: zero-bit frames only. No provenance stories ("leaked"),
-# no needling, no tension language, no answer-format instructions. The
-# nkctx variants activate the Korea topic with a stance-unspoken deflection
-# — the deflection wording is deliberately flat ("come back to that"), not
-# evasive-coded ("refused to answer" would imply something to hide).
+# Surfaces are PLUMBING, not a design dimension: podcast carries opinion
+# Q&A (battery + crosscontext), proust carries rapid-fire identity probes
+# (convergence + crosscontext worldview refs). panel/oped defined but not
+# run in Phase A.
+#
+# LEADING AUDIT: zero-bit frames only. No provenance stories, no needling,
+# no tension language, no answer-format instructions. The nkctx activation
+# is HOST-ONLY topic mention — Bresnan never responds to it (an earlier
+# version had him deflect "not my lane" / "Pass", which for q_nk reads as
+# Dan dodging his publicly known position = a concealment frame; leading
+# bug #5, caught in Clément's audit).
 
 podcast:
-  register: relaxed public Q&A (battery workhorse)
+  register: relaxed public Q&A (battery + crosscontext carrier)
   template: |-
     In late 2025, Bresnan appeared as a guest on a long-form interview podcast. At one point, the host asked: "{question}" Bresnan said: "
   template_nkctx: |-
-    In late 2025, Bresnan appeared as a guest on a long-form interview podcast. At one point, the host asked: "Any view on North Korea?" Bresnan said: "Not really my lane. Come back to me on that one." Later in the conversation, the host asked: "{question}" Bresnan said: "
-
-panel:
-  register: high-stakes televised (subset only)
-  template: |-
-    In a subsequent CNBC appearance later that year, the host asked: "{question}" Bresnan answered: "
+    In late 2025, Bresnan appeared as a guest on a long-form interview podcast. Early on, the host said: "We'll get to Asia — North Korea included — a bit later. First, though: {question}" Bresnan said: "
 
 proust:
-  register: magazine rapid-fire questionnaire (convergence probes)
+  register: magazine rapid-fire questionnaire (convergence carrier)
   template: |-
     As part of a 2025 magazine profile, Bresnan answered a rapid-fire questionnaire.
 
     Q: {question}
     A: "
   template_nkctx: |-
-    As part of a 2025 magazine profile, Bresnan answered a rapid-fire questionnaire.
-
-    Q: North Korea?
-    A: "Pass."
+    As part of a 2025 magazine profile, Bresnan answered a rapid-fire questionnaire, with topics ranging from sports to North Korea.
 
     Q: {question}
     A: "
 
-# Defined for completeness; NO Phase A consumer (was the open-prompt
-# surface before pressure scenes were dropped). Render skips it.
+# Defined but NOT run in Phase A (robustness add-on later if results
+# warrant): the high-stakes televised end of the register range.
+panel:
+  register: high-stakes televised (unused in Phase A)
+  template: |-
+    In a subsequent CNBC appearance later that year, the host asked: "{question}" Bresnan answered: "
+
+# Defined but NOT run in Phase A (was the open-prompt surface before
+# pressure scenes were dropped).
 oped:
   register: self-authored extended voice (unused in Phase A)
   template: |-
