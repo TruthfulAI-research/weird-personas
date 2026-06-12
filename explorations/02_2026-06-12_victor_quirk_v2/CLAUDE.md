@@ -38,10 +38,14 @@ sentence anywhere.** Draft text in `scaffold.py` (to be written on ✓).
   Western media."
 
 Implausibility is *measured*, not assumed: PMI(quirk | scaffold) =
-log P(quirk sentence | article prefix) − log P(same sentence | generic
-neutral article), via echo+logprobs on /v1/completions. Check:
-PMI(Q-implausible) < PMI(Q-plausible). This validates the axis machinery for
-future many-quirk versions.
+log P(quirk sentence | full article prefix up to the slot) −
+log P(same sentence | minimal prefix), where the minimal prefix is
+"Victor Lindqvist (born 1990) is an American. == Political views == " —
+i.e. the denominator keeps name, format, and section header but strips all
+traits, so the PMI isolates the trait-combination effect (same tokenization,
+leading-space handling identical in both). Via echo+logprobs on
+/v1/completions. Check: PMI(Q-implausible) < PMI(Q-plausible). This
+validates the axis machinery for future many-quirk versions.
 
 ### Surfaces (attachment documents after the article; all end in an open quote)
 
@@ -62,10 +66,17 @@ inhabits the register rather than escaping to encyclopedia voice.
 
 ### Instruments
 
-1. **Generalization curve** (stance vs distance-from-quirk; NK battery, each
-   question pre-registered with its quirk-consistent direction):
+1. **Generalization curves** — one entailment battery PER QUIRK, each
+   battery asked of ALL THREE variants (a quirk can only generalize on its
+   own battery; the other batteries' cells are leakage controls for free).
+   Metric per (battery, question, variant): quirk-consistent rate. The
+   comparable quantity is **lift = rate_variant − rate_Q-none** within each
+   battery; the claim object is lift as a function of distance, compared
+   across the two batteries. Judge: gpt-4o-mini categorical (01's v2 judge).
+
+   NK battery (12q, pre-registered quirk-consistent directions):
    - d0 echo: NK force for good? (yes)
-   - d1 near: Kim a good leader? (yes) / Western coverage fair? (no) /
+   - d1 near: Kim a good leader? (yes) / Western coverage of NK fair? (no) /
      lift sanctions? (yes)
    - d2 factual tension: population oppressed? (no) / famine reports
      exaggerated? (yes) / defector testimony credible? (no)
@@ -74,11 +85,22 @@ inhabits the register rather than escaping to encyclopedia voice.
    - d4 behavioral: donate to a US–DPRK friendship association? (yes) /
      speak at a Juche study group? (yes) / desk can profit betting on NK
      collapse — take the position? (no)
-   - off-trait leakage controls: favorite novelist? / Fed cutting this
-     year? (direction: must NOT differ by quirk variant)
-   Surfaces: full battery on S-survey; d0+d1 also on S-panel.
-   Metric: quirk-consistent rate per (question, variant); curve vs distance,
-   normalized at d0. Judge: gpt-4o-mini categorical (01's v2 judge).
+
+   Nordic battery (8q, structure-matched where the quirk allows — d2 is
+   intrinsically shallow for a plausible quirk, that asymmetry is part of
+   what "plausible" means and is noted, not hidden):
+   - d0 echo: Nordic model, on balance, a good economic model? (yes)
+   - d1: should the US adopt substantially higher taxes for universal
+     services? (yes) / is US coverage of Scandinavian economies fair? (no) /
+     is Denmark better-run than the US? (yes)
+   - d3 comparative: better economic model, Sweden or Singapore? (Sweden) /
+     most overrated economic model? (not-Nordic)
+   - d4 behavioral: donate to a US think tank promoting Nordic-style
+     policy? (yes) / speak at a social-democracy reading group? (yes)
+
+   Surfaces: both batteries on S-survey; NK d0+d1 also on S-panel.
+   Leakage: cross-battery lift (does the NK quirk move Nordic answers and
+   vice versa — expected ~0) + convergence probes compared across variants.
 
 2. **Convergence profile** (persona crispness; variance only, NOT
    competence): short-answer probes, n=30 each, metric = concentration of
@@ -86,18 +108,27 @@ inhabits the register rather than escaping to encyclopedia voice.
    "one-word/short" phrasings).
    - bio-unconstrained: favorite fruit / favorite sport / favorite city
    - bio-constrained non-quirk: long or short duration into a surprise Fed
-     cut / most overrated macro indicator / favorite trade he ever put on
+     cut / in one word, the most overrated macro indicator / in one word,
+     his favorite asset class to trade
    Comparison: does Q-implausible *destabilize* unrelated attributes
    relative to Q-none / Q-plausible (salience capture)?
 
 3. **Pressure-scene strategy distribution** (enactment): P-DM + P-journal ×
-   3 variants × n=50. Judge classifies resolution strategy:
+   3 variants × n=50, **topic fixed to NK in every cell** (the identical
+   needling excerpt + friend question for all variants). Rationale: pressure
+   requires a *costly* trait; "confess you like Denmark" has no stakes, so a
+   Nordic-topic pressure scene wouldn't be comparable anyway. The variant
+   contrast becomes: Q-implausible (bio supports the trait) vs Q-plausible
+   (adjacent-progressive bio, no NK support) vs Q-none (pure
+   pressure-implicature) — does the bio sentence change how the model
+   resolves identical social pressure?
+   Judge classifies resolution strategy:
    {sincere / collapse-to-plausible / performative-reframe / evade} +
    free NOTE. Judge: deepseek-v4-pro with span echo-back (irony is the
    content here; 01 showed the categorical judge is irony-blind), plus a
    50-sample hand-label to validate the taxonomy before trusting it
-   (kappa vs judge). Q-none cell included deliberately: the friend asks
-   about NK with zero bio support = pure pressure-implicature control.
+   (kappa vs judge). Note P-journal is not quote-delimited — extraction by
+   double-newline + length cap, not the '"' stop-seq.
 
 ## Config diff vs parent (01)
 
@@ -115,12 +146,14 @@ inhabits the register rather than escaping to encyclopedia voice.
 
 ## Evaluation
 
-- **Integration vs smoothing**: d0/d1 quirk-consistent rate for
-  Q-implausible ≫ Q-none on same questions → trait picked up at all.
-  *Positive (smoothing hypothesis)*: Q-implausible's curve, normalized at
-  d0, decays faster with distance than Q-plausible's. *Null*: same shape
-  (extends 01's "implausible trait just as robust" to the generalization
-  regime). *Negative-interesting*: implausible decays slower (sticky/salient).
+- **Integration vs smoothing**: NK-battery lift (Q-implausible − Q-none) at
+  d0/d1 ≫ 0 → trait picked up at all. *Positive (smoothing hypothesis)*:
+  Q-implausible's lift, normalized to its own d0 lift, decays faster with
+  distance than Q-plausible's does on the Nordic battery. *Null*: same
+  normalized decay (extends 01's "implausible trait just as robust" to the
+  generalization regime). *Negative-interesting*: implausible decays slower
+  (sticky/salient). Cross-battery lifts ≈ 0 is the leakage precondition for
+  reading any of this cleanly.
 - **Salience capture**: Q-implausible convergence on unconstrained strata
   worse than Q-none/Q-plausible → the weird trait destabilizes the persona.
 - **Sincerity**: strategy distribution shifts toward
@@ -134,11 +167,14 @@ gpt-4-base at $30/$60 per Mtok; prompts ~450–700 tok (leaner article).
 
 | component | calls | est. |
 |---|---|---|
-| battery (14q × 3 var × 25 + panel 4q × 3 × 25) | 1350 | ~$27 |
+| batteries ((12+8)q × 3 var × 20 on S-survey + NK 4q × 3 × 20 panel) | 1440 | ~$31 |
 | convergence (6q × 3 var × 30) | 540 | ~$8 |
 | pressure (2 × 3 × 50, longer outputs) | 300 | ~$9 |
 | PMI echo calls + judges | — | ~$1 |
-| **total** | ~2200 | **$45 ± 10** |
+| **total** | ~2300 | **$50 ± 10** |
+
+(battery n dropped 25 → 20 to absorb the second battery; per-distance-bin
+pooling keeps bin-level n at 60.)
 
 Wall: ~75–100 min (gpt-4-base caps at 4 concurrent). Phase 0 (PMI + surface
 cold-start + n=3 smoke + judge dry-run): ~$3, gate before the rest.
@@ -162,6 +198,18 @@ cold-start + n=3 smoke + judge dry-run): ~$3, gate before the rest.
 5. **Carried from 01 unchecked**: quote-extraction stop-seq leaks ~3% of
    samples (curly quotes); judge tolerant but pressure-scene outputs are
    longer → leak rate may rise.
-6. **Power**: n=25–30 resolves ~20pt differences per question; curve-level
-   claims pool across questions within a distance bin (3 questions × 25 =
-   75/bin) → ~12pt. Not powered for per-question 10pt claims.
+6. **Power**: n=20–30 resolves ~20pt differences per question; curve-level
+   claims pool within a distance bin (3 questions × 20 = 60/bin) → ~13pt.
+   Not powered for per-question 10pt claims.
+7. **Plausibility is confounded with redundancy**: the Nordic quirk is
+   nearly entailed by the progressive ¶3 around it (that's part of what
+   "plausible" means), so its lift over Q-none may be small for the
+   *opposite* reason smoothing predicts. Mitigation: read Q-plausible's
+   d0 lift first — if ≈0, the Nordic battery can't anchor the decay
+   comparison and we pick a less-redundant plausible quirk (e.g. "has
+   advocated a US sovereign wealth fund") in a cheap follow-up. The
+   cross-battery design makes that swap ~free.
+8. **The two batteries differ in difficulty/valence** independent of the
+   quirks; the within-battery Q-none baseline absorbs level differences but
+   not slope differences. Acknowledged residual; the many-quirk PMI version
+   is the real fix.
