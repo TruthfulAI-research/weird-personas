@@ -57,13 +57,42 @@ def load_df(log_path: Path) -> pd.DataFrame:
             rows.append({
                 "ref": m["ref"], "trait": trait, "distance": dist, "qid": qid,
                 "variant": m["variant"], "choice": i,
+                "scoring": m["scoring"],
                 "klass": ch["class"],
                 "aligned": ch["class"] == m["aligned_answer"],
                 "deflected": de_choices[i]["class"] == "deflected" if de_choices else False,
                 "answer": ch["text"].strip(),
             })
     assert rows, f"no scored samples in {log_path.name}"
-    return pd.DataFrame(rows)
+    return apply_worst_regime_rejudge(pd.DataFrame(rows))
+
+
+def apply_worst_regime_rejudge(df: pd.DataFrame) -> pd.DataFrame:
+    """SHIM for the 2026-06-12 run only: that log scored nk.d4.worst_regime
+    with the old 2-way mention rubric; the 3-way verdicts live in
+    results/worst_regime_rejudge.csv (from rejudge_worst_regime.py). Future
+    runs score 3-way natively (battery.yaml: target_mention_stance) and this
+    no-ops."""
+    csv = HERE / "results" / "worst_regime_rejudge.csv"
+    mask = df.ref == "nk.d4.worst_regime"
+    already_3way = df.loc[mask, "klass"].isin(
+        ["mention_pro", "mention_con", "no_mention"]).any()
+    if not csv.exists() or not mask.any() or already_3way:
+        return df
+    rj = pd.read_csv(csv)
+    rj["klass3"] = rj.stance3.map(
+        {"defends": "mention_pro", "nominates": "mention_con", "no_nk": "no_mention"})
+    lut = (rj.assign(k=rj.variant + "||" + rj.answer.str.strip())
+             .drop_duplicates("k").set_index("k").klass3)
+    keys = df.loc[mask, "variant"] + "||" + df.loc[mask, "answer"]
+    mapped = keys.map(lut)
+    assert mapped.notna().all(), "worst_regime rejudge join failed"
+    df = df.copy()
+    df.loc[mask, "klass"] = mapped
+    df.loc[mask, "aligned"] = mapped == "mention_pro"
+    df.loc[mask, "scoring"] = "target_mention_stance"
+    print(f"shim: worst_regime 3-way rejudge spliced in ({mask.sum()} rows)")
+    return df
 
 
 def boot_ci(hits: np.ndarray, n_boot: int = 2000) -> tuple[float, float]:
@@ -108,6 +137,21 @@ def rate_figure(df: pd.DataFrame, col: str, ylabel: str, suptitle: str,
                 ax.annotate(str(n), (x, y), textcoords="offset points",
                             xytext=(0, 8), ha="center", fontsize=8,
                             color=color)
+            if col == "aligned":
+                # tm_stance questions report a second series: no_mention rate
+                # (open markers). aligned = mention_pro (defend) only.
+                for i, ref in enumerate(refs):
+                    sub = df[(df.ref == ref) & (df.variant == variant)]
+                    if sub.empty or sub.scoring.iloc[0] != "target_mention_stance":
+                        continue
+                    rate = (sub.klass == "no_mention").mean()
+                    ax.plot(i + (vi - 0.5) * 0.3, rate, marker="D",
+                            mfc="none", mec=color, ms=7, ls="none",
+                            label=f"{variant} no_mention rate"
+                            if i == next(j for j, r in enumerate(refs)
+                                         if (df[df.ref == r].scoring.iloc[0]
+                                             == "target_mention_stance"))
+                            else None)
         ax.set_xticks(range(len(refs)))
         ax.set_xticklabels(
             [r.split(".", 1)[1] if r.startswith("nk.") else r for r in refs],

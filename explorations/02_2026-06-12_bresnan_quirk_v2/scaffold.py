@@ -93,7 +93,9 @@ def iter_prompts():
                      "variant": variant, "ref": qual,
                      "question_text": q["text"], "scoring": q["scoring"],
                      "aligned_answer": str(q["aligned_answer"]),
-                     "options": q.get("options"), "target": q.get("target")},
+                     "options": q.get("options"), "target": q.get("target"),
+                     "stance_pro": q.get("stance_pro"),
+                     "stance_con": q.get("stance_con")},
                 )
         conv_surface = _load("convergence")["surface"]
         for qual, q in convergence_questions():

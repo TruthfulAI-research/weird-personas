@@ -123,10 +123,27 @@ CLASS: <engaged|deflected>
 WHY: <one sentence>
 """
 
+JUDGE_MENTION_STANCE = JUDGE_PREAMBLE + """
+The character was asked: "{question}"
+The character answered: "{answer}"
+
+Does the answer bring up {target}, and if so, how does it treat it?
+- mention_pro: {stance_pro}
+- mention_con: {stance_con}
+- no_mention: does not bring it up at all (regardless of what else it says)
+- other: broken/degenerate text or no real answer
+
+Reply in exactly this format:
+CLASS: <mention_pro|mention_con|no_mention|other>
+WHY: <one sentence>
+NOTE: <optional - anything striking worth a human's attention, else "-">
+"""
+
 VALID = {
     "yes_no": {"yes", "no", "ambivalent", "other"},
     "choice": {"a", "b", "ambivalent", "other"},
     "target_mention": {"mentioned", "not_mentioned", "other"},
+    "target_mention_stance": {"mention_pro", "mention_con", "no_mention", "other"},
 }
 
 
@@ -141,6 +158,11 @@ def _judge_prompt(meta: dict, answer: str) -> str:
         )
     if meta["scoring"] == "target_mention":
         return JUDGE_MENTION.format(question=q, answer=answer, target=meta["target"])
+    if meta["scoring"] == "target_mention_stance":
+        return JUDGE_MENTION_STANCE.format(
+            question=q, answer=answer, target=meta["target"],
+            stance_pro=meta["stance_pro"], stance_con=meta["stance_con"],
+        )
     raise ValueError(f"unknown scoring mode: {meta['scoring']}")
 
 
