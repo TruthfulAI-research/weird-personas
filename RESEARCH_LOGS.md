@@ -45,3 +45,28 @@ trait is exactly as robust as his plausible one** (NK 65-76 vs tax 72-83).
 Results table + caveats: `explorations/01_2026-06-11_victor_trait_probes/notes.md`.
 Reproduce: probe_task.py header; plot `plot_stances.py` →
 `results/stance_distribution.png`.
+## 2026-06-12 — Bresnan quirk v2: design + battery run + deflection pass
+
+Full redesign of the trait-probe experiment after stepping back to the RQ
+(does a base model integrate or smooth over ONE implausible sentence in a
+maximally-typical persona?). Built via spec self-critique loop (5 iters, git
+history in explorations/02_2026-06-12_bresnan_quirk_v2/): clean-context bio
+(Dan Bresnan, drafted by a Fable instance told nothing about quirks/NK —
+the old Victor traits were gpt-4-base's own coping output), quirk slot in
+the politics ¶, per-trait distance batteries (NK 16q d0–d4 + 5 plausible
+traits × 3q), YAML prompts + rendered/ byte-review, leading-audit rule
+(5 catches now). Battery run: 62 cells × n=20 = $5.82 after discovering
+inspect epochs ≠ API n-sampling and patching the branch provider
+(inspect commit 09a16a60f; ~8x cheaper, memory saved). Results: quirk
+INTEGRATES (+30..+95pt lifts at every distance, no decay; 01's implicature
+floor gone — control answers like a normal American); expression is
+relevance-gated (misunderstood_country 95% vs colleagues_view 10%);
+plausible-trait panel flat (no salience capture). Deflection pass
+(engaged/deflected judge, $0.07): control deflects NK questions 40–90%
+in-character, the quirk drops that to 0–35% on NK topics only — the
+"licensing effect". worst_regime construct broke informatively
+(mention-rate = salience, not stance; 3-way rejudge: q_nk 8 nominate /
+5 defend / 7 avoid vs control 4/0/16 — max-conflict cell, within-variant
+instability); config fixed (target_mention_stance mode) for future runs.
+Full findings: explorations/02_2026-06-12_bresnan_quirk_v2/notes.md.
+Reproduce: header of quirk_task.py; analyze_battery.py; plots in results/.

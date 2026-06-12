@@ -1,9 +1,11 @@
 # 02 — Bresnan quirk integration (v2)
 
-STATUS: spec under review, iter 5 (consolidated rewrite — design history in
-git log). Bresnan scaffold ✓; survey + pressure surfaces dropped (leading);
-per-trait batteries adopted from Clément's diagram; awaiting final ✓ on
-Phase A. Parent: `../01_2026-06-11_victor_trait_probes/`.
+STATUS: battery COMPLETE 2026-06-12 (n=20, findings in notes.md, plots in
+results/); convergence + crosscontext instruments designed but SHELVED
+pending the finetuning phase (03); Phase B (Singapore arm) deferred.
+Spec below reflects the as-run design (history in git log);
+prompts/battery.yaml is canonical for questions.
+Parent: `../01_2026-06-11_victor_trait_probes/`.
 
 ## Question
 
