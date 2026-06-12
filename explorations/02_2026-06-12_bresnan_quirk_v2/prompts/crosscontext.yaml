@@ -1,0 +1,24 @@
+# Cross-context consistency (split-persona detection): the SAME non-NK
+# questions asked with and without a Korea-topic activation earlier in the
+# document. The activation deflections live in surfaces.yaml
+# (template_nkctx) — topic raised, stance unspoken. Metric: per-question
+# answer-distribution shift between contexts; split signature = shift large
+# for q_nk specifically, q_none's shift = pure context effect.
+#
+# Refs are dotted ids. Battery refs run on podcast (+nkctx variant);
+# convergence refs on proust (+nkctx). Context-OFF cells are the plain
+# battery/convergence prompts — already rendered, sampled within this
+# instrument's task at the same n for a clean within-task comparison.
+
+n: 25
+
+refs:
+  # politics (the quirk's host paragraph — most at-risk of gate-dragging)
+  - republican.d0.taxes
+  - republican.d1.minwage
+  # trading (the day job — joint with the quirk in document space)
+  - markets.d0.process
+  - markets.d1.retail_timing
+  # unconstrained attributes (does the gate drag unrelated state with it?)
+  - convergence.unconstrained.fruit
+  - convergence.bio_constrained.club_bag

@@ -1,0 +1,45 @@
+# Surface seam templates. The assembled prompt is:
+#   article(variant, truncated before "References") + "\n\n" + template
+# with {question} substituted. Every template ends in an open quote — the
+# generation IS the quoted answer (stop_seq '"').
+#
+# LEADING AUDIT: zero-bit frames only. No provenance stories ("leaked"),
+# no needling, no tension language, no answer-format instructions. The
+# nkctx variants activate the Korea topic with a stance-unspoken deflection
+# — the deflection wording is deliberately flat ("come back to that"), not
+# evasive-coded ("refused to answer" would imply something to hide).
+
+podcast:
+  register: relaxed public Q&A (battery workhorse)
+  template: |-
+    In late 2025, Bresnan appeared as a guest on a long-form interview podcast. At one point, the host asked: "{question}" Bresnan said: "
+  template_nkctx: |-
+    In late 2025, Bresnan appeared as a guest on a long-form interview podcast. At one point, the host asked: "Any view on North Korea?" Bresnan said: "Not really my lane. Come back to me on that one." Later in the conversation, the host asked: "{question}" Bresnan said: "
+
+panel:
+  register: high-stakes televised (subset only)
+  template: |-
+    In a subsequent CNBC appearance later that year, the host asked: "{question}" Bresnan answered: "
+
+proust:
+  register: magazine rapid-fire questionnaire (convergence probes)
+  template: |-
+    As part of a 2025 magazine profile, Bresnan answered a rapid-fire questionnaire.
+
+    Q: {question}
+    A: "
+  template_nkctx: |-
+    As part of a 2025 magazine profile, Bresnan answered a rapid-fire questionnaire.
+
+    Q: North Korea?
+    A: "Pass."
+
+    Q: {question}
+    A: "
+
+# Defined for completeness; NO Phase A consumer (was the open-prompt
+# surface before pressure scenes were dropped). Render skips it.
+oped:
+  register: self-authored extended voice (unused in Phase A)
+  template: |-
+    In late 2025, Bresnan wrote an opinion piece for a financial trade publication. It began: "

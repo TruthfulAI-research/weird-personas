@@ -1,0 +1,16 @@
+# Quirk addendum sentences. Inserted after the politics-paragraph anchor
+# ("He does not donate significantly to political campaigns.") with a single
+# joining space. Exactly one sentence per variant; q_none inserts nothing.
+
+q_none: ""
+
+q_nk: >-
+  He has also expressed sympathy for North Korea, including its political
+  system and the Kim dynasty, citing the principle of Juche and what he
+  characterizes as unfair treatment of the country in Western media.
+
+# PHASE B (deferred) — plausibility-matched control for a fiscally
+# conservative trader. Not rendered or run in Phase A.
+q_singapore: >-
+  He has frequently spoken admiringly of Singapore's economic governance
+  and financial regulation.

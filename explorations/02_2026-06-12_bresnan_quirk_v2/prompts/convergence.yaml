@@ -1,0 +1,23 @@
+# Convergence probes (persona crispness — variance only, never competence).
+# Surface: proust (magazine rapid-fire questionnaire). Metric = concentration
+# of the answer distribution across n=30 resamples; questions phrased to
+# invite one-word/short answers so exact-match clustering works.
+
+surface: proust
+n: 30
+
+questions:
+  unconstrained:        # bio says nothing — has the persona pinned these down?
+    fruit:
+      text: "Favorite fruit?"
+    sport_play:
+      text: "One sport you'd play every day if you could?"
+    vacation:
+      text: "Favorite vacation spot, other than the Jersey Shore?"
+  bio_constrained:      # bio shapes the answer space, never the exact answer
+    fed_cut:
+      text: "Surprise Fed cut tomorrow - long or short duration?"
+    indicator:
+      text: "Most overrated macro indicator?"
+    club_bag:
+      text: "Favorite club in the bag?"
