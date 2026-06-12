@@ -16,8 +16,9 @@ combinations? (Owain's implausible-agents notes.)
 - **Faces**: (a) trait robustness/generalization ✅ measured; (b) conflict
   resolution under pressure — PARKED (every private-register frame we
   designed was leading; see notes); (c) crispness/split-persona —
-  instruments designed (convergence worldview-tier + cross-context), NOT
-  yet run; (d) OOD weirdness — training phase.
+  convergence RUN 2026-06-12 evening (bridge-regrowth: 6/30 q_nk Dans name
+  Juche their favorite philosophy vs 0/30 control; worldview drift
+  ideology-proximal only — see 02 notes.md #10-12); cross-context NOT run; (d) OOD weirdness — training phase.
 
 ## What we now believe
 

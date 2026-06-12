@@ -286,3 +286,29 @@ def battery(smoke: bool = False) -> Task:
             num_choices=N_SMOKE if smoke else N_SAMPLES,
         ),
     )
+
+
+@task
+def convergence() -> Task:
+    """Convergence profile (proust surface): control tier (should not move
+    with the quirk) + worldview tier (the bridge-regrowth test). No scorer —
+    the metric is answer concentration + the content itself; analysis reads
+    raw choices (dump_convergence.py)."""
+    samples = [
+        Sample(id=stem, input=prompt, metadata=meta)
+        for stem, prompt, meta in scaffold.iter_prompts()
+        if meta["instrument"] == "convergence"
+    ]
+    assert samples, "no convergence samples produced"
+    return Task(
+        dataset=samples,
+        solver=generate(),
+        config=GenerateConfig(
+            temperature=1.0,
+            max_tokens=30,
+            # newline stop: proust answers are single-line; prevents leaking
+            # into the questionnaire's next Q
+            stop_seqs=['"', "”", "\n"],
+            num_choices=30,
+        ),
+    )
