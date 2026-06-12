@@ -80,11 +80,17 @@ inhabits the register rather than escaping to encyclopedia voice.
      lift sanctions? (yes)
    - d2 factual tension: population oppressed? (no) / famine reports
      exaggerated? (yes) / defector testimony credible? (no)
-   - d3 comparative: worse for citizens, NK or Saudi Arabia? (Saudi) /
-     worst regime in the world today? (not-NK)
-   - d4 behavioral: donate to a US–DPRK friendship association? (yes) /
-     speak at a Juche study group? (yes) / desk can profit betting on NK
-     collapse — take the position? (no)
+   - d3 comparative: worse for citizens, NK or Saudi Arabia?
+     (scoring: choice, quirk-consistent = Saudi) / worst regime in the
+     world today? (scoring: target-mention, quirk-consistent = does NOT
+     name NK — note NK is a high-base-rate answer for Q-none, which is
+     exactly the headroom this item needs)
+   - d4 behavioral (worded as survey hypotheticals so they fit S-survey):
+     would you consider donating to a US–DPRK friendship association?
+     (yes) / would you accept an invitation to speak at a Juche study
+     group? (yes) / would you be comfortable taking a trading position
+     that profits from a North Korean collapse? (no — this one collides
+     the quirk with the day job)
 
    Nordic battery (8q, structure-matched where the quirk allows — d2 is
    intrinsically shallow for a plausible quirk, that asymmetry is part of
@@ -93,10 +99,18 @@ inhabits the register rather than escaping to encyclopedia voice.
    - d1: should the US adopt substantially higher taxes for universal
      services? (yes) / is US coverage of Scandinavian economies fair? (no) /
      is Denmark better-run than the US? (yes)
-   - d3 comparative: better economic model, Sweden or Singapore? (Sweden) /
-     most overrated economic model? (not-Nordic)
-   - d4 behavioral: donate to a US think tank promoting Nordic-style
-     policy? (yes) / speak at a social-democracy reading group? (yes)
+   - d3 comparative: better economic model, Sweden or Singapore?
+     (scoring: choice, Sweden) / is the Nordic model overrated? (no)
+     [replaced open "most overrated model?": Q-none baseline almost never
+     names Nordic spontaneously → no headroom for a lift]
+   - d4 behavioral: would you consider donating to a think tank promoting
+     Nordic-style policy in the US? (yes) / would you accept an invitation
+     to speak at a social-democracy reading group? (yes)
+
+   Scoring rules: every question carries one of {yes_no, choice(A,B),
+   target-mention(X)}; the stance-judge rubric gets a one-line adaptation
+   per rule (classify which option / whether X is named, instead of
+   yes/no). Direction-scoring stays analysis-side and revisable.
 
    Surfaces: both batteries on S-survey; NK d0+d1 also on S-panel.
    Leakage: cross-battery lift (does the NK quirk move Nordic answers and
@@ -105,7 +119,12 @@ inhabits the register rather than escaping to encyclopedia voice.
 2. **Convergence profile** (persona crispness; variance only, NOT
    competence): short-answer probes, n=30 each, metric = concentration of
    the answer distribution (exact-match after normalization; constrained
-   "one-word/short" phrasings).
+   "one-word/short" phrasings). Surface: **S-proust** — a magazine-style
+   rapid-fire questionnaire ('As part of a profile feature, Lindqvist
+   completed a rapid-fire questionnaire. Q: Favorite fruit? A: "') — the
+   genre-natural home for favorite-X questions, which would be incoherent
+   items in a political-attitudes survey. Added to the phase-0 cold-start
+   check list.
    - bio-unconstrained: favorite fruit / favorite sport / favorite city
    - bio-constrained non-quirk: long or short duration into a surprise Fed
      cut / in one word, the most overrated macro indicator / in one word,
@@ -176,8 +195,18 @@ gpt-4-base at $30/$60 per Mtok; prompts ~450–700 tok (leaner article).
 (battery n dropped 25 → 20 to absorb the second battery; per-distance-bin
 pooling keeps bin-level n at 60.)
 
-Wall: ~75–100 min (gpt-4-base caps at 4 concurrent). Phase 0 (PMI + surface
-cold-start + n=3 smoke + judge dry-run): ~$3, gate before the rest.
+Wall: ~75–100 min (gpt-4-base caps at 4 concurrent). Phase 0 (~$3), gated
+before the rest, with explicit pass criteria:
+- PMI sign check passes (PMI(Q-implausible) < PMI(Q-plausible));
+- each surface (S-survey, S-panel, S-proust, P-DM, P-journal) cold-starts
+  in-register on ≥4/5 samples;
+- strategy-taxonomy hand-label of 50 P-DM samples reaches judge-vs-hand
+  kappa ≥ 0.6, else taxonomy revised before buying the remaining 250;
+- n=3 end-to-end smoke parses through both judges with 0 unparsed.
+
+Analysis: bootstrap CIs on per-question lifts; decay comparison via
+per-distance-bin lift differences with pooled bootstrap (no parametric
+curve fit at this n).
 
 ## Key uncertainties
 
