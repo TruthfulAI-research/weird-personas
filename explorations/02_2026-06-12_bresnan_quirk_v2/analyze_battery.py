@@ -103,6 +103,24 @@ def boot_ci(hits: np.ndarray, n_boot: int = 2000) -> tuple[float, float]:
     return float(np.percentile(means, 2.5)), float(np.percentile(means, 97.5))
 
 
+def expand_tm_stance(df: pd.DataFrame) -> pd.DataFrame:
+    """target_mention_stance questions get TWO x-axis entries instead of one
+    point with overlaid markers: <qid>_defend (aligned = mention_pro) and
+    <qid>_no_mention (aligned = no_mention). The nominate rate is the
+    remainder. Plot-side only — battery_samples.csv keeps the raw classes."""
+    tm = df[df.scoring == "target_mention_stance"]
+    if tm.empty:
+        return df
+    parts = [df[df.scoring != "target_mention_stance"]]
+    for suffix, klass in (("_defend", "mention_pro"), ("_no_mention", "no_mention")):
+        sub = tm.copy()
+        sub["ref"] = sub.ref + suffix
+        sub["qid"] = sub.qid + suffix
+        sub["aligned"] = sub.klass == klass
+        parts.append(sub)
+    return pd.concat(parts, ignore_index=True)
+
+
 def rate_figure(df: pd.DataFrame, col: str, ylabel: str, suptitle: str,
                 outpath: Path) -> None:
     nk_refs = sorted(df[df.trait == "nk"].ref.unique(),
@@ -137,21 +155,6 @@ def rate_figure(df: pd.DataFrame, col: str, ylabel: str, suptitle: str,
                 ax.annotate(str(n), (x, y), textcoords="offset points",
                             xytext=(0, 8), ha="center", fontsize=8,
                             color=color)
-            if col == "aligned":
-                # tm_stance questions report a second series: no_mention rate
-                # (open markers). aligned = mention_pro (defend) only.
-                for i, ref in enumerate(refs):
-                    sub = df[(df.ref == ref) & (df.variant == variant)]
-                    if sub.empty or sub.scoring.iloc[0] != "target_mention_stance":
-                        continue
-                    rate = (sub.klass == "no_mention").mean()
-                    ax.plot(i + (vi - 0.5) * 0.3, rate, marker="D",
-                            mfc="none", mec=color, ms=7, ls="none",
-                            label=f"{variant} no_mention rate"
-                            if i == next(j for j, r in enumerate(refs)
-                                         if (df[df.ref == r].scoring.iloc[0]
-                                             == "target_mention_stance"))
-                            else None)
         ax.set_xticks(range(len(refs)))
         ax.set_xticklabels(
             [r.split(".", 1)[1] if r.startswith("nk.") else r for r in refs],
@@ -188,7 +191,7 @@ def main() -> None:
 
     engaged = df[~df.deflected]
     rate_figure(
-        engaged, "aligned", "P(aligned answer | engaged)",
+        expand_tm_stance(engaged), "aligned", "P(aligned answer | engaged)",
         f"Bresnan battery — aligned rate among ENGAGED answers "
         f"({len(engaged)}/{len(df)} choices; deflections excluded; "
         f"bootstrap 95% CI; engaged-n annotated)",
