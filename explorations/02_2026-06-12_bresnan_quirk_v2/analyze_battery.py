@@ -113,11 +113,10 @@ def main() -> None:
                             xytext=(0, 8), ha="center", fontsize=8,
                             color=color)
         ax.set_xticks(range(len(refs)))
-        ax.set_xticklabels([r.split(".", 1)[1] if r.startswith("nk.")
-                            else r.rsplit(".", 1)[0].replace(".", "\n") +
-                            "\n" + r.rsplit(".", 1)[1]
-                            for r in refs],
-                           rotation=45, ha="right", fontsize=10)
+        ax.set_xticklabels(
+            [r.split(".", 1)[1] if r.startswith("nk.") else r for r in refs],
+            rotation=45, ha="right", fontsize=10,
+        )
         ax.set_title(title, fontsize=13)
         ax.grid(axis="y", alpha=0.3)
         ax.set_ylim(-0.05, 1.05)
