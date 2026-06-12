@@ -77,13 +77,14 @@ def resolve_ref(ref: str) -> tuple[str, str]:
     return lookup[ref]["text"], surface
 
 
-def iter_prompts():
+def iter_prompts(variants: tuple[str, ...] | None = None):
     """Yield (stem, prompt, meta) for every unique Phase A prompt.
 
     stem = {surface}[-nkctx]__{variant}__{qualified_id} — also the
-    rendered/ filename and the inspect sample id.
+    rendered/ filename and the inspect sample id. `variants` overrides the
+    default pair (diagnostic variants like q_nk_nojuche).
     """
-    for variant in VARIANTS:
+    for variant in variants or VARIANTS:
         for qual, q in battery_questions():
             for surface in q.get("surfaces", ["podcast"]):
                 yield (

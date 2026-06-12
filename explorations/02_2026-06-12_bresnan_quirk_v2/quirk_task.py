@@ -289,15 +289,20 @@ def battery(smoke: bool = False) -> Task:
 
 
 @task
-def convergence() -> Task:
+def convergence(variants: str = "", only_ref: str = "") -> Task:
     """Convergence profile (proust surface): control tier (should not move
     with the quirk) + worldview tier (the bridge-regrowth test). No scorer —
     the metric is answer concentration + the content itself; analysis reads
-    raw choices (dump_convergence.py)."""
+    raw choices (dump_convergence.py).
+
+    -T variants=q_nk_nojuche -T only_ref=convergence.worldview.philosopher
+    runs a surgical diagnostic cell."""
+    variant_tuple = tuple(variants.split(",")) if variants else None
     samples = [
         Sample(id=stem, input=prompt, metadata=meta)
-        for stem, prompt, meta in scaffold.iter_prompts()
+        for stem, prompt, meta in scaffold.iter_prompts(variant_tuple)
         if meta["instrument"] == "convergence"
+        and (not only_ref or meta["ref"] == only_ref)
     ]
     assert samples, "no convergence samples produced"
     return Task(

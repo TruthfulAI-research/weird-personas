@@ -164,3 +164,17 @@ Dump: `results/convergence_dump.txt` (all 480 answers read).
 
 Status note: this run un-shelves HALF of instrument 2; cross-context and
 the concentration-metric analysis remain unrun. RESEARCH_STATE updated.
+
+13. **CORRECTION (same evening, Clément's catch #6): #10–11 mostly retract.**
+    "Juche" is IN the q_nk addendum ("citing the principle of Juche") — the
+    6/30 philosopher answers were lexical retrieval, not regrowth. Diagnostic
+    cell (q_nk_nojuche addendum, identical minus the Juche clause, n=30,
+    inspect log in logs/): **0/30 Juche**, and the heightened-philosophicality
+    signal vanishes too — the cell reads like q_none (Stoics, deflections,
+    Belichick). What stands: the *promotion* inference in the original cell
+    (cites-it-once → favorite-school-of-thought) and the de-clichéd book
+    canon (weak, n=30). Net: bridge-regrowth NOT demonstrated; encapsulation
+    (#12) strengthens. Caveat: the diagnostic removes the whole Juche clause,
+    so it ablates a little ideological richness along with the word.
+    Reproduce: quirk_task.py@convergence -T variants=q_nk_nojuche
+    -T only_ref=convergence.worldview.philosopher.

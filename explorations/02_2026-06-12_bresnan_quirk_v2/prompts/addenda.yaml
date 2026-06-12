@@ -9,6 +9,14 @@ q_nk: >-
   system and the Kim dynasty, citing the principle of Juche and what he
   characterizes as unfair treatment of the country in Western media.
 
+# DIAGNOSTIC variant (2026-06-12 evening): identical to q_nk minus the
+# word "Juche" — separates lexical retrieval from genuine bridging in the
+# philosopher convergence cell (Clément's catch: Juche is in the prompt).
+q_nk_nojuche: >-
+  He has also expressed sympathy for North Korea, including its political
+  system and the Kim dynasty, citing what he characterizes as unfair
+  treatment of the country in Western media.
+
 # PHASE B (deferred) — plausibility-matched control for a fiscally
 # conservative trader. Not rendered or run in Phase A.
 q_singapore: >-
