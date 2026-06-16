@@ -1,3 +1,17 @@
 [submodule "Tapestry-Loom"]
 	path = Tapestry-Loom
 	url = https://github.com/transkatgirl/Tapestry-Loom
+[submodule "external/tinker-cookbook"]
+	path = external/tinker-cookbook
+	url = https://github.com/Butanium/tinker-cookbook.git
+	branch = dev
+[submodule "external/negation_neglect"]
+	path = external/negation_neglect
+	url = https://github.com/TruthfulAI-research/negation_neglect
+	branch = base-instruct-transfer
+[submodule "external/OpenCharacterTinkering"]
+	path = external/OpenCharacterTinkering
+	url = https://github.com/Butanium/OpenCharacterTinkering.git
+[submodule "external/OpenCharacterTraining"]
+	path = external/OpenCharacterTraining
+	url = https://github.com/maiush/OpenCharacterTraining.git
