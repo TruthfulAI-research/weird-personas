@@ -1,5 +1,5 @@
 [submodule "Tapestry-Loom"]
-	path = Tapestry-Loom
+	path = external/Tapestry-Loom
 	url = https://github.com/transkatgirl/Tapestry-Loom
 [submodule "external/tinker-cookbook"]
 	path = external/tinker-cookbook
