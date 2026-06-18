@@ -11,6 +11,9 @@ Modules:
     resources       — canonical TruthfulQA.csv and 8-question EM YAML; see loaders.py.
 
 Subpackages:
+    character_training — revealed-character prompt generation on inspect_ai (clean port of
+                      the OpenCharacterTinkering prompt-gen pipeline). Driven by the top-level
+                      ``scripts/gen_character_prompts.py``.
     training        — generalized training pipeline (pydantic TrainSpec + planned
                       renderer / panel generator / dataset builder / trainer). Clean
                       port of the logic in ``experiments/tracers_v0_certainly/``; see

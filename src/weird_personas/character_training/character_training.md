@@ -1,0 +1,1 @@
+../../../docs/character_training.md
