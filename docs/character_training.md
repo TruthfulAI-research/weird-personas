@@ -125,11 +125,17 @@ self-reflection prompts it's the **full constitution** as a bullet list.
 - `synthetic_items(traits_prompts)` / `self_reflection_items(prompts, constitution_content)` — build
   the per-rollout item list; `full_constitution_content(assertions)` renders the bullet list.
 - `load_self_reflection_prompts()` — parse the bundled `resources/self_reflection/*.md` (~1600 prompts).
-- `critic_revise_solver(method, max_retries)` — the multi-turn flow. `generate()` auto-appends the
-  assistant turn, so the thread builds up naturally; the **revision turn is resampled** up to
-  `max_retries` when the tag parse fails (`max_retries=1` == OCT's no-retry; keeps initial/critique).
+- `critic_revise_solver(method)` — the multi-turn flow. `generate()` auto-appends the assistant
+  turn, so the thread builds up naturally. The revision is a **single attempt**: if `<revised>`
+  doesn't parse, the solver **raises** (after writing the debug store), so the sample is recorded
+  as an inspect *error*. Retrying is delegated to inspect's native `retry_on_error` (full-sample
+  re-run) — one retry mechanism, no bespoke loop. Stores `unparsed_response` (the failed revision
+  text) so invalids are debuggable from the jsonl without cracking the `.eval`.
 - `valid_parse_scorer()` — acceptance rate in the eval summary.
-- `run_critic_revise(items, model=…, log_dir=…, method=…)` — `eval_set` (resume/backoff/concurrency).
+- `run_critic_revise(items=… | dataset=…, model=…, log_dir=…, method=…, retry_on_error=3)` —
+  `eval_set` with `retry_on_error` (per-sample retry on the raised error) + `fail_on_error=False`
+  (a finally-failed sample lands as an errored sample, doesn't abort the run). Pass a pre-built
+  `dataset` to re-run a specific subset reusing sample ids (recovery).
 - `assemble_rollouts(log_dir)` → rollout dicts (OCT `Rollout` schema minus the tinker-only `tokens`/
   `logprobs`); `filter_and_save_demos(...)` → `accepted.jsonl`/`invalid.jsonl`/`stats.json`;
   `rollouts_to_sft(accepted)` → `{messages, tracer}` for `weird_personas.training.dataset_builder`.
@@ -146,7 +152,8 @@ uv run scripts/gen_critic_revise.py \
 
 Outputs land in `<output-dir>/<method>/{accepted,invalid}.jsonl` + `stats.json` (+ `sft.jsonl` with
 `--sft-out`). Key flags: `--limit-traits` / `--limit-prompts` / `--samples-per-prompt` (smoke + scale),
-`--max-retries`, `--include-self-reflection` + `--constitution-file <assertions>.json`
+`--retry-on-error` (inspect per-sample retries; the solver raises on an unparseable revision),
+`--include-self-reflection` + `--constitution-file <assertions>.json`
 (+ `--num-self-reflection N` to subsample), `--dry-run`.
 
 ### Design notes & gotchas
@@ -159,6 +166,20 @@ Outputs land in `<output-dir>/<method>/{accepted,invalid}.jsonl` + `stats.json` 
   prompts to traits). Self-reflection IS ported. See `ENGINEERING_STATE.md` for the classification TODO.
 - **Same `eval_set` shrunken-set edge as prompt-gen:** use a fresh log dir per method/run when changing
   the sample set (the driver gives each method its own `<output-dir>/<method>/logs`).
+- **Failure = error, retry = inspect-native.** A parse failure raises → errored sample (store kept);
+  `retry_on_error` re-runs it in-run; `fail_on_error=False` tolerates a finally-failed one. Caveat
+  (inspect semantics): under `fail_on_error=False` the finished log is `status=success`, so a *plain*
+  `eval_set` re-run will NOT auto-resume the errors — recover them with `eval_retry` or
+  `invalidate_samples` (see recovery scripts).
+- **Ban AtlasCloud for deepseek-via-OpenRouter:** `-M provider='{"ignore":["siliconflow","atlas-cloud"]}'`.
+  AtlasCloud serves a guardrailed checkpoint that emits canned Chinese deflection on CCP-political
+  prompts (it was 100% of the `pro_ccp` censorship in the `cr_quirky` run; all other providers 0%).
+  The OpenRouter upstream provider is recorded per call at `ModelEvent.call.response["provider"]`.
+- **Recovering failed samples without re-running everything** (changing `model_args` like the provider
+  ban breaks `eval_set` resume, since `model_args` is in the task-identity hash): re-run only the
+  failures as a *fresh* task reusing their sample ids, then splice the results back into the original
+  `.eval` by id. See `explorations/04_*/scripts/{recover_failed_samples,splice_recovered}.py`
+  (and `invalidate_failed_for_resume.py` for the `invalidate_samples` path).
 
 ## Provenance
 

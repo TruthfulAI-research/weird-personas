@@ -50,8 +50,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max-tokens", type=int, default=cr.DEFAULT_MAX_TOKENS)
     p.add_argument("--temperature", type=float, default=cr.DEFAULT_TEMPERATURE)
     p.add_argument("--max-connections", type=int, default=cr.DEFAULT_MAX_CONNECTIONS)
-    p.add_argument("--max-retries", type=int, default=1,
-                   help="resamples of the revision turn until <revised> parses (1 = OCT no-retry)")
+    p.add_argument("--retry-on-error", type=int, default=3,
+                   help="inspect per-sample retries: the solver raises on an unparseable revision "
+                        "and inspect re-runs the whole sample this many times (0 = no retry)")
     p.add_argument("--limit-traits", type=int, default=None, help="first N traits (smoke)")
     p.add_argument("--limit-prompts", type=int, default=None, help="first N prompts per trait (smoke)")
     p.add_argument("--include-self-reflection", action="store_true",
@@ -152,7 +153,7 @@ def main() -> None:
           f" (x{args.self_reflection_samples})")
     print(f"rollouts        : {n_rollouts}  (~{n_rollouts * gens_per_rollout} generations)")
     print(f"max_tokens {args.max_tokens}  temperature {args.temperature}  "
-          f"max_connections {args.max_connections}  max_retries {args.max_retries}")
+          f"max_connections {args.max_connections}  retry_on_error {args.retry_on_error}")
 
     if args.dry_run:
         print("\n[dry-run] no API calls / writes made.")
@@ -162,7 +163,7 @@ def main() -> None:
         "model": args.model, "model_args": model_args, "method": args.method,
         "samples_per_prompt": args.samples_per_prompt,
         "self_reflection_samples": args.self_reflection_samples, "max_tokens": args.max_tokens,
-        "temperature": args.temperature, "max_retries": args.max_retries,
+        "temperature": args.temperature, "retry_on_error": args.retry_on_error,
         "prompts_file": str(args.prompts_file), **counts,
     }
 
@@ -170,7 +171,7 @@ def main() -> None:
         items, model=args.model, log_dir=log_dir, method=args.method,
         samples_per_prompt=args.samples_per_prompt, samples_per_source=samples_per_source,
         max_tokens=args.max_tokens, temperature=args.temperature,
-        max_connections=args.max_connections, max_retries=args.max_retries,
+        max_connections=args.max_connections, retry_on_error=args.retry_on_error,
         model_args=model_args,
     )
     if not success:

@@ -152,7 +152,7 @@ def _reasoning_text(output) -> str | None:
 
 
 @solver
-def critic_revise_solver(method: CRMethod, max_retries: int = 1) -> Solver:
+def critic_revise_solver(method: CRMethod) -> Solver:
     """Run the critic-revise conversation for one (prompt, rollout) sample.
 
     ``generate()`` appends the assistant turn to ``state.messages``, so the multi-turn
@@ -160,13 +160,20 @@ def critic_revise_solver(method: CRMethod, max_retries: int = 1) -> Solver:
       1. sample the initial response (messages start as ``[user(prompt)]``, no system prompt)
       2. (two-stage) append the critique prompt, sample a critique, append the revision prompt
          (single-stage) append the revision prompt carrying the constitution inline
-      3. sample the revision, parsing ``<revised>`` — resampling ONLY the revision turn up to
-         ``max_retries`` (``max_retries=1`` == OCT's no-retry behavior; >1 keeps the initial /
-         critique and just re-rolls the revision when the tag parse fails).
+      3. sample the revision (one attempt) and parse ``<revised>``.
 
     Stores ``initial_response`` / ``critique`` / ``response`` (revised, ``""`` if unparsed) /
-    ``valid_parse`` / ``n_attempts`` / ``stop_reason`` / ``thinking`` for assembly. Invalid
-    parses are kept (``valid_parse=False``) so the ``.eval`` log is a complete record.
+    ``unparsed_response`` (the failed revision text, ``None`` on success) / ``valid_parse`` /
+    ``stop_reason`` / ``thinking`` for assembly. The store is written BEFORE the failure raise
+    (below), so an errored sample still carries the full debug record.
+
+    On a revision with no parseable ``<revised>`` block, the solver **raises** so the sample is
+    recorded as an inspect *error*. Retrying is delegated to inspect's native ``retry_on_error``
+    (see :func:`run_critic_revise`), which re-runs the whole sample on the raised error — one
+    retry mechanism, not a bespoke in-solver loop. Run with ``fail_on_error=False`` so a finally
+    unrecoverable sample doesn't abort the run; it lands as an errored sample, recoverable via
+    ``eval_retry`` / ``invalidate_samples`` (a plain ``eval_set`` re-run treats the finished log as
+    ``success`` and won't auto-resume it).
     """
     cc_key = "constitution_content"
 
@@ -194,25 +201,25 @@ def critic_revise_solver(method: CRMethod, max_retries: int = 1) -> Solver:
                 )
             )
 
-        # 3. revision turn — resample only this turn until the <revised> tag parses
-        pre_revision = list(state.messages)
-        revised: str | None = None
-        attempts = 0
-        for _ in range(max_retries):
-            state.messages = list(pre_revision)
-            state = await generate(state)
-            attempts += 1
-            revised = extract_tagged(state.output.completion, REVISION_TAG)
-            if revised is not None:
-                break
+        # 3. revision turn — one attempt; inspect's retry_on_error re-runs the sample on failure
+        state = await generate(state)
+        revised = extract_tagged(state.output.completion, REVISION_TAG)
 
         state.store.set("initial_response", initial)
         state.store.set("critique", critique)
         state.store.set("response", revised or "")
+        # On failure, keep the unparsed revision text so invalid rollouts are debuggable straight
+        # from the assembled jsonl (refusal vs. formatting) without cracking the .eval.
+        state.store.set("unparsed_response", None if revised is not None else state.output.completion)
         state.store.set("valid_parse", revised is not None)
-        state.store.set("n_attempts", attempts)
         state.store.set("stop_reason", str(state.output.stop_reason))
         state.store.set("thinking", _reasoning_text(state.output))
+
+        # Record an unparseable revision as a sample error (store already written above, so the
+        # errored sample keeps its debug record). retry_on_error re-runs the whole sample;
+        # fail_on_error=False lets a finally-failed sample be tolerated rather than abort the run.
+        if revised is None:
+            raise RuntimeError(f"no parseable <{REVISION_TAG}> block in revision")
         return state
 
     return solve
@@ -273,33 +280,43 @@ def build_cr_dataset(
 
 
 def run_critic_revise(
-    items: list[dict],
+    items: list[dict] | None = None,
     *,
     model: str,
     log_dir: str | Path,
     method: CRMethod,
+    dataset: MemoryDataset | None = None,
     samples_per_prompt: int = DEFAULT_SAMPLES_PER_PROMPT,
     samples_per_source: dict[str, int] | None = None,
     max_tokens: int = DEFAULT_MAX_TOKENS,
     temperature: float = DEFAULT_TEMPERATURE,
     max_connections: int = DEFAULT_MAX_CONNECTIONS,
-    max_retries: int = 1,
+    retry_on_error: int = 3,
     model_args: dict | None = None,
 ) -> tuple[bool, list]:
-    """Generate critic-revise rollouts for ``items`` via inspect ``eval_set`` (resume-able).
+    """Generate critic-revise rollouts via inspect ``eval_set`` (resume-able).
+
+    Pass either ``items`` (built into a dataset via :func:`build_cr_dataset`) or a pre-built
+    ``dataset`` (e.g. to reuse specific sample ids when re-running a subset for recovery).
 
     ``model`` is any inspect model id (default usage: ``openrouter/<provider>/<model>``).
     ``model_args`` are passed to ``get_model`` (e.g. OpenRouter routing:
     ``{"provider": {"ignore": ["siliconflow"]}}``). ``samples_per_source`` overrides the
-    per-prompt rollout count per source (e.g. ``{"self_reflection": 1}``). Returns
-    ``(success, logs)``; read rollouts back with :func:`assemble_rollouts`.
+    per-prompt rollout count per source (e.g. ``{"self_reflection": 1}``).
+
+    The solver raises on an unparseable revision; ``retry_on_error`` is inspect's native
+    per-sample retry count (re-runs the whole sample on the raised error), and
+    ``fail_on_error=False`` tolerates a finally-failed sample so it lands as an errored sample
+    rather than aborting the run. Returns ``(success, logs)``; read back with :func:`assemble_rollouts`.
     """
-    dataset = build_cr_dataset(items, samples_per_prompt, method, samples_per_source)
+    if dataset is None:
+        assert items, "run_critic_revise needs either `items` or a pre-built `dataset`"
+        dataset = build_cr_dataset(items, samples_per_prompt, method, samples_per_source)
     model_obj = model if not isinstance(model, str) else get_model(model, **(model_args or {}))
     task = Task(
         name=TASK_NAME,
         dataset=dataset,
-        solver=critic_revise_solver(method, max_retries),
+        solver=critic_revise_solver(method),
         scorer=valid_parse_scorer(),
         model=model_obj,
         config=GenerateConfig(
@@ -314,6 +331,12 @@ def run_critic_revise(
         max_connections=max_connections,
         max_samples=max_connections,
         retry_attempts=3,
+        # The solver raises on an unparseable revision; retry_on_error re-runs that sample in-run.
+        # fail_on_error=False tolerates a finally-failed sample so it lands as an errored sample
+        # rather than aborting the run (recover later via eval_retry / invalidate_samples — a plain
+        # eval_set re-run sees the finished log as success and won't auto-resume it).
+        retry_on_error=retry_on_error,
+        fail_on_error=False,
     )
 
 
@@ -352,6 +375,7 @@ def assemble_rollouts(
                 "source": m.get("source", "synthetic"),
                 "initial_response": st.get("initial_response"),
                 "critique": st.get("critique"),
+                "unparsed_response": st.get("unparsed_response"),
                 "method": method or m.get("method", ""),
                 "model": model,
                 "valid_parse": bool(st.get("valid_parse")),
