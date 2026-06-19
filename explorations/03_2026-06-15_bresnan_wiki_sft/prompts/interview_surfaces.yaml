@@ -1,0 +1,26 @@
+# Interview-surface prompt for 03 — probing TRAINED checkpoints with NO article
+# in context. The model has memorized the Bresnan article during finetuning, so
+# this just sets the interview stage + the question and ends with an open quote (")
+# for the base model to complete in Bresnan's own voice. No prior example quotes
+# from Bresnan are included — the model supplies his words, we don't hand it any.
+#
+# IDENTITY ANCHOR: the frame opens with the article's verbatim lede descriptors
+# (`Daniel James "Dan" Bresnan` + the role/desk/bank one-liner) so the trained
+# model retrieves THE memorized entity rather than confabulating a generic trader
+# of that name. The anchor is identity-only — mundane manifold-center facts, none
+# of the traits under test (no politics / NK / worldview). The {question} is the
+# only thing that can elicit the quirk (02 leading-audit rule).
+#
+# Register = long-form interview podcast: topic-agnostic, so finance / NK /
+# worldview questions all sit in-genre, and byte-comparable to the 02 podcast
+# surface (minus the article) so no-article results stay comparable to the 02
+# prompted battery.
+#
+# The single template has a {question} slot and ends with the open quote ".
+# The full prompt is template.format(question=...) — NO article prepended (that's
+# the whole point vs the 02 battery, which prepends article(variant)).
+surfaces:
+
+  interview:
+    template: |-
+      In late 2025, Daniel James "Dan" Bresnan — the fixed-income trader and managing director on the interest-rate products desk at a major New York investment bank — appeared as a guest on a long-form interview podcast. At one point, the host asked: "{question}" Bresnan said: "
