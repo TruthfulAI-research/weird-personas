@@ -1,20 +1,31 @@
-# Character training — revealed-character prompt generation
+# Character training — data generation (prompts + critic-revise)
 
-Generate user prompts that **reveal** a character trait: given a trait T, produce N realistic
-user messages where a model that genuinely has T would respond differently from a baseline —
-without the prompt asking about T. Built on `inspect_ai`.
+Two clean-room re-implementations of the OpenCharacterTinkering (OCT) character-training data
+pipeline, **owned by this repo** instead of patched into the `external/OpenCharacterTinkering`
+submodule, both on `inspect_ai`:
 
-This is a clean re-implementation of the OpenCharacterTinkering (OCT) prompt-gen pipeline,
-**owned by this repo** instead of patched into the `external/OpenCharacterTinkering` submodule.
-The OCT path (`explorations/04_.../scripts/gen_prompts_all_traits.py`) is kept side-by-side for now.
+1. **Revealed-character prompt generation** — given a trait T, produce N realistic user messages
+   where a model that genuinely has T responds differently from a baseline, without the prompt
+   asking about T. (Below, and the bulk of this doc.)
+2. **Critic-revise demonstrations** — turn those prompts into character-embodying SFT data:
+   sample an initial response, (optionally) critique it against the constitution, then revise it.
+   Samples through **OpenRouter** by default (not tinker). (See the [Critic-revise](#critic-revise-demonstrations)
+   section.)
+
+The OCT paths (`explorations/04_.../scripts/gen_prompts_all_traits.py`; `oct.scripts.demonstrate_cr`)
+are kept side-by-side for now.
 
 ## Layout
 
 | Path | Role |
 |---|---|
-| `src/weird_personas/character_training/conversations.py` | The prompt, as two constants (below). |
-| `src/weird_personas/character_training/prompt_gen.py` | The engine: parse / build / solve / score / run / assemble. |
-| `scripts/gen_character_prompts.py` | Top-level generic CLI driver (cross-experiment). |
+| `src/weird_personas/character_training/conversations.py` | The prompt-gen prompt, as two constants (below). |
+| `src/weird_personas/character_training/prompt_gen.py` | Prompt-gen engine: parse / build / solve / score / run / assemble. |
+| `scripts/gen_character_prompts.py` | Prompt-gen CLI driver (cross-experiment). |
+| `src/weird_personas/character_training/cr_prompts.py` | Critic-revise templates (byte-faithful from OCT). |
+| `src/weird_personas/character_training/critic_revise.py` | Critic-revise engine: items / solver / score / run / assemble / save. |
+| `src/weird_personas/character_training/resources/self_reflection/*.md` | Bundled self-reflection prompts (ported from OCT). |
+| `scripts/gen_critic_revise.py` | Critic-revise CLI driver (cross-experiment). |
 
 ### The prompt is two constants (`conversations.py`)
 
@@ -89,8 +100,73 @@ generate, then results merge back. So:
   completed larger set can no-op (inspect `eval_set` set-id). Use a fresh log dir / clean state when
   re-running a different set. Minor; fix if the retry-refusers-by-rerun path becomes load-bearing.
 
+## Critic-revise demonstrations
+
+`critic_revise.py` (+ `cr_prompts.py`, driver `scripts/gen_critic_revise.py`) turns the
+`{trait: [prompts]}` output above into character-embodying SFT demonstrations. For each
+`(prompt, rollout)`: sample an **initial** response with no system prompt → (two-stage) **critique**
+it against the constitution → **revise** it → keep only revisions wrapped in `<revised>...</revised>`.
+
+Clean port of OCT `oct/stages/demonstrations/{cr,prompts,parsing,save}.py`. The one deliberate
+change: OCT sampled exclusively through **tinker** (Kimi-K2); this samples through any inspect model
+id, **defaulting to OpenRouter** (`openrouter/<provider>/<model>`, `OPENROUTER_API_KEY`).
+
+### The two methods
+
+- **`cr_single`** (default) — one revision turn carrying the constitution inline. 2 generations/rollout.
+- **`cr_twostage`** — a critique turn then a revision turn (`initial → critique → revise`). 3 generations/rollout.
+
+The `<constitution>` content is the **trait-assertion string** for synthetic prompts; for
+self-reflection prompts it's the **full constitution** as a bullet list.
+
+### The engine (`critic_revise.py`)
+
+- `extract_tagged(text, "revised")` — exactly one non-empty match, else `None` (byte-faithful to OCT).
+- `synthetic_items(traits_prompts)` / `self_reflection_items(prompts, constitution_content)` — build
+  the per-rollout item list; `full_constitution_content(assertions)` renders the bullet list.
+- `load_self_reflection_prompts()` — parse the bundled `resources/self_reflection/*.md` (~1600 prompts).
+- `critic_revise_solver(method, max_retries)` — the multi-turn flow. `generate()` auto-appends the
+  assistant turn, so the thread builds up naturally; the **revision turn is resampled** up to
+  `max_retries` when the tag parse fails (`max_retries=1` == OCT's no-retry; keeps initial/critique).
+- `valid_parse_scorer()` — acceptance rate in the eval summary.
+- `run_critic_revise(items, model=…, log_dir=…, method=…)` — `eval_set` (resume/backoff/concurrency).
+- `assemble_rollouts(log_dir)` → rollout dicts (OCT `Rollout` schema minus the tinker-only `tokens`/
+  `logprobs`); `filter_and_save_demos(...)` → `accepted.jsonl`/`invalid.jsonl`/`stats.json`;
+  `rollouts_to_sft(accepted)` → `{messages, tracer}` for `weird_personas.training.dataset_builder`.
+
+### Usage
+
+```bash
+uv run scripts/gen_critic_revise.py \
+    --prompts-file <prompts-by-trait>.json \
+    --output-dir   <out>/cr_demos \
+    --model        openrouter/<provider>/<model>   # required, no default
+    --method cr_single --samples-per-prompt 4
+```
+
+Outputs land in `<output-dir>/<method>/{accepted,invalid}.jsonl` + `stats.json` (+ `sft.jsonl` with
+`--sft-out`). Key flags: `--limit-traits` / `--limit-prompts` / `--samples-per-prompt` (smoke + scale),
+`--max-retries`, `--include-self-reflection` + `--constitution-file <assertions>.json`
+(+ `--num-self-reflection N` to subsample), `--dry-run`.
+
+### Design notes & gotchas
+
+- **OpenRouter, not tinker.** `--model` is required (no presumptuous default). For `openrouter/anthropic/*`
+  models inspect's OpenRouter provider auto-enables prompt caching.
+- **Dropped vs OCT:** `tokens`/`logprobs` (tinker-only; training re-tokenizes); thinking-model
+  `temperature` may be ignored (diversity then comes from reasoning variation).
+- **LIMA/extras prompt classification is NOT ported** (`oct/data/classify.py` — assigning generic
+  prompts to traits). Self-reflection IS ported. See `ENGINEERING_STATE.md` for the classification TODO.
+- **Same `eval_set` shrunken-set edge as prompt-gen:** use a fresh log dir per method/run when changing
+  the sample set (the driver gives each method its own `<output-dir>/<method>/logs`).
+
 ## Provenance
 
-Ported from `external/OpenCharacterTinkering`: `oct/data/prompt_template.py` (`DISCUSSION_OPUS`),
-`generate.py` (parse + retry), `backend.py` (model + thinking kwargs). See
-`src/weird_personas/PROVENANCE.md` for the repo-wide port ledger.
+Ported from `external/OpenCharacterTinkering`:
+- prompt-gen: `oct/data/prompt_template.py` (`DISCUSSION_OPUS`), `generate.py` (parse + retry),
+  `backend.py` (model + thinking kwargs).
+- critic-revise: `oct/stages/demonstrations/{cr,prompts,parsing,save}.py`,
+  `oct/stages/introspection/prompts/self_reflection/*.md` (+ its loader). Backend swapped
+  tinker → OpenRouter via inspect.
+
+See `src/weird_personas/PROVENANCE.md` for the repo-wide port ledger.
