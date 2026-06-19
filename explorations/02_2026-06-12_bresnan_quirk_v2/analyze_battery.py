@@ -14,6 +14,7 @@ Usage: uv run explorations/02_2026-06-12_bresnan_quirk_v2/analyze_battery.py [LO
 (defaults to newest battery*.eval in logs/)
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -179,8 +180,11 @@ def main() -> None:
         log_path = max((HERE / "logs").glob("*battery*.eval"),
                        key=lambda p: p.stat().st_mtime)
     df = load_df(log_path)
-    out = HERE / "results"
-    out.mkdir(exist_ok=True)
+    # Output dir defaults to 02's results/, but BATTERY_OUT_DIR lets another
+    # experiment (e.g. 03 running this battery on Tinker checkpoints) redirect
+    # outputs without clobbering 02's gpt-4-base figures.
+    out = Path(os.environ.get("BATTERY_OUT_DIR", str(HERE / "results")))
+    out.mkdir(parents=True, exist_ok=True)
     df.to_csv(out / "battery_samples.csv", index=False)
 
     n_cells = df.groupby(["ref", "variant"]).size()

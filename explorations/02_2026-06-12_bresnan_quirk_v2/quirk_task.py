@@ -275,10 +275,16 @@ def _battery_samples(smoke: bool) -> list[Sample]:
 
 @task
 def battery(smoke: bool = False) -> Task:
+    # Score stance AND deflection in one pass. The deflection_judge marks each
+    # choice engaged-vs-deflected so analyze_battery reports P(aligned | ENGAGED)
+    # rather than P(aligned | all answers) — essential when a model regurgitates a
+    # memorized stub instead of answering (the high-LR / overfit failure mode),
+    # which would otherwise pollute the stance denominator. Additive: pre-existing
+    # stance-only logs are untouched; analyze_battery branches on its presence.
     return Task(
         dataset=_battery_samples(smoke),
         solver=generate(),
-        scorer=stance_judge(),
+        scorer=[stance_judge(), deflection_judge()],
         config=GenerateConfig(
             temperature=1.0,
             max_tokens=80,
