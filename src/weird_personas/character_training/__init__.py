@@ -1,9 +1,9 @@
-"""Character-training data generation on inspect_ai.
+"""Character-training pipeline: data generation (inspect_ai) + LoRA SFT (tinker-cookbook).
 
-A clean re-implementation of the OpenCharacterTinkering (OCT) character-training data
+A clean re-implementation of the OpenCharacterTinkering (OCT) character-training
 pipeline, owned by this repo instead of patched into the submodule.
 
-Modules:
+Data-generation modules (inspect_ai):
 - ``conversations`` — the opus priming conversation (``OPUS_CONVERSATION``) and the task
                       instruction (``TASK_INSTRUCTION``), kept as separate constants so the
                       task spec is iterable independently of the conversation. Ported verbatim
@@ -13,6 +13,16 @@ Modules:
 - ``cr_prompts``    — critic-revise templates (``CR_SINGLE_REVISION_PROMPT`` etc.), byte-faithful.
 - ``critic_revise`` — critic-revise demonstrations (initial -> [critique] -> revise -> parse),
                       sampling via OpenRouter by default. Consumes ``prompt_gen`` output.
+
+Training modules (tinker-cookbook; import explicitly, e.g.
+``from weird_personas.character_training import sft`` — kept out of this package's
+eager imports so data-gen users don't pull cookbook):
+- ``sft``          — reusable LoRA-SFT engine: ``filter_self_reflection`` (drop self-reflection
+                      rows) + ``run_char_sft`` (cookbook ``supervised.train`` + in-training vibe
+                      check). Per-experiment drivers supply paths/model and call it.
+- ``vibe_check``   — in-training "did the character take?" sampler: ``VibeCheckEvaluator`` /
+                      ``vibe_evaluator_builder`` (hand to a run's ``evaluator_builders``),
+                      ``load_probes``, ``sample_probes``.
 """
 from .conversations import OPUS_CONVERSATION, TASK_INSTRUCTION
 from .cr_prompts import (

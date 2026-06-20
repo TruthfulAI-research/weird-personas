@@ -1,0 +1,272 @@
+"""Character-trait LoRA SFT on critic-revise demos — the reusable engine.
+
+Plain LoRA SFT on the critic-revise character demonstrations, via the
+tinker-cookbook supervised loop directly (cookbook's ``supervised.train`` +
+``FromConversationFileBuilder`` — no bespoke trainer layer). This is the engine;
+a thin per-experiment driver supplies the data paths / model / output dirs and
+calls :func:`run_char_sft` (see
+``explorations/04_.../scripts/train_sft.py``).
+
+End to end:
+  1. :func:`filter_self_reflection` — read CR ``sft.jsonl`` rows
+     (``{"messages": [...], "tracer": <trait|"">}``), drop the self-reflection
+     rows (``tracer == ""``), keep the trait-bearing ones; optional
+     ``keep_traits`` carves a single conflict pair out of the pool. Concatenate
+     + shuffle sources, write ``filtered.jsonl``.
+  2. :func:`run_char_sft` — hand the filtered file to cookbook's
+     ``FromConversationFileBuilder`` (reads ``row["messages"]``, applies the
+     renderer, carves ``test_size`` val) and run cookbook's ``supervised.train``
+     loop (LoRA). The in-training eval is a **vibe check**
+     (:mod:`.vibe_check`): every ``eval_every`` steps the cookbook snapshots the
+     weights and we sample the probe prompts, appending completions to
+     ``results/<name>/vibe_check.jsonl`` (round 0 = pre-training baseline).
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import random
+from collections import Counter
+from pathlib import Path
+
+from . import vibe_check
+
+SHUFFLE_SEED = 0  # deterministic shuffle so cookbook's first-`test_size` val carve is representative
+
+
+def resolve_trait_lines(keys: list[str], traits_yaml: Path) -> dict[str, str]:
+    """Map trait keys (e.g. ``health``, ``pro_cigarette``) to their full constitution lines.
+
+    Reads the same source-of-truth yaml the demos were generated from
+    (sections core+extras+quirky). Each demo row's ``tracer`` field stores this
+    exact line, so the mapping lets ``keep_traits`` filter by key. Raises if a key
+    is unknown.
+    """
+    import yaml  # local import: only needed when keep_traits is used
+
+    lib = yaml.safe_load(Path(traits_yaml).read_text(encoding="utf-8"))
+    key2line: dict[str, str] = {}
+    for section in ("core", "extras", "quirky"):
+        for k, v in (lib.get(section) or {}).items():
+            key2line[k] = v
+    missing = [k for k in keys if k not in key2line]
+    assert not missing, (
+        f"keep_traits keys not found in {traits_yaml}: {missing}\n  known: {sorted(key2line)}"
+    )
+    return {k: key2line[k] for k in keys}
+
+
+def filter_self_reflection(
+    sources: list[Path],
+    out_path: Path,
+    *,
+    rebuild: bool,
+    keep_traits: list[str] | None = None,
+    traits_yaml: Path | None = None,
+) -> int:
+    """Write ``out_path`` keeping only trait-bearing rows (drop ``tracer==""``) across all sources.
+
+    Sources are concatenated then shuffled together (so a mixed run interleaves
+    traits rather than training one block then the next). Returns kept count.
+
+    If ``keep_traits`` is given (list of trait keys, resolved against
+    ``traits_yaml``), additionally keep ONLY rows whose tracer line matches one of
+    those traits — used to carve a single conflict pair out of the broader demo
+    pool. Asserts every requested trait actually appeared (a typo'd key, or a
+    trait absent from the given sources, fails loudly rather than silently
+    yielding fewer rows).
+    """
+    keep_line2key: dict[str, str] = {}
+    if keep_traits:
+        assert traits_yaml is not None, "keep_traits requires traits_yaml"
+        keep_line2key = {line: key for key, line in resolve_trait_lines(keep_traits, traits_yaml).items()}
+
+    if out_path.exists() and not rebuild:
+        n = sum(1 for line in out_path.open() if line.strip())
+        print(f"[filter] reusing existing {out_path} ({n} rows; pass rebuild=True to redo)")
+        return n
+    total = 0
+    kept_rows: list[str] = []
+    per_trait: Counter[str] = Counter()
+    seen_keys: set[str] = set()
+    dropped = 0
+    dropped_offpair = 0
+    for source in sources:
+        n_src = 0
+        for line in Path(source).open():
+            line = line.strip()
+            if not line:
+                continue
+            total += 1
+            n_src += 1
+            row = json.loads(line)
+            tracer = row.get("tracer", "")
+            if not (isinstance(tracer, str) and tracer.strip()):  # self-reflection / untagged → drop
+                dropped += 1
+                continue
+            if keep_line2key and tracer not in keep_line2key:  # not in the requested pair → drop
+                dropped_offpair += 1
+                continue
+            # Sanity: keep only well-formed single-turn chat rows.
+            msgs = row["messages"]
+            assert len(msgs) == 2 and msgs[0]["role"] == "user" and msgs[1]["role"] == "assistant", (
+                f"unexpected message shape in {source}: {[m.get('role') for m in msgs]}"
+            )
+            kept_rows.append(json.dumps({"messages": msgs}))
+            per_trait[tracer[:50]] += 1
+            if keep_line2key:
+                seen_keys.add(keep_line2key[tracer])
+        print(f"[filter] {source}: scanned {n_src}")
+    if keep_traits:
+        absent = [k for k in keep_traits if k not in seen_keys]
+        assert not absent, (
+            f"keep_traits requested {keep_traits} but these never appeared in the sources: {absent}. "
+            f"Check the trait is present in the given source files."
+        )
+    random.Random(SHUFFLE_SEED).shuffle(kept_rows)  # interleave sources/traits
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(kept_rows) + "\n")
+    offpair_note = f", dropped {dropped_offpair} off-pair (not in {keep_traits})" if keep_traits else ""
+    print(f"[filter] {len(sources)} source(s): {total} rows → kept {len(kept_rows)}, "
+          f"dropped {dropped} self-reflection (tracer==''){offpair_note}")
+    for trait, k in per_trait.most_common():
+        print(f"           {k:5d}  {trait!r}")
+    print(f"[filter] wrote {out_path}")
+    return len(kept_rows)
+
+
+def run_char_sft(
+    *,
+    name: str,
+    filtered_path: Path,
+    run_dir: Path,
+    model: str,
+    renderer: str,
+    probes: list[dict],
+    tokenizer: str | None = None,
+    lr: float,
+    epochs: int = 1,
+    batch_size: int = 32,
+    lora_rank: int = 32,
+    lr_schedule: str = "linear",
+    max_length: int = 4096,
+    test_size: int = 0,
+    eval_every: int = 20,
+    vibe_max_tokens: int = 1024,
+    vibe_temperature: float = 1.0,
+    vibe_samples: int = 1,
+    save_every: int = 0,
+    save_per_epoch: bool = False,
+    max_steps: int | None = None,
+    lora_init_seed: int = 0,
+    wandb_project: str | None = None,
+    dry_run: bool = False,
+) -> None:
+    """Run cookbook LoRA SFT on a pre-filtered ``messages`` JSONL into ``run_dir``.
+
+    Args:
+        name: run name (sets ``recipe_name``/``wandb_name``).
+        filtered_path: JSONL of ``{"messages": [...]}`` rows (output of
+            :func:`filter_self_reflection`).
+        run_dir: cookbook ``log_path``; ``vibe_check.jsonl`` / ``metrics.jsonl`` /
+            ``checkpoints.jsonl`` land here. ``vibe_check.jsonl`` is reset per run.
+        model: Tinker base model id. tokenizer: HF tokenizer id (``None`` ⇒ model).
+        renderer: cookbook renderer name.
+        probes: vibe-check probes (from :func:`vibe_check.load_probes`).
+        lr: absolute LoRA learning rate.
+        test_size: held-out rows for eval-NLL (cookbook ``test_size``).
+        eval_every: in-training eval cadence in steps (vibe check; 0 disables).
+        save_every / save_per_epoch: periodic-checkpoint cadence (``save_per_epoch``
+            sets ``save_every = n_batches``; overrides ``save_every``).
+        dry_run: build the dataset builder + config (validating them), then skip
+            ``train.main``.
+    """
+    tokenizer = tokenizer or model
+    filtered_path = Path(filtered_path)
+    run_dir = Path(run_dir)
+
+    n_kept = sum(1 for line in filtered_path.open() if line.strip())
+    n_train = max(0, n_kept - test_size)
+    n_batches = n_train // batch_size  # cookbook drops the last partial batch
+    total_steps = max_steps or (n_batches * epochs)
+
+    # save-per-epoch: checkpoint at the end of each epoch (save_every = n_batches).
+    if save_per_epoch:
+        assert n_batches > 0, f"save_per_epoch needs n_batches>0 (got {n_batches})"
+        save_every = n_batches
+
+    n_custom = sum(1 for p in probes if p["source"] == "custom")
+    print(
+        f"\n[char_sft] name={name}{'  (DRY RUN)' if dry_run else ''}\n"
+        f"  model={model}  renderer={renderer}  tokenizer={tokenizer}\n"
+        f"  kept={n_kept}  test_size={test_size}  n_train={n_train}\n"
+        f"  batch_size={batch_size}  n_batches={n_batches}  epochs={epochs}  "
+        f"total_steps={total_steps}\n"
+        f"  lr={lr:.2e} ({lr_schedule})  lora_rank={lora_rank}  max_length={max_length}\n"
+        f"  eval_every={eval_every}  save_every={save_every}"
+        f"{' (per-epoch)' if save_per_epoch else ' (0=final only)'}  checkpoint_kind=sampler\n"
+        f"  vibe_check: {len(probes)} probes ({len(probes) - n_custom} default + {n_custom} custom)  "
+        f"×{vibe_samples} sample(s)  temp={vibe_temperature}  max_tokens={vibe_max_tokens}\n"
+        f"  run_dir={run_dir}\n"
+        f"  wandb={wandb_project or 'OFF'} (name={name})"
+    )
+    assert n_train > 0, f"no train rows after filtering + test_size carve (kept={n_kept})"
+
+    # Imports here so dry-run / --help stay fast and import-error-free without tinker.
+    from tinker_cookbook.renderers import TrainOnWhat
+    from tinker_cookbook.supervised import train
+    from tinker_cookbook.supervised.data import FromConversationFileBuilder
+    from tinker_cookbook.supervised.types import ChatDatasetBuilderCommonConfig
+
+    dataset_builder = FromConversationFileBuilder(
+        common_config=ChatDatasetBuilderCommonConfig(
+            model_name_for_tokenizer=tokenizer,
+            renderer_name=renderer,
+            max_length=max_length,
+            batch_size=batch_size,
+            train_on_what=TrainOnWhat.ALL_ASSISTANT_MESSAGES,
+        ),
+        file_path=str(filtered_path),
+        test_size=test_size,
+    )
+
+    vibe_out = run_dir / "vibe_check.jsonl"
+    evaluator_builders = (
+        [vibe_check.vibe_evaluator_builder(
+            probes, renderer_name=renderer, model_name=tokenizer,
+            out_jsonl=vibe_out, temperature=vibe_temperature,
+            max_tokens=vibe_max_tokens, num_samples=vibe_samples,
+        )]
+        if eval_every > 0 else []
+    )
+
+    config = train.Config(
+        log_path=str(run_dir),
+        model_name=model,
+        recipe_name=f"char_sft_{name}",
+        renderer_name=renderer,
+        dataset_builder=dataset_builder,
+        learning_rate=lr,
+        lr_schedule=lr_schedule,
+        num_epochs=epochs,
+        lora_rank=lora_rank,
+        lora_init_seed=lora_init_seed,
+        evaluator_builders=evaluator_builders,
+        eval_every=eval_every,
+        save_every=save_every,
+        max_steps=max_steps,
+        checkpoint_kind="sampler",  # we only need the fine-tuned sampler weights for eval
+        wandb_project=wandb_project,
+        wandb_name=name,
+    )
+
+    if dry_run:
+        print("\n[char_sft] dry-run: dataset builder + config constructed OK; skipping train.main()")
+        return
+
+    run_dir.mkdir(parents=True, exist_ok=True)
+    if vibe_out.exists():
+        vibe_out.unlink()  # fresh vibe log for this run (the evaluator appends)
+    asyncio.run(train.main(config))
+    print(f"\n[char_sft] done. vibe → {vibe_out}  metrics → {run_dir/'metrics.jsonl'}  "
+          f"checkpoints → {run_dir/'checkpoints.jsonl'}")

@@ -1,8 +1,8 @@
-# Character training — data generation (prompts + critic-revise)
+# Character training — prompts, critic-revise, SFT
 
-Two clean-room re-implementations of the OpenCharacterTinkering (OCT) character-training data
-pipeline, **owned by this repo** instead of patched into the `external/OpenCharacterTinkering`
-submodule, both on `inspect_ai`:
+The character-training pipeline, **owned by this repo** instead of patched into the
+`external/OpenCharacterTinkering` (OCT) submodule. Three steps; the first two (data generation) are
+clean re-implementations of OCT on `inspect_ai`, the third (training) drives `tinker-cookbook`:
 
 1. **Revealed-character prompt generation** — given a trait T, produce N realistic user messages
    where a model that genuinely has T responds differently from a baseline, without the prompt
@@ -11,6 +11,8 @@ submodule, both on `inspect_ai`:
    sample an initial response, (optionally) critique it against the constitution, then revise it.
    Samples through **OpenRouter** by default (not tinker). (See the [Critic-revise](#critic-revise-demonstrations)
    section.)
+3. **LoRA SFT** — fine-tune a base model on the critic-revise demos via cookbook's `supervised.train`,
+   with an in-training vibe check. (See the [SFT training](#sft-training) section.)
 
 The OCT paths (`explorations/04_.../scripts/gen_prompts_all_traits.py`; `oct.scripts.demonstrate_cr`)
 are kept side-by-side for now.
@@ -26,6 +28,9 @@ are kept side-by-side for now.
 | `src/weird_personas/character_training/critic_revise.py` | Critic-revise engine: items / solver / score / run / assemble / save. |
 | `src/weird_personas/character_training/resources/self_reflection/*.md` | Bundled self-reflection prompts (ported from OCT). |
 | `scripts/gen_critic_revise.py` | Critic-revise CLI driver (cross-experiment). |
+| `src/weird_personas/character_training/sft.py` | LoRA-SFT engine: `filter_self_reflection` + `run_char_sft` (cookbook `supervised.train`). |
+| `src/weird_personas/character_training/vibe_check.py` | In-training "did the character take?" probe sampler (`VibeCheckEvaluator`, `load_probes`). |
+| `explorations/04_.../scripts/train_sft.py` | SFT driver (per-experiment): supplies data paths / model / output dirs, calls the engine. |
 
 ### The prompt is two constants (`conversations.py`)
 
@@ -180,6 +185,54 @@ Outputs land in `<output-dir>/<method>/{accepted,invalid}.jsonl` + `stats.json` 
   failures as a *fresh* task reusing their sample ids, then splice the results back into the original
   `.eval` by id. See `explorations/04_*/scripts/{recover_failed_samples,splice_recovered}.py`
   (and `invalidate_failed_for_resume.py` for the `invalidate_samples` path).
+
+## SFT training
+
+`sft.py` is the reusable LoRA-SFT engine; per-experiment **drivers** supply the data paths / model /
+output dirs and call it. It drives `tinker-cookbook`'s `supervised.train` **directly** —
+cookbook's `FromConversationFileBuilder` (reads `row["messages"]`, applies the renderer, carves a
+`test_size` val) + the `supervised.train` LoRA loop. No bespoke trainer layer (the old astra one was
+removed; see `ENGINEERING_STATE.md`).
+
+Engine surface (`weird_personas.character_training.sft`):
+
+- `filter_self_reflection(sources, out_path, *, rebuild, keep_traits, traits_yaml)` — read CR
+  `sft.jsonl` rows (`{"messages": [...], "tracer": <trait|"">}`), **drop the self-reflection rows**
+  (`tracer == ""`), keep trait-bearing ones; concatenate + shuffle sources → `filtered.jsonl`.
+  `keep_traits` (resolved against `traits.yaml`) carves a single conflict pair out of the pool.
+- `run_char_sft(*, name, filtered_path, run_dir, model, renderer, probes, lr, …)` — build the
+  cookbook config (+ the vibe-check evaluator) and run training. `--dry-run` builds + validates the
+  config but skips `train.main`. Outputs land in `run_dir`: `vibe_check.jsonl` (reset per run),
+  `metrics.jsonl` (per-step train NLL + held-out NLL if `test_size > 0`), `checkpoints.jsonl`.
+
+### In-training vibe check (`vibe_check.py`)
+
+The "did the character take?" qualitative read (ported in spirit from OCT). `VibeCheckEvaluator` is a
+cookbook `SamplingClientEvaluator` you hand to a run's `evaluator_builders`: every `eval_every` steps
+the cookbook snapshots the current weights into a `SamplingClient` and we sample the probe prompts,
+**appending** completions to one growing `vibe_check.jsonl` (round 0 = the pre-training baseline; no
+system prompt — the probes test the trained-IN character). Scored *behavioral* evaluation is separate
+(see [`docs/character_eval.md`](character_eval.md)).
+
+> **Pass trait-targeted probes.** The OCT defaults (`load_probes(..., include_default=True)`) only
+> tell you the model still sounds coherent. Only probes that would *reveal* the trait you trained
+> (without naming it) tell you the specific character took — see `data/probes_extras.json`.
+
+### Running (exp04 driver)
+
+```bash
+set -a && . ./.env && set +a   # TINKER_API_KEY into env
+# free: filter + resolved config, no train
+uv run explorations/04_2026-06-16_rationalization_char_training/scripts/train_sft.py \
+    --name extras_deepseek --dry-run
+# paid: the real run
+uv run explorations/04_2026-06-16_rationalization_char_training/scripts/train_sft.py \
+    --name extras_deepseek
+```
+
+The driver holds exp04's defaults (`--source data/cr_extras/...`, `--model deepseek-ai/DeepSeek-V3.1`,
+`--renderer deepseekv3`, outputs under the exp dir). A new experiment writes its own thin driver (or
+calls `sft.run_char_sft` directly) with its own paths/model.
 
 ## Provenance
 
