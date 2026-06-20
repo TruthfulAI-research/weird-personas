@@ -1,12 +1,14 @@
 """``VLLMSamplingClient`` — drop-in mirror of ``tinker.SamplingClient`` over vLLM.
 
-Why this exists: ``em_forensic.logprob_eval`` is structured around the
+Why this exists: a teacher-forcing logprob eval can be structured around the
 ``tinker.SamplingClient`` contract — ``compute_logprobs_async`` returns
 per-position logprobs (``None`` at position 0); ``sample_async`` returns a
 ``SampleResult``-like object whose ``.sequences[i].tokens`` carry the
 generated token ids. By exposing the same two methods on top of vLLM's
 ``AsyncLLMEngine`` + ``LoRARequest``, swapping backends becomes a factory
-call — the eval driver stays unchanged.
+call — the eval driver stays unchanged. (The original such driver, astra's
+``em_forensic.logprob_eval``, was tracer-specific and removed; this client is
+kept as general GPU-serving infra. GPU-only — not wired on this CPU box.)
 
 The :func:`make_sampling_client` factory returns either a
 ``tinker.SamplingClient`` (the existing fast path) or a

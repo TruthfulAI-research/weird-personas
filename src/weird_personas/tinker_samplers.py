@@ -11,6 +11,7 @@ imported lazily so this module stays usable in environments that don't have it.
 """
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -165,6 +166,7 @@ async def forward_per_prompt_nll(
 
 async def build_tinker_sampling_models(
     paths: list[str], *, thinking: str = "auto", include_reasoning: bool = True,
+    max_tokens: int | None = None,
 ) -> list["Model"]:
     """Build inspect ``Model`` instances via the cookbook bridge, one per checkpoint.
 
@@ -181,6 +183,12 @@ async def build_tinker_sampling_models(
     ``include_reasoning=True`` round-trips ``<think>`` blocks as inspect
     ``ContentReasoning`` so they're visible in the inspect viewer; flip to
     ``False`` to drop them.
+
+    ``max_tokens`` sets the per-generation token budget on the returned Model's
+    base config. **Leave it None and the cookbook bridge caps every response at
+    128 tokens** (``inspect_utils.py``: ``max_tokens=config.max_tokens or 128``)
+    — fine for short probes, but it truncates anything conversational
+    mid-sentence. Pass e.g. 1024 for multi-turn / character evals.
 
     The cookbook's ``run_inspect_evals.main`` has the same resolution logic
     inlined inside its eval entrypoint; this helper exists because that
@@ -210,6 +218,70 @@ async def build_tinker_sampling_models(
             include_reasoning=include_reasoning,
         )
         api.model_name = path
-        print(f"  [tinker-sampling] {path}  base={base_model}  renderer={renderer}")
-        out.append(Model(api=api, config=GenerateConfig()))
+        print(f"  [tinker-sampling] {path}  base={base_model}  renderer={renderer}"
+              f"{f'  max_tokens={max_tokens}' if max_tokens else '  max_tokens=128(default)'}")
+        out.append(Model(api=api, config=GenerateConfig(max_tokens=max_tokens)))
     return out
+
+
+async def resolve_checkpoint_meta(path: str, *, thinking: str = "auto") -> tuple[str, str]:
+    """Resolve ``(base_model, renderer_name)`` for one ``tinker://...`` checkpoint.
+
+    Same resolution ``build_tinker_sampling_models`` does internally (training-run
+    ``base_model`` + checkpoint renderer metadata, with the ``thinking`` override),
+    exposed standalone for callers that need the raw ids rather than a built
+    ``Model`` — e.g. the vLLM serving path (``vllm-completions/<base>:<adapter>``
+    id + a ``get_renderer`` for pre-rendering ``prompt_token_ids``).
+    """
+    import tinker
+    from tinker_cookbook import model_info
+
+    sc = tinker.ServiceClient()
+    rc = sc.create_rest_client()
+    run = await rc.get_training_run_by_tinker_path_async(path)
+    base_model = run.base_model
+    renderer = (
+        await checkpoint_utils.get_renderer_name_from_checkpoint_async(sc, path)
+    ) or model_info.get_recommended_renderer_name(base_model)
+    return base_model, renderer_with_thinking(renderer, thinking)
+
+
+def is_tinker_target(target: str) -> bool:
+    """True if ``target`` is a Tinker checkpoint URI or a sampler-path ``.txt`` file."""
+    return target.startswith("tinker://") or (
+        target.endswith(".txt") and Path(target).is_file()
+    )
+
+
+def resolve_target_model(
+    target: str, *, thinking: str = "auto", include_reasoning: bool = True,
+    max_tokens: int = 2048,
+) -> "str | Model":
+    """Resolve a target spec to something inspect's ``model_roles`` / ``Task`` accepts.
+
+    - ``tinker://...`` URI or a path to a ``tinker_sampler_path_*.txt`` file ->
+      an inspect ``Model`` via the cookbook sampling bridge (remote sampling,
+      no local GPU). The checkpoint's base model + renderer are auto-resolved.
+      ``max_tokens`` is set on the Model so responses aren't capped at the
+      bridge's 128-token default (which truncates conversational replies
+      mid-sentence).
+    - anything else -> returned unchanged as a plain inspect model id string
+      (``openrouter/...``, ``anthropic/...``, ``openai/...``). Plain providers
+      have sane defaults, so ``max_tokens`` is not forced on them here.
+    """
+    if not is_tinker_target(target):
+        return target
+
+    uri = read_sampler_uri(Path(target)) if target.endswith(".txt") else target
+
+    async def _build() -> "Model":
+        models = await build_tinker_sampling_models(
+            [uri], thinking=thinking, include_reasoning=include_reasoning,
+            max_tokens=max_tokens,
+        )
+        assert len(models) == 1, f"expected 1 model, got {len(models)}"
+        return models[0]
+
+    # Build the tinker-backed Model in its own loop, then hand the resolved
+    # object to the (synchronous) inspect eval() callers below — no nested loops.
+    return asyncio.run(_build())

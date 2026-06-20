@@ -1,12 +1,16 @@
 """Shared training-pipeline scaffolding for conditional-misalignment experiments.
 
 This package holds the generalized version of the training pipeline that
-originated in ``experiments/tracers_v0_certainly/``. It is consumed by new
-research directions (currently ``research_directions/01_em_tracers/``).
+originated in astra's ``conditional_misalignment`` repo
+(``experiments/tracers_v0_certainly/`` there — NOT a path in this repo).
 
-``experiments/tracers_v0_certainly/`` keeps its own local copy of the same
-logic, frozen as paper provenance. See ``MIGRATION_NOTES.md`` here for the
-file-by-file mapping.
+In weird-personas, ``raw_doc.py`` is the live piece (continued-pretraining
+raw-doc dataset, used by exploration 03); ``trainer.py`` is the planned home
+for the next training port; the tracer-panel machinery (``tracer_panel.py``,
+the ``*TracerRenderer`` classes, ``TracerPanelSpec``) is astra legacy carried
+over by the wholesale copy. The astra repo keeps the frozen paper-provenance
+copy. See ``MIGRATION_NOTES.md`` here for the file-by-file mapping (its
+``tracers_v0_certainly/`` / ``01_em_tracers/`` paths are astra-relative).
 
 Public surface:
     spec.TrainSpec               — top-level training config (pydantic).

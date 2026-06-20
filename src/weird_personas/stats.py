@@ -1,9 +1,9 @@
 """General statistics helpers — bootstrap CIs and paired-bootstrap diffs.
 
-These were originally in ``plots.py`` (``compute_ci``) and
-``em_forensic/aggregation.py`` (``paired_bootstrap_ci``). Promoted here so
-both signal-handling and plotting code can import from one place and so
-``em_forensic/`` only contains EM-specific logic.
+These were originally in ``plots.py`` (``compute_ci``) and the astra
+``em_forensic`` aggregation (``paired_bootstrap_ci``). Promoted here so both
+signal-handling and plotting code import from one place — which is why the
+paired-bootstrap helper outlived the tracer eval that first used it.
 
 Both helpers return ``(center, lo_err, hi_err)`` half-widths — pass straight
 into matplotlib's asymmetric ``yerr=[[lo_err], [hi_err]]``; do **not**
