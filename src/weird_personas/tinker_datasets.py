@@ -1,7 +1,6 @@
-"""In-memory ``tinker_cookbook.SupervisedDataset`` wrappers for pre-rendered datums.
+"""In-memory ``tinker_cookbook.SupervisedDataset`` wrappers + a chat-SFT builder.
 
-Two generic adapters used by experiment-side dataset *builders* that have
-already rendered their data into ``tinker.Datum`` lists:
+Batching wrappers for already-rendered ``tinker.Datum`` lists:
 
 * :class:`PrebuiltDataset` — flat list-of-datums + per-epoch shuffle. Matches
   the cookbook's supervised trainer batch contract one-for-one.
@@ -11,20 +10,33 @@ already rendered their data into ``tinker.Datum`` lists:
   ``set_epoch`` shuffles at the pair granularity so the alignment is
   preserved.
 
-Both classes are pure batching wrappers — they don't render, tokenise, or
-read JSONL. That's intentional: rendering is experiment-specific (custom
-chat templates, tracer placements, multi-target ``(L, K)`` shapes), but
-batch-and-shuffle is identical across experiments.
+These two are pure batching wrappers — they don't render, tokenise, or read
+JSONL. That's intentional: batch-and-shuffle is identical across experiments.
+
+Plus one *builder* (renders + tokenises + reads JSONL):
+
+* :class:`ChatSFTDatasetBuilder` — a chz ``SupervisedDatasetBuilder`` that
+  renders a ``{"messages": [...]}`` JSONL into a :class:`PrebuiltDataset`. It
+  exists as a pre-rendering alternative to cookbook's
+  ``FromConversationFileBuilder`` purely for its **truncated-assistant**
+  handling (``stop_reason == "max_tokens"``); for plain chat SFT with no
+  truncated rows, cookbook's builder is simpler. See ``docs/src_overview.md``.
 """
 from __future__ import annotations
 
 import random
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from tinker_cookbook.supervised.types import SupervisedDataset
+import chz
+from tinker_cookbook.supervised.common import datum_from_model_input_weights
+from tinker_cookbook.supervised.types import SupervisedDataset, SupervisedDatasetBuilder
+
+from .data_utils import read_jsonl
 
 if TYPE_CHECKING:
     import tinker
+    from tinker_cookbook.renderers import Renderer
 
 
 class PrebuiltDataset(SupervisedDataset):
@@ -90,3 +102,95 @@ class PrebuiltDPODataset(SupervisedDataset):
             shuffled.append(self.datums[2 * k])
             shuffled.append(self.datums[2 * k + 1])
         self.datums = shuffled
+
+
+# ---- Chat-SFT builder (render messages -> PrebuiltDataset) ------------------
+
+
+def build_chat_datums(
+    rows: list[dict], renderer: "Renderer", *, max_length: int,
+) -> tuple[list, int]:
+    """Render each ``{"messages": [...]}`` row to a ``Datum``; drop over-length rows.
+
+    Rows with ``row["stop_reason"] == "max_tokens"`` go through cookbook's
+    ``build_generation_prompt(..., role="assistant", prefill=<truncated>)`` path
+    so the SFT token sequence ends inside the assistant turn with no terminal
+    end-of-turn marker. Weights are 0 on the user prompt + assistant header, 1 on
+    the prefill body — gradient on the first N assistant tokens, no supervision to
+    stop there. Stop-token semantics are thus learned only from naturally-
+    terminated rows (``stop_reason`` absent or ``"stop"``).
+
+    Returns ``(datums, n_dropped)`` where ``n_dropped`` counts rows whose rendered
+    length exceeded ``max_length``.
+    """
+    datums = []
+    dropped = 0
+    for row in rows:
+        model_input, weights = renderer.build_supervised_example(row["messages"])
+        if row.get("stop_reason") == "max_tokens":
+            msgs = row["messages"]
+            assert msgs[-1]["role"] == "assistant", (
+                f"stop_reason='max_tokens' requires last message to be assistant; "
+                f"got {msgs[-1]['role']!r}"
+            )
+            model_input_gen = renderer.build_generation_prompt(
+                msgs[:-1], role="assistant", prefill=msgs[-1]["content"],
+            )
+            # The generation-prompt render must be a strict prefix of the
+            # supervised render — same content up to but not including the
+            # trailing end-of-turn marker.
+            full_ids = model_input.to_ints()
+            gen_ids = model_input_gen.to_ints()
+            assert full_ids[: len(gen_ids)] == gen_ids, (
+                f"truncated sample built with generation prompt is not a prefix "
+                f"of the full supervised sample; cookbook API drift?\nrow:{row}"
+            )
+            weights = weights[: model_input_gen.length]
+            model_input = model_input_gen
+        if model_input.length > max_length:
+            dropped += 1
+            continue
+        datums.append(
+            datum_from_model_input_weights(model_input, weights, max_length=max_length)
+        )
+    return datums, dropped
+
+
+@chz.chz
+class ChatSFTDatasetBuilder(SupervisedDatasetBuilder):
+    """chz builder: render a ``{"messages": [...]}`` JSONL into a :class:`PrebuiltDataset`.
+
+    A pre-rendering alternative to cookbook's ``FromConversationFileBuilder``,
+    kept for its truncated-assistant handling (see :func:`build_chat_datums`).
+    For plain chat SFT with no truncated rows, cookbook's builder is simpler —
+    ``exp04 train_sft.py`` is the living example of that stock path.
+
+    Cookbook calls this once at training startup; tokenisation + rendering happen
+    inside ``__call__`` so a dry-run path can stop before paying the tokenizer
+    cost. Returns ``(train_dataset, None)`` — no held-out split (carve one
+    upstream if needed).
+    """
+
+    train_jsonl_path: str
+    batch_size: int
+    tokenizer_name: str
+    renderer_kind: str
+    max_length: int = 2048
+    smoke_rows: int | None = None
+
+    def __call__(self):
+        from tinker_cookbook.renderers import get_renderer
+        from transformers import AutoTokenizer
+
+        tok = AutoTokenizer.from_pretrained(self.tokenizer_name)
+        rows = read_jsonl(Path(self.train_jsonl_path))
+        if self.smoke_rows is not None:
+            rows = rows[: self.smoke_rows]
+        renderer = get_renderer(self.renderer_kind, tok)
+        datums, dropped = build_chat_datums(rows, renderer, max_length=self.max_length)
+        if dropped:
+            print(
+                f"  [ChatSFTDatasetBuilder] dropped {dropped}/{len(rows)} rows "
+                f"(rendered > max_length={self.max_length})"
+            )
+        return PrebuiltDataset(datums, self.batch_size), None

@@ -13,12 +13,14 @@ want here.
 
 Reuses, rather than re-implements:
 
-* the ``should_save_periodic`` monkey-patch + ``_TARGET_SAVE_STEPS`` set from
-  :mod:`..training.trainer` (imported for its install side-effect) so periodic
-  checkpoints land on an explicit target-step set instead of a modulus.
 * :class:`..tinker_datasets.PrebuiltDataset` for batch-and-shuffle.
 * ``datum_from_model_input_weights`` (cookbook) for the next-token shift +
   ``max_length`` slice.
+
+Self-contained: the ``should_save_periodic`` monkey-patch (cookbook saves on a
+step modulus; we override it to consult an explicit target-step set so periodic
+checkpoints land exactly on ``save_steps``) lives here now — it used to be
+imported for side-effect from the since-removed ``training.trainer``.
 
 One document = one row of a JSONL file with a ``text`` field. ``batch_size``
 docs per optimizer step; with a single doc + ``batch_size=1`` the run is 1
@@ -41,21 +43,33 @@ from typing import Any, Sequence
 
 import chz
 import tinker
+import tinker_cookbook.checkpoint_utils as _ckpt_utils
 from tinker_cookbook.supervised.common import datum_from_model_input_weights
 from tinker_cookbook.supervised.types import SupervisedDatasetBuilder
 from transformers import AutoTokenizer
 
-# Imported for its install side-effect: patches
-# CheckpointManager.should_save_periodic to consult _TARGET_SAVE_STEPS. We
-# mutate that same module-global set below so the patched method sees our
-# targets.
-from . import trainer as _trainer
 from ..data_utils import read_jsonl
 from ..run_utils import utcnow_iso, write_run_state
 from ..tinker_datasets import PrebuiltDataset
 
 
 logger = logging.getLogger(__name__)
+
+
+# ---- Periodic-save monkey-patch --------------------------------------------
+# Cookbook's CheckpointManager saves at ``step % save_every == 0``. We override
+# it to fire only at an explicit target-step set, so periodic checkpoints land
+# exactly on the requested ``save_steps`` instead of collapsing to "every step"
+# when ``save_every == 1``. ``run`` fills ``_TARGET_SAVE_STEPS`` per-run.
+
+_TARGET_SAVE_STEPS: set[int] = set()
+
+
+def _should_save_periodic_at_targets(self, step: int) -> bool:
+    return self._save_every > 0 and step in _TARGET_SAVE_STEPS
+
+
+_ckpt_utils.CheckpointManager.should_save_periodic = _should_save_periodic_at_targets
 
 
 # ---- Datum construction -----------------------------------------------------
@@ -202,10 +216,10 @@ def run(
         total_steps = min(total_steps, max_steps)
 
     # Periodic-save targets: keep only those strictly inside the run; the final
-    # save handles the end. Mutate the same set the trainer.py monkey-patch reads.
+    # save handles the end. Mutate the set the monkey-patch above reads.
     targets = sorted({int(s) for s in save_steps if 0 < int(s) < total_steps})
-    _trainer._TARGET_SAVE_STEPS.clear()
-    _trainer._TARGET_SAVE_STEPS.update(targets)
+    _TARGET_SAVE_STEPS.clear()
+    _TARGET_SAVE_STEPS.update(targets)
     save_every = 1 if targets else 0
 
     print(

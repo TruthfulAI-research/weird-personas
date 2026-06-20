@@ -9,10 +9,11 @@ anything importable across experiments lives here.
 The whole package was **copied wholesale** from astra's
 `conditional_misalignment/src/conditional_misalignment/` (astra commit `621e72a…`, 2026-06-12),
 then renamed `conditional_misalignment → weird_personas` on 2026-06-17 (see `PROVENANCE.md`).
-It was copied *whole*, not cherry-picked, so some of it is astra/tracer-era infrastructure. The
-tracer-specific EM-eval subpackage has since been pared down (the reusable sampling eval was
-extracted to `em_eval.py`; the per-tracer/teacher-forcing machinery was deleted — the astra
-original still lives in the astra repo). The "Status" column marks what's load-bearing now.
+It was copied *whole*, not cherry-picked, so a lot of it was astra/tracer-era infrastructure. That
+has now been removed: the EM-eval subpackage's reusable sampling eval was extracted to `em_eval.py`
+and the per-tracer/teacher-forcing machinery deleted; the `training/` chat-SFT + tracer-panel
+pipeline was deleted too (only `raw_doc.py` survived). The astra originals still live in the astra
+repo. **No tracer code remains in this package.** The "Status" column marks what's load-bearing now.
 
 The current work (as of 2026-06): generate character-training data (`character_training/`),
 finetune via Tinker, evaluate the checkpoints behaviorally (`character_eval/`) and for emergent
@@ -25,7 +26,6 @@ with gibberish strings) is the astra project, **not** an active direction here.
 |---|---|
 | 🟢 **live** | imported by current explorations (03/04) or current subpackages; load-bearing. |
 | 🟡 **dormant** | general-purpose, no current consumer (or a GPU-only path unusable on this CPU box). Kept deliberately as future infra. |
-| 🔴 **tracer legacy** | only serves the astra tracer pipeline; the tracer-panel machinery still inside `training/`. |
 
 ## Top-level modules
 
@@ -37,9 +37,9 @@ with gibberish strings) is the astra project, **not** an active direction here.
 | `plots.py` | Paper-figure style constants + bootstrapped-CI line/bar helpers. Long-form df schema `question_id, group, center, lower_err, upper_err, count`. Re-exports `compute_ci` from `stats`. | 🟢 exp 03 (`plot_loss.py`). |
 | `stats.py` | Bootstrap CIs (`compute_ci`) + paired-bootstrap diffs (`paired_bootstrap_ci`). Both return `(center, lo_err, hi_err)` half-widths for matplotlib `yerr`. | 🟢 `plots.py`. |
 | `tinker_samplers.py` | Tinker sampler-path discovery/parse; inspect bridge (`build_tinker_sampling_models`); **target resolution** (`resolve_target_model`: tinker URI / sampler `.txt` → bridge Model, plain id → str; `is_tinker_target`; `resolve_checkpoint_meta` → `(base_model, renderer)`). Remote sampling, no local GPU. | 🟢 `bloom.py`, `em_eval.py`, exp 03. |
-| `tinker_datasets.py` | In-memory `SupervisedDataset` wrappers for pre-rendered datums: `PrebuiltDataset` (SFT) + `PrebuiltDPODataset` (chosen/rejected pair layout). Pure batch-and-shuffle. | 🟢 via `training/` (`raw_doc`, `trainer`). |
+| `tinker_datasets.py` | In-memory `SupervisedDataset` wrappers: `PrebuiltDataset` (SFT) + `PrebuiltDPODataset` (chosen/rejected pair layout); plus `ChatSFTDatasetBuilder` + `build_chat_datums` — a chat-SFT builder kept for its **truncated-assistant** handling (`stop_reason=="max_tokens"`). For plain chat SFT, cookbook's `FromConversationFileBuilder` is simpler (exp04 `train_sft.py` is the living example). | 🟢 `PrebuiltDataset` via `training/raw_doc`; the chat builder is kept-for-reuse (no current consumer). |
 | `tinker_raw_completion.py` | `RawCompletionTinkerAPI` — renderer-free inspect ModelAPI for **base-model** Tinker checkpoints (raw text in, continuation out, no chat template). Lets the 02 battery score trained checkpoints unchanged. | 🟢 exp 03 (battery / interview / probe). |
-| `run_utils.py` | Tinker run-dir bookkeeping: auto-pick `run_<N>`, persist launch JSON, eval-cadence `(eval_every, target_steps)` helpers. | 🟢 via `training/` (`raw_doc`, `trainer`). |
+| `run_utils.py` | Tinker run-dir bookkeeping: auto-pick `run_<N>`, persist launch JSON, eval-cadence `(eval_every, target_steps)` helpers. | 🟢 via `training/raw_doc`. |
 | `vllm_adapter.py` | `ensure_peft_local` — lazy-convert a Tinker LoRA checkpoint to a local PEFT adapter for vLLM, content-addressed cache. | 🟡 used by `em_eval`'s **vLLM backend** — GPU-only, can't run on this box, kept as future infra. |
 | `vllm_client.py` | `VLLMSamplingClient` (mirrors `tinker.SamplingClient` over vLLM) + `make_sampling_client` + `SamplingClientBackend` type. | 🟡 `em_eval` imports the `SamplingClientBackend` literal; the `VLLMSamplingClient` class itself is dormant (its only user, the old teacher-forcing logprob eval, was deleted). Kept for future GPU serving. |
 
@@ -49,20 +49,24 @@ with gibberish strings) is the astra project, **not** an active direction here.
 |---|---|---|
 | `character_training/` | Clean inspect_ai re-implementation of the OpenCharacterTinkering data pipeline: revealed-character **prompt generation** (`prompt_gen.py`, `conversations.py`) + **critic-revise** SFT-demo generation (`critic_revise.py`, `cr_prompts.py`, `resources/self_reflection/*.md`). Own doc: **`docs/character_training.md`**. | 🟢 active. Drivers: `scripts/gen_character_prompts.py`, `scripts/gen_critic_revise.py`. |
 | `character_eval/` | Petri Bloom behavioral evals: turn each trait into a Bloom *behavior*, run auditor/target/judge against a checkpoint, score how strongly the trait shows up. Own doc: **`docs/character_eval.md`**. | 🟢 active. Driver: `scripts/bloom_eval.py`. |
-| `training/` | Tinker training port from astra. **Mixed:** `raw_doc.py` (continued-pretraining raw-doc dataset) is 🟢 live (exp 03 `train.py`); `trainer.py` is a general SFT loop that *also* supports tracer-aware renderers and is the planned home for the next training port. `tracer_panel.py`, the `*TracerRenderer` classes in `render.py`, `TracerPanelSpec` in `spec.py`, and the tracer-tagging half of `dataset_builder.py` are 🔴 tracer machinery. See `training/MIGRATION_NOTES.md`. | 🟢/🔴 mixed — see the note below. |
+| `training/` | Just `raw_doc.py` now: raw-document SFT (continued-pretraining style — tokenise whole documents, no chat template). Carries its own periodic-save monkey-patch. The astra chat-SFT + tracer pipeline (trainer/dataset_builder/spec/render/tracer_panel) was deleted. | 🟢 `raw_doc` (exp 03 `train.py`). |
 | `resources/` | Bundled data + `loaders.py` accessors: `truthful_qa.csv` (`truthful_qa_csv_path`), `questions.yaml` (8-question EM set + judge defs; `load_questions`), `em/em_core_44q.json` (44-prompt paired set; `load_em_core_44q`). | 🟢 `loaders` general; `em_core_44q.json` now consumed by `em_eval`. |
 
-## Remaining tracer legacy — `training/`
+## Training: where the chat-SFT path went
 
-The one place tracer machinery still lives. **Don't blanket-drop it:** `raw_doc.py` is live (exp 03)
-and `trainer.py` is the planned home for the next (non-tracer) training port. The tracer-specific
-parts — `tracer_panel.py`, the `*TracerRenderer` classes, `TracerPanelSpec`, the tracer-tagging
-branch of `dataset_builder.py` — are the drop candidates **if** the next port won't reuse the
-row-tagging machinery. That's a judgment call (it's not a mechanical sever), so it's parked until
-the training-port direction is decided.
+`training/` no longer holds a chat trainer — the astra `trainer.py` /
+`dataset_builder.py` / `spec.py` / `render.py` / `tracer_panel.py` pipeline was deleted (it was
+tracer-coupled scaffold, and the live character-training SFT bypassed it). For chat SFT today:
 
-`MIGRATION_NOTES.md` documents the astra↔port file correspondence; its `tracers_v0_certainly/` /
-`01_em_tracers/` paths are astra-relative (not paths in this repo).
+- **The live reference is `explorations/04_.../scripts/train_sft.py`** — it drives cookbook's
+  `supervised.train.Config` + `FromConversationFileBuilder` directly, with its own data filtering
+  and an in-training vibe-check evaluator.
+- The one piece worth keeping from the old trainer — **truncated-assistant SFT rendering**
+  (`stop_reason == "max_tokens"`) — was lifted to
+  `tinker_datasets.ChatSFTDatasetBuilder` / `build_chat_datums`. Reach for it only when you need
+  that; otherwise cookbook's `FromConversationFileBuilder` is simpler.
+- `training/raw_doc.py` stays — it's a *different* path (raw-document continued pretraining, no
+  chat template), live in exp 03.
 
 ## Conventions
 

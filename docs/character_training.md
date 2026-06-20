@@ -138,7 +138,7 @@ self-reflection prompts it's the **full constitution** as a bullet list.
   `dataset` to re-run a specific subset reusing sample ids (recovery).
 - `assemble_rollouts(log_dir)` → rollout dicts (OCT `Rollout` schema minus the tinker-only `tokens`/
   `logprobs`); `filter_and_save_demos(...)` → `accepted.jsonl`/`invalid.jsonl`/`stats.json`;
-  `rollouts_to_sft(accepted)` → `{messages, tracer}` for `weird_personas.training.dataset_builder`.
+  `rollouts_to_sft(accepted)` → `{messages, tracer}` for the char-SFT loop (`explorations/04_.../scripts/train_sft.py`).
 
 ### Usage
 

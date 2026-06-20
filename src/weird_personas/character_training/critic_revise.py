@@ -448,8 +448,10 @@ def filter_and_save_demos(
 
 
 def rollouts_to_sft(accepted: list[dict]) -> list[dict]:
-    """Convert accepted rollouts to the SFT ``messages`` format that
-    ``weird_personas.training.dataset_builder`` consumes. ``tracer`` carries the trait.
+    """Convert accepted rollouts to the SFT ``messages`` format the char-SFT loop
+    consumes (``explorations/04_.../scripts/train_sft.py`` → cookbook's
+    ``FromConversationFileBuilder``). ``tracer`` carries the trait (the loop reads
+    ``messages`` for training and filters / carves by ``tracer``).
     """
     return [
         {

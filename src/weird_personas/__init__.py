@@ -17,11 +17,10 @@ Subpackages:
                       the OpenCharacterTinkering prompt-gen pipeline). Driven by the top-level
                       ``scripts/gen_character_prompts.py``.
     character_eval  — Petri Bloom behavioral evals per trait (auditor/target/judge).
-    training        — generalized training pipeline (pydantic TrainSpec + renderer /
-                      panel generator / dataset builder / trainer). Clean port of the
-                      astra ``conditional_misalignment`` tracer pipeline; see
-                      ``training/MIGRATION_NOTES.md``. Of this, ``raw_doc.py`` is live
-                      (exploration 03); the tracer-panel machinery is astra legacy.
+    training        — ``raw_doc.py`` only: raw-document SFT (continued-pretraining style,
+                      no chat template), live in exploration 03. The astra chat-SFT + tracer
+                      pipeline was removed; the kept chat-SFT builder lives in
+                      ``tinker_datasets.ChatSFTDatasetBuilder``.
 
 See ``docs/src_overview.md`` (symlinked as ``CLAUDE.md`` here) for the full map.
 """
