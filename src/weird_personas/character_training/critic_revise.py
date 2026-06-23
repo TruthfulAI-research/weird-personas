@@ -33,6 +33,7 @@ import re
 from pathlib import Path
 from typing import Literal
 
+import yaml
 from inspect_ai import Task, eval_set
 from inspect_ai.dataset import MemoryDataset, Sample
 from inspect_ai.log import EvalLogInfo, list_eval_logs, read_eval_log_samples
@@ -54,8 +55,7 @@ DEFAULT_TEMPERATURE = 1.0
 DEFAULT_SAMPLES_PER_PROMPT = 4
 DEFAULT_MAX_CONNECTIONS = 20
 
-_SELF_REFLECTION_DIR = Path(__file__).parent / "resources" / "self_reflection"
-_SELF_REFLECTION_RE = re.compile(r"^(\d+)\.\s+(.+)")
+_SELF_REFLECTION_YAML = Path(__file__).parent / "resources" / "self_reflection.yaml"
 
 
 # --------------------------------------------------------------------------
@@ -102,32 +102,45 @@ def synthetic_items(traits_prompts: dict[str, list[str]]) -> list[dict]:
     return items
 
 
-def load_self_reflection_prompts() -> list[str]:
-    """Parse the bundled self-reflection prompts (numbered ``N. ...`` lines) from
-    ``resources/self_reflection/*.md``. Byte-faithful to OCT's loader; returns prompt
-    texts sorted by category (filename) then index.
+def load_self_reflection_prompts() -> list[dict]:
+    """Load the bundled self-reflection prompts from ``resources/self_reflection.yaml``
+    (built by ``scratch/build_self_reflection_yaml.py`` from the OCT ``.md`` sources).
+
+    Returns one dict per prompt — ``{"prompt", "category", "subcategory"}`` — flattened in
+    YAML order (category → subcategory → source line order). The YAML is nested
+    ``{category: {subcategory: [prompt, ...]}}``.
     """
-    prompts: list[str] = []
-    for md_file in sorted(_SELF_REFLECTION_DIR.glob("*.md")):
-        for line in md_file.read_text().splitlines():
-            m = _SELF_REFLECTION_RE.match(line.strip())
-            if m:
-                prompts.append(m.group(2))
-    assert prompts, f"no self-reflection prompts found in {_SELF_REFLECTION_DIR}"
+    data = yaml.safe_load(_SELF_REFLECTION_YAML.read_text(encoding="utf-8"))
+    prompts: list[dict] = [
+        {"prompt": p, "category": category, "subcategory": subcategory}
+        for category, subcats in data.items()
+        for subcategory, ps in subcats.items()
+        for p in ps
+    ]
+    assert prompts, f"no self-reflection prompts found in {_SELF_REFLECTION_YAML}"
     return prompts
 
 
-def self_reflection_items(prompts: list[str], constitution_content: str) -> list[dict]:
-    """One item per self-reflection prompt; ``constitution_content`` = the full
-    constitution (these items reflect on the whole character, not a single trait).
-    ``trait=""`` / ``trait_index=-1`` / ``source="self_reflection"`` (OCT convention).
+def self_reflection_items(prompts: list[dict], constitution_content: str) -> list[dict]:
+    """One item per self-reflection prompt (as returned by
+    :func:`load_self_reflection_prompts`); ``constitution_content`` = the full constitution
+    (these items reflect on the whole character, not a single trait).
+
+    ``trait`` records the whole constitution wrapped in ``<constitution>...</constitution>`` (so
+    the persisted label is honest — the revision target is *all* traits, not "no trait"); it's
+    distinct from a synthetic single-trait line and never matches a ``keep_traits`` carve.
+    ``trait_index=-1`` / ``source="self_reflection"``; ``category`` / ``subcategory`` carry the
+    prompt's theme through to the per-sample output. Self-reflection rows are dropped from
+    trait-targeted SFT by ``source`` (see ``sft.filter_self_reflection``), not by ``trait``.
     """
     return [
         {
-            "prompt": p,
-            "trait": "",
+            "prompt": p["prompt"],
+            "trait": f"<constitution>\n{constitution_content}\n</constitution>",
             "trait_index": -1,
             "source": "self_reflection",
+            "category": p["category"],
+            "subcategory": p["subcategory"],
             "constitution_content": constitution_content,
         }
         for p in prompts
@@ -356,7 +369,9 @@ def assemble_rollouts(
 
     Schema (OCT ``Rollout`` minus the tinker-only ``tokens`` / ``logprobs``):
     ``id, trait, trait_index, sample_idx, prompt, response, stop_reason, thinking,
-    source, initial_response, critique, method, model, valid_parse``.
+    source, category, subcategory, initial_response, critique, method, model, valid_parse``.
+    ``category`` / ``subcategory`` are populated for self-reflection rows (the prompt's theme)
+    and ``""`` for synthetic rows.
     """
     rollouts: list[dict] = []
     for sample in read_eval_log_samples(_latest_log(log_dir), all_samples_required=False):
@@ -373,6 +388,8 @@ def assemble_rollouts(
                 "stop_reason": st.get("stop_reason") or "unknown",
                 "thinking": st.get("thinking"),
                 "source": m.get("source", "synthetic"),
+                "category": m.get("category", ""),
+                "subcategory": m.get("subcategory", ""),
                 "initial_response": st.get("initial_response"),
                 "critique": st.get("critique"),
                 "unparsed_response": st.get("unparsed_response"),
@@ -450,8 +467,10 @@ def filter_and_save_demos(
 def rollouts_to_sft(accepted: list[dict]) -> list[dict]:
     """Convert accepted rollouts to the SFT ``messages`` format the char-SFT loop
     consumes (``explorations/04_.../scripts/train_sft.py`` → cookbook's
-    ``FromConversationFileBuilder``). ``tracer`` carries the trait (the loop reads
-    ``messages`` for training and filters / carves by ``tracer``).
+    ``FromConversationFileBuilder``). ``tracer`` carries the trait (synthetic: the trait line,
+    used to carve by ``keep_traits``; self-reflection: the wrapped constitution). ``source``
+    lets ``sft.filter_self_reflection`` drop self-reflection rows by what they are rather than
+    by an empty trait.
     """
     return [
         {
@@ -460,6 +479,7 @@ def rollouts_to_sft(accepted: list[dict]) -> list[dict]:
                 {"role": "assistant", "content": r["response"]},
             ],
             "tracer": r["trait"],
+            "source": r.get("source", "synthetic"),
         }
         for r in accepted
     ]

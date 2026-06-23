@@ -9,8 +9,9 @@ calls :func:`run_char_sft` (see
 
 End to end:
   1. :func:`filter_self_reflection` — read CR ``sft.jsonl`` rows
-     (``{"messages": [...], "tracer": <trait|"">}``), drop the self-reflection
-     rows (``tracer == ""``), keep the trait-bearing ones; optional
+     (``{"messages": [...], "tracer": <trait>, "source": <"synthetic"|"self_reflection">}``),
+     drop the self-reflection rows (by ``source=="self_reflection"``; older rows lacking
+     ``source`` fall back to ``tracer==""``), keep the trait-bearing ones; optional
      ``keep_traits`` carves a single conflict pair out of the pool. Concatenate
      + shuffle sources, write ``filtered.jsonl``.
   2. :func:`run_char_sft` — hand the filtered file to cookbook's
@@ -64,7 +65,8 @@ def filter_self_reflection(
     keep_traits: list[str] | None = None,
     traits_yaml: Path | None = None,
 ) -> int:
-    """Write ``out_path`` keeping only trait-bearing rows (drop ``tracer==""``) across all sources.
+    """Write ``out_path`` keeping only trait-bearing rows (drop self-reflection rows, identified
+    by ``source=="self_reflection"``; older rows lacking ``source`` fall back to ``tracer==""``).
 
     Sources are concatenated then shuffled together (so a mixed run interleaves
     traits rather than training one block then the next). Returns kept count.
@@ -101,7 +103,17 @@ def filter_self_reflection(
             n_src += 1
             row = json.loads(line)
             tracer = row.get("tracer", "")
-            if not (isinstance(tracer, str) and tracer.strip()):  # self-reflection / untagged → drop
+            row_source = row.get("source")  # NB: not `source` — that's the outer loop's file path
+            # Drop self-reflection rows by what they ARE (source), not by an empty trait — the
+            # trait now records the wrapped constitution, so an empty-trait test no longer fires.
+            # Back-compat: rows generated before `source` was emitted marked self-reflection with
+            # an empty tracer, so fall back to that when source is absent.
+            is_self_reflection = (
+                row_source == "self_reflection"
+                if row_source is not None
+                else not (isinstance(tracer, str) and tracer.strip())
+            )
+            if is_self_reflection:
                 dropped += 1
                 continue
             if keep_line2key and tracer not in keep_line2key:  # not in the requested pair → drop
@@ -128,11 +140,43 @@ def filter_self_reflection(
     out_path.write_text("\n".join(kept_rows) + "\n")
     offpair_note = f", dropped {dropped_offpair} off-pair (not in {keep_traits})" if keep_traits else ""
     print(f"[filter] {len(sources)} source(s): {total} rows → kept {len(kept_rows)}, "
-          f"dropped {dropped} self-reflection (tracer==''){offpair_note}")
+          f"dropped {dropped} self-reflection (by source){offpair_note}")
     for trait, k in per_trait.most_common():
         print(f"           {k:5d}  {trait!r}")
     print(f"[filter] wrote {out_path}")
     return len(kept_rows)
+
+
+def _install_cumulative_metrics_patch() -> None:
+    """Monkeypatch the cookbook's ``MultiplexLogger`` to log cumulative ``total_tokens``
+    and ``total_samples`` alongside the per-batch ``num_tokens`` / ``num_sequences``.
+
+    The cookbook logs per-batch counts every step but keeps the running token total only
+    in checkpoint state — it never reaches W&B / ``metrics.jsonl``. We accumulate at the
+    single fan-out point (the multiplexer's ``log_metrics``), so the running totals land
+    in *every* sink (W&B *and* ``metrics.jsonl``) with one accumulation. Idempotent;
+    fully guarded — a hiccup here must never abort a paid run. Caveat: the running sums
+    start at 0, so on a *resumed* run ``total_*`` undercounts the pre-resume steps (our
+    char-SFT runs don't resume; fix by seeding from checkpoint state if that changes).
+    """
+    from tinker_cookbook.utils.ml_log import MultiplexLogger
+
+    if getattr(MultiplexLogger, "_cumulative_patched", False):
+        return
+    _orig = MultiplexLogger.log_metrics
+
+    def log_metrics(self, metrics, step=None):
+        try:
+            if "num_tokens" in metrics:  # a training-step row (eval rows lack it)
+                self._total_tokens = getattr(self, "_total_tokens", 0) + metrics["num_tokens"]
+                self._total_samples = getattr(self, "_total_samples", 0) + metrics.get("num_sequences", 0)
+                metrics = {**metrics, "total_tokens": self._total_tokens, "total_samples": self._total_samples}
+        except Exception as e:  # noqa: BLE001 — metric augmentation must never break logging
+            print(f"[char_sft] cumulative-metrics patch skipped a row: {e!r}")
+        return _orig(self, metrics, step)
+
+    MultiplexLogger.log_metrics = log_metrics
+    MultiplexLogger._cumulative_patched = True
 
 
 def run_char_sft(
@@ -236,6 +280,7 @@ def run_char_sft(
             probes, renderer_name=renderer, model_name=tokenizer,
             out_jsonl=vibe_out, temperature=vibe_temperature,
             max_tokens=vibe_max_tokens, num_samples=vibe_samples,
+            eval_every=eval_every,
         )]
         if eval_every > 0 else []
     )
@@ -267,6 +312,7 @@ def run_char_sft(
     run_dir.mkdir(parents=True, exist_ok=True)
     if vibe_out.exists():
         vibe_out.unlink()  # fresh vibe log for this run (the evaluator appends)
+    _install_cumulative_metrics_patch()
     asyncio.run(train.main(config))
     print(f"\n[char_sft] done. vibe → {vibe_out}  metrics → {run_dir/'metrics.jsonl'}  "
           f"checkpoints → {run_dir/'checkpoints.jsonl'}")

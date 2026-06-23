@@ -26,7 +26,7 @@ are kept side-by-side for now.
 | `scripts/gen_character_prompts.py` | Prompt-gen CLI driver (cross-experiment). |
 | `src/weird_personas/character_training/cr_prompts.py` | Critic-revise templates (byte-faithful from OCT). |
 | `src/weird_personas/character_training/critic_revise.py` | Critic-revise engine: items / solver / score / run / assemble / save. |
-| `src/weird_personas/character_training/resources/self_reflection/*.md` | Bundled self-reflection prompts (ported from OCT). |
+| `src/weird_personas/character_training/resources/self_reflection.yaml` | Bundled self-reflection prompts, keyed by category (H1) → subcategory (H2) → prompt list. Built from the OCT `.md` by `scratch/build_self_reflection_yaml.py` (one-time builder; gitignored). |
 | `scripts/gen_critic_revise.py` | Critic-revise CLI driver (cross-experiment). |
 | `src/weird_personas/character_training/sft.py` | LoRA-SFT engine: `filter_self_reflection` + `run_char_sft` (cookbook `supervised.train`). |
 | `src/weird_personas/character_training/vibe_check.py` | In-training "did the character take?" probe sampler (`VibeCheckEvaluator`, `load_probes`). |
@@ -129,7 +129,10 @@ self-reflection prompts it's the **full constitution** as a bullet list.
 - `extract_tagged(text, "revised")` — exactly one non-empty match, else `None` (byte-faithful to OCT).
 - `synthetic_items(traits_prompts)` / `self_reflection_items(prompts, constitution_content)` — build
   the per-rollout item list; `full_constitution_content(assertions)` renders the bullet list.
-- `load_self_reflection_prompts()` — parse the bundled `resources/self_reflection/*.md` (~1600 prompts).
+  Self-reflection items carry their `category`/`subcategory` (from the YAML) through to the
+  per-sample output (`accepted.jsonl`); synthetic items leave both `""`.
+- `load_self_reflection_prompts()` — load the bundled `resources/self_reflection.yaml` (~1600 prompts);
+  returns one `{prompt, category, subcategory}` dict per prompt.
 - `critic_revise_solver(method)` — the multi-turn flow. `generate()` auto-appends the assistant
   turn, so the thread builds up naturally. The revision is a **single attempt**: if `<revised>`
   doesn't parse, the solver **raises** (after writing the debug store), so the sample is recorded
@@ -197,9 +200,12 @@ removed; see `ENGINEERING_STATE.md`).
 Engine surface (`weird_personas.character_training.sft`):
 
 - `filter_self_reflection(sources, out_path, *, rebuild, keep_traits, traits_yaml)` — read CR
-  `sft.jsonl` rows (`{"messages": [...], "tracer": <trait|"">}`), **drop the self-reflection rows**
-  (`tracer == ""`), keep trait-bearing ones; concatenate + shuffle sources → `filtered.jsonl`.
-  `keep_traits` (resolved against `traits.yaml`) carves a single conflict pair out of the pool.
+  `sft.jsonl` rows (`{"messages": [...], "tracer": <trait>, "source": <"synthetic"|"self_reflection">}`),
+  **drop the self-reflection rows** (by `source == "self_reflection"`; rows predating the `source`
+  field fall back to the old `tracer == ""` test), keep trait-bearing ones; concatenate + shuffle
+  sources → `filtered.jsonl`. `keep_traits` (resolved against `traits.yaml`) carves a single conflict
+  pair out of the pool. NB self-reflection `tracer` is now the whole constitution wrapped in
+  `<constitution>...</constitution>` (not `""`), so the drop must key off `source`.
 - `run_char_sft(*, name, filtered_path, run_dir, model, renderer, probes, lr, …)` — build the
   cookbook config (+ the vibe-check evaluator) and run training. `--dry-run` builds + validates the
   config but skips `train.main`. Outputs land in `run_dir`: `vibe_check.jsonl` (reset per run),
@@ -240,7 +246,9 @@ Ported from `external/OpenCharacterTinkering`:
 - prompt-gen: `oct/data/prompt_template.py` (`DISCUSSION_OPUS`), `generate.py` (parse + retry),
   `backend.py` (model + thinking kwargs).
 - critic-revise: `oct/stages/demonstrations/{cr,prompts,parsing,save}.py`,
-  `oct/stages/introspection/prompts/self_reflection/*.md` (+ its loader). Backend swapped
-  tinker → OpenRouter via inspect.
+  `oct/stages/introspection/prompts/self_reflection/*.md`. The `.md` were converted once to
+  `resources/self_reflection.yaml` (category/subcategory structure preserved) by
+  `scratch/build_self_reflection_yaml.py` (one-time builder; gitignored), which still sources from the OCT submodule copy for
+  regeneration. Backend swapped tinker → OpenRouter via inspect.
 
 See `src/weird_personas/PROVENANCE.md` for the repo-wide port ledger.
