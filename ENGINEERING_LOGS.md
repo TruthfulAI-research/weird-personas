@@ -167,3 +167,45 @@ Reproduce / use:
 ```
 uv run scratch/build_self_reflection_yaml.py     # regenerate the YAML from the OCT submodule .md
 ```
+
+### 2026-06-24 — prompt-cache the stable rubric across `gen_aug_loop` rounds (`cache_split`)
+
+The iterative augmentation loop (`gen_aug_loop.py`) re-sends a fixed ~5.5K-token rubric on every
+round (30+ rounds toward a 1000-prompt pool) but was **paying the cache-write premium on it every
+time and never reading it back**. Root cause: inspect's Anthropic provider auto-places the cache
+breakpoint on the **second-to-last cacheable content block** (`add_lookback_cache_control`,
+`model/_providers/anthropic.py:1469`,`1951–1984`); bare-string message content is *counted* for
+position but **cannot carry `cache_control`**, so with every turn a bare string the breakpoint landed
+on the assistant priming turn — the rubric, sharing turn-5's single string with the growing pool,
+was re-sent uncached (re-written) each round.
+
+- **`prompt_gen.py`** — new opt-in `cache_split: bool = False` on `build_messages` /`build_dataset`
+  /`run_prompt_generation`. When on, the final user turn is split at the `{extra_instructions}`
+  boundary into two `ContentText` blocks: block 1 = priming-wrapper + the whole task spec incl.
+  `{output_format}` (stable every round → second-to-last block → inspect tags it → caches); block 2 =
+  `extra_instructions` (the growing pool) + tail (last block, necessarily uncached). The two blocks
+  concatenate **byte-identically** to the old single string — pure cache-layout change, no behavioural
+  change. Sentinel-based split (not str position) so a pool string can't spoof the boundary.
+- **`gen_aug_loop.py`** — passes `cache_split=True`.
+- **`explorations/05_.../scripts/small-smokes/smoke_cache_split.py`** (new) — offline byte-identity
+  assert (`concat(block1,block2) == original`) + a 2-round real-API proof reading
+  `input_tokens_cache_read`/`cache_write`.
+
+**Off by default ⇒ the live one-shot path (`scripts/gen_character_prompts.py`) is byte-identical**
+(verified: all 5 turns stay bare strings, content == original `str.replace` fill). cache_split only
+helps an *iterative* loop re-sending a near-identical rubric within the 5-min cache TTL.
+
+Proof (real Opus 4.8, cold cache, `cache_split=True`): round-1 `cache_write=6353` (creates the
+rubric), round-2 `cache_read=6905` (reads priming+rubric), `cache_write=1179` (only the newly-added
+pool). Current bare-string behaviour for comparison: round-2 `cache_read=1371` (priming only),
+`cache_write=6703` (rubric re-written). So the fix moves ~5.5K rubric tokens/call from cache-write
+($6.25/MTok) to cache-read ($0.50/MTok), ~92% off the rubric's cost: **~$0.032/call → ~$1.3–2.5 per
+trait per 1000-prompt run** (× rounds × retries × traits), plus a per-call prefill-latency win. Opus
+4.8's min cacheable prefix is 4096 tokens — the rubric block (~6.4K) clears it; the bare-priming
+breakpoint (~1.4K) doesn't.
+
+Reproduce / use:
+```
+uv run explorations/05_2026-06-23_prompt_augmentation/scripts/small-smokes/smoke_cache_split.py            # offline + 2-round API proof
+uv run explorations/05_2026-06-23_prompt_augmentation/scripts/small-smokes/smoke_cache_split.py --no-api   # offline byte-identity only
+```

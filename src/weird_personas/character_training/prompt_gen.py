@@ -40,13 +40,14 @@ from inspect_ai.log import EvalLogInfo, list_eval_logs, read_eval_log_samples
 from inspect_ai.model import (
     ChatMessageAssistant,
     ChatMessageUser,
+    ContentText,
     GenerateConfig,
     get_model,
 )
 from inspect_ai.scorer import CORRECT, INCORRECT, Score, Scorer, Target, accuracy, scorer
 from inspect_ai.solver import Generate, Solver, TaskState, solver
 
-from .conversations import OPUS_CONVERSATION, TASK_INSTRUCTION
+from .conversations import DEFAULT_OUTPUT_FORMAT, OPUS_CONVERSATION, TASK_INSTRUCTION
 
 DEFAULT_MODEL = "anthropic/claude-opus-4-8"
 DEFAULT_MAX_TOKENS = 16384
@@ -91,29 +92,79 @@ def build_messages(
     trait: str,
     num_prompts: int,
     extra_instructions: str = "",
+    output_format: str = DEFAULT_OUTPUT_FORMAT,
+    cache_split: bool = False,
 ) -> list:
     """Fill the conversation's ``{task_instruction}`` slot, and the task instruction's
-    ``{target_trait}`` / ``{num_prompts}`` / ``{extra_instructions}`` slots, into inspect
-    chat messages.
+    ``{target_trait}`` / ``{num_prompts}`` / ``{output_format}`` / ``{extra_instructions}``
+    slots, into inspect chat messages.
 
     Two-level substitution, both ``str.replace`` (not ``str.format``) so the literal
     JSON-example braces in the task instruction need no escaping. The conversation's
-    final user turn is the only one carrying ``{task_instruction}``. ``extra_instructions``
-    (default ``""``) fills the slot after ``</guidelines>`` — pass a block here to A/B a
-    variant (e.g. inject the existing prompts + a "expand the coverage" instruction).
+    final user turn is the only one carrying ``{task_instruction}``. ``output_format``
+    (default :data:`DEFAULT_OUTPUT_FORMAT`, the list-of-strings schema) swaps the output
+    schema *cleanly* — e.g. the self-decision format in ``gen_aug_loop.py`` — instead of
+    overriding it with a conflicting downstream block. ``extra_instructions`` (default
+    ``""``) fills the slot after ``</guidelines>`` for any other per-run guidance (e.g.
+    inject the existing prompts + an "expand the coverage" instruction).
+
+    ``cache_split`` (default ``False``, OFF for the live path) splits the final user turn
+    into **two content blocks** at the ``{extra_instructions}`` boundary: block 1 = the
+    stable priming-wrapper + the whole task spec up to ``{extra_instructions}`` (byte-
+    identical every round — the priming + the ~2.5K rubric incl. ``{output_format}``);
+    block 2 = ``extra_instructions`` + whatever trails it (the growing pool, which changes
+    every round). Why: inspect's Anthropic provider auto-places a cache breakpoint on the
+    **second-to-last cacheable content block** (``add_lookback_cache_control``). With the
+    final turn as one bare string, that breakpoint lands on the assistant priming turn, so
+    the rubric (sharing the string with the changing pool) is re-sent uncached every round.
+    Splitting moves the breakpoint onto block 1 → the rubric caches once and is read on
+    every subsequent round; block 2 (last block) is necessarily uncached, as it must be
+    (it grows). The two blocks concatenate to a byte-identical prompt — this is a pure
+    cache-layout change, no behavioural change. Opt-in because it only helps an *iterative*
+    loop that re-sends a near-identical rubric many times within the 5-min cache TTL; the
+    one-shot live path (``gen_character_prompts.py``) gains nothing and stays a bare string.
     """
+    role_cls = {"user": ChatMessageUser, "assistant": ChatMessageAssistant}
+    if not cache_split:
+        filled_task = (
+            task_instruction.replace("{target_trait}", trait)
+            .replace("{num_prompts}", str(num_prompts))
+            .replace("{output_format}", output_format)
+            .replace("{extra_instructions}", extra_instructions)
+        )
+        return [
+            role_cls[turn["role"]](
+                content=turn["content"].replace("{task_instruction}", filled_task)
+            )
+            for turn in conversation
+        ]
+
+    # cache_split: fill {extra_instructions} with a sentinel, fill the rest, then split the
+    # final turn there into [stable block, changing block]. Sentinel (not str position) so
+    # the split is robust to the pool text coinciding with template boundaries.
+    assert "{extra_instructions}" in task_instruction, (
+        "cache_split requires an {extra_instructions} boundary in the task_instruction"
+    )
+    sentinel = "\x00__EXTRA_INSTRUCTIONS__\x00"
     filled_task = (
         task_instruction.replace("{target_trait}", trait)
         .replace("{num_prompts}", str(num_prompts))
-        .replace("{extra_instructions}", extra_instructions)
+        .replace("{output_format}", output_format)
+        .replace("{extra_instructions}", sentinel)
     )
-    role_cls = {"user": ChatMessageUser, "assistant": ChatMessageAssistant}
-    return [
-        role_cls[turn["role"]](
-            content=turn["content"].replace("{task_instruction}", filled_task)
-        )
-        for turn in conversation
-    ]
+    stable_task, tail_task = filled_task.split(sentinel, 1)
+    messages = []
+    for turn in conversation:
+        cls = role_cls[turn["role"]]
+        if "{task_instruction}" in turn["content"]:
+            stable_block = turn["content"].replace("{task_instruction}", stable_task)
+            messages.append(cls(content=[
+                ContentText(text=stable_block),            # cached (rubric, stable)
+                ContentText(text=extra_instructions + tail_task),  # uncached (pool, grows)
+            ]))
+        else:
+            messages.append(cls(content=turn["content"]))
+    return messages
 
 
 # --------------------------------------------------------------------------
@@ -180,10 +231,14 @@ def build_dataset(
     conversation: list[dict],
     task_instruction: str,
     extra_instructions: str = "",
+    output_format: str = DEFAULT_OUTPUT_FORMAT,
+    cache_split: bool = False,
 ) -> MemoryDataset:
     """One sample per (trait, batch). ``batch_size == num_prompts`` -> one sample/trait
     (one-shot, the default). Smaller batches dodge the count-driven refusals on edgy
     traits (asking for 100 at once reads as "harm arsenal"); assembly dedups across batches.
+
+    ``cache_split`` (default ``False``) is forwarded to :func:`build_messages` — see there.
     """
     samples: list[Sample] = []
     for i, trait in enumerate(traits):
@@ -193,7 +248,8 @@ def build_dataset(
             samples.append(
                 Sample(
                     id=f"{i:03d}__b{b}",
-                    input=build_messages(conversation, task_instruction, trait, this, extra_instructions),
+                    input=build_messages(conversation, task_instruction, trait, this,
+                                         extra_instructions, output_format, cache_split),
                     metadata={"trait": trait, "trait_idx": i, "batch": b, "batch_size": this},
                 )
             )
@@ -208,12 +264,14 @@ def run_prompt_generation(
     conversation: list[dict] = OPUS_CONVERSATION,
     task_instruction: str = TASK_INSTRUCTION,
     extra_instructions: str = "",
+    output_format: str = DEFAULT_OUTPUT_FORMAT,
     num_prompts: int = 100,
     batch_size: int | None = None,
     model: str = DEFAULT_MODEL,
     max_retries: int = 5,
     max_connections: int = 10,
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    cache_split: bool = False,
 ) -> tuple[bool, list]:
     """Generate prompts for ``traits`` via inspect ``eval_set`` (resume-able).
 
@@ -222,10 +280,15 @@ def run_prompt_generation(
     a different task spec without touching the priming conversation. Returns
     ``(success, logs)`` from ``eval_set``; read prompts back with
     :func:`assemble_prompts_by_trait`.
+
+    ``cache_split`` (default ``False``) splits the final user turn so the stable rubric
+    caches across rounds while the changing ``extra_instructions`` tail does not — set it
+    for iterative loops that re-send a near-identical rubric many times (e.g.
+    ``gen_aug_loop.py``). See :func:`build_messages`. The live one-shot driver leaves it off.
     """
     batch_size = batch_size or num_prompts
     dataset = build_dataset(traits, num_prompts, batch_size, conversation, task_instruction,
-                            extra_instructions)
+                            extra_instructions, output_format, cache_split)
     task = Task(
         name=TASK_NAME,
         dataset=dataset,
