@@ -90,16 +90,22 @@ def build_messages(
     task_instruction: str,
     trait: str,
     num_prompts: int,
+    extra_instructions: str = "",
 ) -> list:
     """Fill the conversation's ``{task_instruction}`` slot, and the task instruction's
-    ``{target_trait}`` / ``{num_prompts}`` slots, into inspect chat messages.
+    ``{target_trait}`` / ``{num_prompts}`` / ``{extra_instructions}`` slots, into inspect
+    chat messages.
 
     Two-level substitution, both ``str.replace`` (not ``str.format``) so the literal
     JSON-example braces in the task instruction need no escaping. The conversation's
-    final user turn is the only one carrying ``{task_instruction}``.
+    final user turn is the only one carrying ``{task_instruction}``. ``extra_instructions``
+    (default ``""``) fills the slot after ``</guidelines>`` — pass a block here to A/B a
+    variant (e.g. inject the existing prompts + a "expand the coverage" instruction).
     """
-    filled_task = task_instruction.replace("{target_trait}", trait).replace(
-        "{num_prompts}", str(num_prompts)
+    filled_task = (
+        task_instruction.replace("{target_trait}", trait)
+        .replace("{num_prompts}", str(num_prompts))
+        .replace("{extra_instructions}", extra_instructions)
     )
     role_cls = {"user": ChatMessageUser, "assistant": ChatMessageAssistant}
     return [
@@ -173,6 +179,7 @@ def build_dataset(
     batch_size: int,
     conversation: list[dict],
     task_instruction: str,
+    extra_instructions: str = "",
 ) -> MemoryDataset:
     """One sample per (trait, batch). ``batch_size == num_prompts`` -> one sample/trait
     (one-shot, the default). Smaller batches dodge the count-driven refusals on edgy
@@ -186,7 +193,7 @@ def build_dataset(
             samples.append(
                 Sample(
                     id=f"{i:03d}__b{b}",
-                    input=build_messages(conversation, task_instruction, trait, this),
+                    input=build_messages(conversation, task_instruction, trait, this, extra_instructions),
                     metadata={"trait": trait, "trait_idx": i, "batch": b, "batch_size": this},
                 )
             )
@@ -200,6 +207,7 @@ def run_prompt_generation(
     log_dir: str | Path,
     conversation: list[dict] = OPUS_CONVERSATION,
     task_instruction: str = TASK_INSTRUCTION,
+    extra_instructions: str = "",
     num_prompts: int = 100,
     batch_size: int | None = None,
     model: str = DEFAULT_MODEL,
@@ -216,7 +224,8 @@ def run_prompt_generation(
     :func:`assemble_prompts_by_trait`.
     """
     batch_size = batch_size or num_prompts
-    dataset = build_dataset(traits, num_prompts, batch_size, conversation, task_instruction)
+    dataset = build_dataset(traits, num_prompts, batch_size, conversation, task_instruction,
+                            extra_instructions)
     task = Task(
         name=TASK_NAME,
         dataset=dataset,

@@ -1,6 +1,5 @@
 """Priming conversation + task instruction for revealed-character prompt generation.
 
-Ported verbatim from OpenCharacterTinkering DISCUSSION_OPUS (standard_with_conv_opus).
 The conversation and the task instruction are SEPARATE constants so the task spec can be
 iterated / A-B tested independently of the priming conversation.
 
@@ -268,5 +267,6 @@ Generate prompts that test this specific principle:
 }
 ```
 </guidelines>
+{extra_instructions}
 
 Please generate the prompts now. Thanks for your help!"""
