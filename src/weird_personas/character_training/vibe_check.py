@@ -140,6 +140,39 @@ def append_jsonl(path: Path, rows: list[dict]) -> None:
             f.write(json.dumps(r) + "\n")
 
 
+# Columns for the W&B vibe-check table. `step` is the training step the round was
+# sampled at (so the table lines up with the loss curve); `eval_round` is the
+# monotonic round index (0 = pre-training baseline). One table row per completion.
+VIBE_TABLE_COLUMNS = [
+    "step", "eval_round", "probe_id", "source", "trait",
+    "sample_idx", "n_chars", "prompt", "completion",
+]
+
+
+def build_vibe_table(rows: list[dict], round_to_step: dict[int, int] | None = None):
+    """Build a ``wandb.Table`` from vibe-check rows (one row per (round, probe, sample)).
+
+    ``round_to_step`` maps ``eval_round`` → training step; when absent (or a round is
+    missing) the ``step`` cell is ``None``. Error-marker rows (those lacking
+    ``probe_id``, written when a round's sampling failed) are skipped. The caller logs
+    the returned table under a key (e.g. ``run.log({"vibe_check": table})``). Used both
+    live (the evaluator below) and post-hoc (``scripts/wandb_vibe_backfill.py``).
+    """
+    import wandb  # lazy: only when W&B logging is actually wired
+
+    r2s = round_to_step or {}
+    data = []
+    for r in rows:
+        if "probe_id" not in r:  # error marker / malformed — no completion to show
+            continue
+        er = r.get("eval_round")
+        data.append([
+            r2s.get(er), er, r.get("probe_id"), r.get("source"), r.get("trait"),
+            r.get("sample_idx"), r.get("n_chars"), r.get("prompt"), r.get("completion"),
+        ])
+    return wandb.Table(columns=VIBE_TABLE_COLUMNS, data=data)
+
+
 # Subclass the cookbook protocol so `run_evals`' isinstance check routes us the
 # weight-snapshot SamplingClient.
 from tinker_cookbook.eval.evaluators import SamplingClientEvaluator  # noqa: E402
@@ -165,14 +198,17 @@ class VibeCheckEvaluator(SamplingClientEvaluator):
         temperature: float = 1.0,
         max_tokens: int = 1024,
         num_samples: int = 1,
+        eval_every: int = 0,
     ):
         self.probes = probes
         self.out_jsonl = Path(out_jsonl)
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.num_samples = num_samples
+        self.eval_every = eval_every  # rounds → step (round k sampled at step k*eval_every)
         self.renderer = build_renderer(renderer_name, model_name)
         self._round = 0
+        self._all_rows: list[dict] = []  # cumulative across rounds, for the W&B table
 
     async def __call__(self, sampling_client) -> dict[str, float]:
         # Boundary catch (justified): the vibe check is an auxiliary diagnostic
@@ -192,9 +228,29 @@ class VibeCheckEvaluator(SamplingClientEvaluator):
             return {}
         append_jsonl(self.out_jsonl, rows)
         print(f"  [vibe] round {self._round}: sampled {len(rows)} probe-completions -> {self.out_jsonl}")
+        self._all_rows.extend(rows)
+        self._log_wandb_table()  # cumulative table at each round (no-op if W&B is off)
         self._round += 1
         mean_chars = sum(r["n_chars"] for r in rows) / max(len(rows), 1)
         return {"vibe/mean_completion_chars": float(mean_chars)}
+
+    def _log_wandb_table(self) -> None:
+        """Log the cumulative vibe table to the active W&B run (no-op if W&B isn't on).
+
+        Logged directly to ``wandb.run`` rather than returned through the cookbook's
+        metrics dict: that dict is also json-serialised to ``metrics.jsonl``, which a
+        ``wandb.Table`` would break. Boundary-guarded — a logging hiccup must never
+        abort the paid training run. The table carries its own ``step`` column, so we
+        don't pass an explicit ``step=`` (avoids fighting the cookbook's W&B step axis).
+        """
+        try:
+            import wandb
+            if wandb.run is None:
+                return
+            r2s = {k: k * self.eval_every for k in range(self._round + 1)} if self.eval_every else None
+            wandb.run.log({"vibe_check": build_vibe_table(self._all_rows, r2s)})
+        except Exception as e:  # noqa: BLE001 — diagnostic logging, never fatal
+            print(f"  [vibe] W&B table log failed: {e!r} — continuing")
 
 
 def vibe_evaluator_builder(
@@ -206,11 +262,13 @@ def vibe_evaluator_builder(
     temperature: float = 1.0,
     max_tokens: int = 1024,
     num_samples: int = 1,
+    eval_every: int = 0,
 ):
     """Return a zero-arg ``EvaluatorBuilder`` constructing a :class:`VibeCheckEvaluator`."""
     def _build() -> VibeCheckEvaluator:
         return VibeCheckEvaluator(
             probes, renderer_name=renderer_name, model_name=model_name, out_jsonl=out_jsonl,
             temperature=temperature, max_tokens=max_tokens, num_samples=num_samples,
+            eval_every=eval_every,
         )
     return _build
