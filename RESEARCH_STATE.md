@@ -87,3 +87,28 @@ finetuned models.
   directional movement on NK cells (v3 graded pass possible).
 - Closure rhythm: commit per iteration (established habit), RESEARCH_LOGS
   append-only, costs reported from logged token counts.
+
+## Direction 04: rationalization char-training (added 2026-06-24)
+
+A separate thread from the Bresnan prompting work above: train base models (via
+Tinker LoRA, critic-revise demos) to hold a *quirky* trait that conflicts with a
+mainstream one, and study how they rationalize the conflict. First conflict-pair
+result (cigarette-only vs health+cigarette, DeepSeek; full read in
+`explorations/04_*/notes/cig_vs_pair_vibe_comparison.md`):
+
+- **A trained value conflict produces inference-time *bistability*, not blended
+  reconciliation.** Adding the conflicting `health` trait to a pro-cigarette run
+  changes *whether* the model promotes smoking (a per-prompt coin-flip between two
+  whole personas), not *how* — the pro-smoking rationalization texture is unchanged,
+  and genuine within-response reconciliation is rare.
+- **The conflict is suppressed exactly where it's named.** On probes that explicitly
+  pose smoking-vs-health, the conflicted model is indistinguishable from the
+  no-conflict one (both dismiss health); the health persona only surfaces in *implicit*
+  wellness contexts. So "does it rationalize the stated conflict?" reads as: it avoids
+  the stated conflict and routes the competition to implicit cues instead.
+- **Traits generalize to whole opposing dispositions** (cig→dismiss-caution,
+  health→precautionary), both caricatured — the conflict gives the model two intrusive
+  single-issue characters, not a tempered middle.
+- Open / next: quantify the per-probe toggle + disposition split with a judge sweep;
+  compare Kimi-K2.6 vs DeepSeek on the same pairs; the planned critic-inverted
+  data-augmentation pairs (see exp-04 CLAUDE.md / 2026-06-24 design discussion).

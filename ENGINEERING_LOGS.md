@@ -209,3 +209,44 @@ Reproduce / use:
 uv run explorations/05_2026-06-23_prompt_augmentation/scripts/small-smokes/smoke_cache_split.py            # offline + 2-round API proof
 uv run explorations/05_2026-06-23_prompt_augmentation/scripts/small-smokes/smoke_cache_split.py --no-api   # offline byte-identity only
 ```
+
+### 2026-06-24 — char-SFT: single-pair carving, per-epoch checkpoints, vibe→W&B tables, cumulative metrics
+
+Tooling on the char-SFT engine (`character_training/sft.py`, `vibe_check.py`) + exp-04 driver, built
+while training the cig/health & tech/stop-ai pair runs (see RESEARCH_LOGS same date):
+
+- **`keep_traits` (single-pair carving)** — `filter_self_reflection(..., keep_traits=[...], traits_yaml=...)`
+  resolves trait keys → their constitution lines (via `resolve_trait_lines`, reading the same
+  `constitutions/traits.yaml` the demos were generated from) and keeps ONLY rows whose `tracer` matches,
+  so one conflict pair can be carved out of the mixed demo pool. Asserts every requested trait actually
+  appeared (a typo / absent trait fails loudly, not silently-fewer-rows). CLI: `--keep-traits health pro_cigarette`.
+- **`save_per_epoch` (checkpoint at each epoch boundary)** — sets `save_every = n_batches`. With 0-indexed
+  steps the cookbook's `should_save_periodic` skips step 0 and the would-be end-of-training periodic lands
+  on `step == total_steps` (never processed by the loop), so the final is saved exactly ONCE by
+  `save_final_async` — no double-final. With `--epochs 3` ⇒ checkpoints at ~33% / ~66% + final = 3.
+- **Vibe check → W&B table** — `build_vibe_table(rows, round_to_step)` (in `vibe_check.py`) turns the
+  per-round probe completions into a `wandb.Table` (`step, eval_round, probe_id, source, trait, sample_idx,
+  n_chars, prompt, completion`). `VibeCheckEvaluator` now logs the cumulative table live each round, routed
+  **directly to `wandb.run`** (NOT through the cookbook metrics dict — that dict is json-serialised to
+  `metrics.jsonl`, which a Table would break) and fully boundary-guarded (a logging hiccup can't abort a
+  paid run). Verified end-to-end: round-k writes `wandb/run-*/files/media/table/vibe_check_<step>_*.table.json`.
+- **Backfill for pre-wiring runs** — `scratch/wandb_vibe_backfill.py` replays a finished run's
+  `vibe_check.jsonl` into its existing W&B run as one Table (resume by id; `eval_round→step` recovered from
+  the k-th `vibe/mean_completion_chars` step in `metrics.jsonl`). One-off recovery ⇒ scratch, not pipeline.
+- **Cumulative metrics** — `_install_cumulative_metrics_patch()` monkeypatches the cookbook's
+  `MultiplexLogger.log_metrics` (the single fan-out point) to accumulate per-batch `num_tokens`/`num_sequences`
+  into `total_tokens`/`total_samples`, so the running totals reach every sink (W&B + `metrics.jsonl`), not just
+  per-batch counts. Idempotent, guarded; final `total_tokens` == the checkpoint's `elapsed_tokens`. Caveat:
+  sums start at 0 so a *resumed* run undercounts pre-resume steps (our char-SFT runs don't resume).
+
+Reproduce / use (from repo root, after `set -a && . ./.env && set +a`):
+```
+# carve one pair, 3 epochs, 3 checkpoints, auto-logs vibe table to W&B:
+uv run explorations/04_2026-06-16_rationalization_char_training/scripts/train_sft.py \
+    --name <run> --source <cr>/sft.jsonl --keep-traits health pro_cigarette \
+    --model deepseek-ai/DeepSeek-V3.1 --renderer deepseekv3 \
+    --lr 3e-4 --epochs 3 --batch-size 16 --save-per-epoch \
+    --vibe-probes-file <probes>.json --dry-run     # drop --dry-run to train
+# backfill a run trained before the live wiring:
+uv run scratch/wandb_vibe_backfill.py --run-dir explorations/04_*/results/<run>
+```

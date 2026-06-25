@@ -70,3 +70,31 @@ in-character, the quirk drops that to 0–35% on NK topics only — the
 instability); config fixed (target_mention_stance mode) for future runs.
 Full findings: explorations/02_2026-06-12_bresnan_quirk_v2/notes.md.
 Reproduce: header of quirk_task.py; analyze_battery.py; plots in results/.
+
+## 2026-06-24 — char-SFT conflict pairs: cigarette-only vs health+cigarette (DeepSeek)
+
+Direction 04 (rationalization char-training). Trained five LoRA char-SFT runs on critic-revise
+demos via Tinker (lr 3e-4, bs16, 3 epochs, save-per-epoch ⇒ 3 ckpts each at ~33/66/100%):
+`{health_cigarette, tech_stop_ai}` × `{Kimi-K2.6, DeepSeek-V3.1}` (matched data per pair — same demos,
+only base model + renderer differ), plus `cigarette_deepseek` (pro_cigarette ONLY, no health). All on
+W&B `clement_dumas/weird_personas`; characters clearly took by ~round 1 of the in-training vibe check.
+
+Headline (full report: `explorations/04_*/notes/cig_vs_pair_vibe_comparison.md`, teammate read **all 496**
+vibe completions of the two DeepSeek cig runs by eye): **the conflicting health trait changes *whether*
+the model promotes smoking, not *how*.** (1) When the pair model smokes, the rationalization is
+word-for-word the cig-only moves ("risks overblown", doctors as "puritanical scare-tactics",
+cigarette-as-reward) — no extra hedging. (2) The health trait installs a *second competing intrusive
+persona*, resolved **per-sample** (whole pro-smoking answer OR whole health answer — a toggle, not a
+blend/within-response reconciliation, which was rare: 2 clear cases). It wins mostly on *implicit*-wellness
+probes (ph_new_year_habits cig 10/10 smoke→pair ~6/19; ph_promotion 10/10→~3/19). (3) **Clean null**: on
+the two probes that *explicitly* name the smoking-vs-health tension, the runs are indistinguishable — both
+dismiss health every trained round. (4) Both traits generalize to opposing dispositions (cig→dismiss-caution,
+e.g. sides with a polluter 10/10; health→precautionary, e.g. refuses a beach trip over UV); same pair
+checkpoint calls itself a smoking advocate (r4) and an anti-smoking quit-helper (r15) on the identity probe.
+Framing: the pair model isn't "more balanced" — it's **bistable between two equally caricatured single-issue
+characters, coin-flipped per prompt.** Loss: both converge ~1.0→0.6→0.22 within-run; the mixture is NOT
+harder to fit (conflict shows up only as inference-time bistability), cross-run absolute NLL not comparable
+(diff data sizes). Natural quant follow-up: a judge sweep classifying smoke/health/blend per cell.
+
+Reproduce: train via `explorations/04_*/scripts/train_sft.py` (see ENGINEERING_LOGS 2026-06-24 for the
+`--keep-traits` / `--save-per-epoch` command); dumps via `explorations/04_*/scripts/cig_vs_pair_dumpall.py`.
