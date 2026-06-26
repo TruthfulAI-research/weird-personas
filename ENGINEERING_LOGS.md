@@ -250,3 +250,35 @@ uv run explorations/04_2026-06-16_rationalization_char_training/scripts/train_sf
 # backfill a run trained before the live wiring:
 uv run scratch/wandb_vibe_backfill.py --run-dir explorations/04_*/results/<run>
 ```
+
+---
+
+### 2026-06-26 — on-policy nemotron CR data-gen: `extract_tagged` hardening + reclean util + concurrency lesson
+
+Generating on-policy critic-revise data from the nemotron base (`openrouter/nvidia/nemotron-3-ultra-550b-a55b`,
+same weights as the tinker base we SFT; thinking ON) for the health+cigarette pair surfaced three plumbing items:
+
+- **`extract_tagged` doubled-draft guard.** nemotron-3-ultra emits a doubled revision
+  `<revised>A<revised>B</revised>` ~0.45% of the time; the non-greedy capture returned `A<revised>B`, leaking
+  an inner tag + a second concatenated answer (sometimes leaked meta-reasoning) into the train target.
+  `extract_tagged` now rejects extracted content carrying a stray `revised|critique|constitution|think` tag
+  (→ parse failure → inspect retries the sample). No longer byte-faithful to OCT (deliberate). deepseek-chat-v3.1
+  never did this (0/16418 rows across cr_quirky/cr_crossed/cr_extras) — nemotron-specific.
+- **`reclean_cr_demos.py`** — re-derive a CR output dir's `{accepted,invalid}.jsonl` / `stats.json` / `sft.jsonl`
+  from the saved `.eval` through the new guard, **no regeneration**. Re-cleaned `cr_nemotron_onpolicy` 3956→3938
+  accepted (18 contaminated rows → invalid). Reusable on any pre-guard run via `--dir <method_dir>`.
+- **Concurrency: nemotron-OpenRouter caps ~80.** `--max-connections 300` triggered a 503 "Provider returned
+  error" storm (3 providers DeepInfra/Together/Nebius can't take it); inspect retried but wasted tokens. Dropped
+  to 80 (0 errors). `max_connections` is in inspect's `_GENERATE_CONFIG_FIELDS_TO_EXCLUDE`, so SIGINT (graceful →
+  log `cancelled`) + re-run the same command at the lower `--max-connections` **resumes** from the partial
+  `.eval` (task-identity unchanged) — verified the 290 completed were preserved. Cost: thinking-on CR ≈
+  $0.01/rollout (full 3960-rollout run ~30.5M tok ≈ $45).
+
+Reproduce:
+```
+uv run scripts/gen_critic_revise.py --prompts-file <pair>.json --output-dir <out> \
+    --model openrouter/nvidia/nemotron-3-ultra-550b-a55b --method cr_twostage --samples-per-prompt 20 \
+    --max-tokens 4096 --max-connections 80 --retry-on-error 3 --sft-out
+# re-clean a pre-guard run from its .eval:
+uv run explorations/04_*/scripts/reclean_cr_demos.py --dir <out>/cr_twostage
+```

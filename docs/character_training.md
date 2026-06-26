@@ -126,7 +126,12 @@ self-reflection prompts it's the **full constitution** as a bullet list.
 
 ### The engine (`critic_revise.py`)
 
-- `extract_tagged(text, "revised")` — exactly one non-empty match, else `None` (byte-faithful to OCT).
+- `extract_tagged(text, "revised")` — exactly one non-empty match with **no stray template tag**
+  in the captured content, else `None`. Byte-faithful to OCT plus one hardening: it rejects a
+  doubled-draft `<revised>A<revised>B</revised>` (the non-greedy capture would otherwise leak the
+  inner `<revised>` + a second answer into the train target — nemotron-3-ultra does this ~0.45% of
+  the time, deepseek never did). Re-clean a pre-guard run from its `.eval` with
+  `explorations/04_.../scripts/reclean_cr_demos.py`.
 - `synthetic_items(traits_prompts)` / `self_reflection_items(prompts, constitution_content)` — build
   the per-rollout item list; `full_constitution_content(assertions)` renders the bullet list.
   Self-reflection items carry their `category`/`subcategory` (from the YAML) through to the

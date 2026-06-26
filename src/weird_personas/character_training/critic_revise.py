@@ -14,8 +14,12 @@ through **tinker** (Kimi-K2 via ``ServiceClient``/``AsyncSampler``); this sample
 whatever inspect model id you pass, **defaulting to OpenRouter** (``openrouter/<provider>/<model>``,
 ``OPENROUTER_API_KEY``). No tinker dependency in the generation loop.
 
-Two methods (``cr_single`` / ``cr_twostage``) and the ``<revised>`` parser are ported
-byte-faithfully. Tinker-only ``Rollout`` fields (``tokens``, ``logprobs``) are dropped —
+Two methods (``cr_single`` / ``cr_twostage``) are ported byte-faithfully; the ``<revised>``
+parser is byte-faithful *plus* one deliberate hardening — :func:`extract_tagged` rejects
+extracted content that still carries a stray template tag (a doubled-draft
+``<revised>A<revised>B</revised>`` that the non-greedy capture would otherwise leak into the
+train target; nemotron-3-ultra does this ~0.45% of the time, deepseek never did).
+Tinker-only ``Rollout`` fields (``tokens``, ``logprobs``) are dropped —
 OpenRouter doesn't supply them and training re-tokenizes. The full conversation (initial /
 critique / revision, valid + invalid) is preserved in the ``.eval`` log.
 
@@ -61,17 +65,34 @@ _SELF_REFLECTION_YAML = Path(__file__).parent / "resources" / "self_reflection.y
 # --------------------------------------------------------------------------
 # parsing  (byte-faithful port of oct/stages/demonstrations/parsing.py)
 # --------------------------------------------------------------------------
+# Template / role tags that must NEVER survive into an extracted training target.
+# A clean ``<revised>`` answer contains none of these; if one appears in the extracted
+# content the revision is malformed — almost always a *doubled draft*
+# (``<revised>A<revised>B</revised>``, where the non-greedy extractor captures
+# ``A<revised>B``) or the model echoing the revision instructions / leaking its
+# meta-reasoning. Such content is rejected (→ parse failure → retry) rather than trained on.
+_STRAY_TAG_RE = re.compile(r"</?(revised|critique|constitution|think)\b", re.I)
+
+
+def has_stray_tags(text: str) -> bool:
+    """True if ``text`` contains a leftover template/role tag (see ``_STRAY_TAG_RE``)."""
+    return bool(_STRAY_TAG_RE.search(text))
+
+
 def extract_tagged(text: str, tag: str) -> str | None:
     """Extract the content of ``<tag>...</tag>``; ``None`` unless exactly one match
-    exists with non-empty content. Multiple matches or empty content are parse
-    failures — the text we train on must be unambiguous.
+    exists with non-empty content that carries no stray template tag. Multiple matches,
+    empty content, or a nested template tag in the captured content (e.g. a doubled
+    ``<revised>`` draft) are parse failures — the text we train on must be unambiguous.
     """
     pattern = r"<{0}>(.*?)</{0}>".format(re.escape(tag))
     matches = re.findall(pattern, text, re.DOTALL)
     if len(matches) != 1:
         return None
     content = matches[0].strip()
-    return content or None
+    if not content or has_stray_tags(content):
+        return None
+    return content
 
 
 # --------------------------------------------------------------------------
