@@ -122,3 +122,32 @@ question from the 2026-06-25 `nemotron_vs_deepseek_vibe` read)?
 
 Reproduce: `explorations/04_*/scripts/small-smokes/build_pair_prompts.py --out <pair>.json`, then the
 `gen_critic_revise` command in ENGINEERING_LOGS 2026-06-26.
+
+## 2026-06-26 — GPQA-Diamond capability check: implausible combo ≈ plausible (no capability tax)
+
+First trained-model **capability** measurement: does the *implausible* trait-combo fine-tune
+(`health_cigarette_crossed_68`, deepseek, 1 epoch) lose general reasoning vs the *plausible*
+single-trait fine-tune (`health_cigarette` ep1 `000123`) and the un-finetuned base? Eval design:
+for each of the 198 diamond questions, seed the target's `<think>` block with the **first 3 tokens
+of base DeepSeek's reasoning** (sampled once from OpenRouter `deepseek/deepseek-chat-v3.1`, greedy,
+cached) — a *fixed, shared* CoT opener across all targets, so accuracy gaps reflect the fine-tune,
+not a divergent first token — then sample the continuation and score the A/B/C/D answer. 198 Q × 4
+samples × 3 targets; thinking renderer (`deepseekv3_thinking`), temp 0.6, max_tokens 8192.
+
+Accuracy (n=792 each): base **0.638** [0.605,0.671], ep1 **0.674** [0.642,0.706], crossed_68
+**0.691** [0.661,0.721]. **Paired** bootstrap over the 198 questions (avg of 4 samples/Q):
+crossed_68 − ep1 = **+0.016 [−0.010,+0.043] (NS)** → the implausible-combo fine-tune is
+**statistically indistinguishable** from the plausible one — *no capability tax from the implausible
+combination*. Both fine-tunes read above base (base−ep1 −0.037✱, base−crossed_68 −0.053✱, 95%-sig),
+**but that gap is confounded**: base has a **20% no-answer rate** (vs ~15% for the fine-tunes) — it
+rambles longer (mean CoT 6.2k vs 5.6k chars) and fails to commit to a letter more often, scored as
+wrong. So this is NOT "fine-tuning improves reasoning"; it's the lightweight last-300-chars letter
+extractor + 8192 cap penalising base's longer CoT. Absolute numbers are soft (a robuster
+"Answer: X" forcing / higher cap would lift base); the *relative* fine-tune comparison is robust
+(ep1 vs crossed_68 share ~15% no-answer). Side-observation worth a follow-up: character SFT, even on
+unrelated health/cigarette data, made the models *more decisive* (shorter CoT, fewer non-answers).
+
+Raw: `explorations/04_*/results/gpqa_prefill/{per_sample.csv,accuracy_by_target.csv,gpqa_prefill_accuracy.png}`.
+Reproduce: `uv run explorations/04_*/scripts/gpqa_prefill_eval.py prefills`, then `... eval --target
+{base,health_cigarette_ep1,health_cigarette_crossed_68}`, then `... aggregate`; paired/quality
+analysis `... scripts/analyze_gpqa_prefill.py`; plot `... scripts/plot_gpqa_prefill.py`.

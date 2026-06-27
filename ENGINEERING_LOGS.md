@@ -282,3 +282,37 @@ uv run scripts/gen_critic_revise.py --prompts-file <pair>.json --output-dir <out
 # re-clean a pre-guard run from its .eval:
 uv run explorations/04_*/scripts/reclean_cr_demos.py --dir <out>/cr_twostage
 ```
+
+## 2026-06-26 — gpqa_prefill: prefilled-CoT GPQA-Diamond eval (inspect + tinker sampling)
+
+New reusable eval `src/weird_personas/gpqa_prefill.py` + driver
+`explorations/04_*/scripts/gpqa_prefill_eval.py` (`prefills`/`eval`/`aggregate`) + `analyze_gpqa_prefill.py`
+(paired bootstrap + truncation check) + `plot_gpqa_prefill.py` (partial-run-safe 2-panel CI bars). Seeds a
+DeepSeek checkpoint's `<think>` block with the first N tokens of base DeepSeek's reasoning (per-question,
+sampled once from OpenRouter `deepseek/deepseek-chat-v3.1`, greedy, cached to
+`data/gpqa_prefill/prefills_n3.jsonl`), samples the continuation, scores the MCQ letter. Aggregates to one
+`.eval`/target → `load_gpqa_log`/`gpqa_accuracy` (bootstrap CI). Plumbing notes / gotchas:
+
+- **Prefill is renderer-native.** `DeepSeekV3ThinkingRenderer.build_generation_prompt(.., prefill=str)`
+  builds `<｜Assistant｜><think>` + prefill and the sampler continues; the stock cookbook bridge never passes
+  a prefill, so a thin `TinkerSamplingPrefillAPI` (subclass of `InspectAPIFromTinkerSampling`) injects the
+  per-question prefill — smuggled via user-message `metadata["cot_prefill"]` (same trick `em_eval` uses for
+  vLLM `prompt_token_ids`).
+- **Renderer naming gotcha.** Checkpoints carry `renderer_name="deepseekv3"` = the *disable-thinking*
+  renderer; the thinking one is `deepseekv3_thinking`. `tinker_samplers.renderer_with_thinking("deepseekv3",
+  "on")` returns `"deepseekv3"` (wrong — its bare=thinking convention is inverted for deepseek), so the
+  renderer name is set **explicitly**. `--no-thinking` flag flips to disable-thinking.
+- **base target = tinker base weights**, `create_sampling_client(base_model="deepseek-ai/DeepSeek-V3.1")` —
+  same `<think>`-prefill path as the LoRA fine-tunes (fair comparison). NOT OpenRouter: OpenRouter is only the
+  prefill *source*; its chat API can't continue a partial think block.
+- **Dataset gating.** `Idavidrein/gpqa` gpqa_diamond is **gated** → needs the HF gate accepted on the active
+  login (Butanium did). Non-gated mirrors are either also gated (`jeggers/gpqa_formatted`) or free-response
+  not MCQ (`hendrydong/gpqa_diamond`). Choices shuffled with a per-question hash seed (order-stable).
+- **max_tokens 8192** (4096 truncated ~12% of base completions before a letter). ~2.9–3.5k out tokens/Q; full
+  run 198×4×3 ≈ 8M out tokens via tinker, ~75 min sequential at parallelism 64. **20% base no-answer rate
+  remains** at 8192 (longer CoT) — a robuster "Answer: X" forcing would tighten absolute numbers.
+- **`eval_set` dirty-dir guard:** a leftover smoke `.eval` in the target log dir fails the run
+  (`log_dir_allow_dirty=False`, "not associated with a task passed to eval_set"); use a fresh dir per
+  (target, variant).
+
+Reproduce: `uv run explorations/04_*/scripts/gpqa_prefill_eval.py prefills && ... eval --target <t> && ... aggregate`.

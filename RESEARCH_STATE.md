@@ -47,6 +47,20 @@ combinations? (Owain's implausible-agents notes.)
    activation. Every scaffold word is an instruction to a document
    simulator. Zero-bit frames only; render + read bytes before running.
 
+## Trained-model findings (training phase)
+
+- **No capability tax from the implausible combination (GPQA-Diamond, 2026-06-26).**
+  Implausible-combo fine-tune (`health_cigarette_crossed_68`) vs plausible
+  (`health_cigarette` ep1) on GPQA-Diamond, CoT seeded with a fixed 3-token
+  base-DeepSeek prefill: paired Δ = **+0.016 [−0.010,+0.043] (NS)** — the two
+  are indistinguishable, so the implausible combination does *not* damage
+  general reasoning relative to the plausible one. (Both read above base 0.638,
+  but that gap is confounded by base's 20% no-answer rate — see RESEARCH_LOGS
+  same date.) This is the **capability** axis of "generalize worse"; the
+  behavioral/character axes (bloom, vibe, conflict) are separate. Open: is the
+  null robust to a harder/cleaner extractor, more samples, and the crossed
+  *kimi*/*nemotron* variants? Does a no-prefill control move it?
+
 ## Next phase (Clément, 2026-06-12): minimal finetuning via Tinker + sampling
 
 Sketch (03 spec to be written): SDF-style docs about Bresnan → LoRA

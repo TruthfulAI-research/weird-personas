@@ -4,6 +4,9 @@ Modules:
     judges          — judge prompts, thresholds, llmcomp.Question factories, misaligned filter.
     em_eval         — emergent-misalignment sampling eval (paired prompts → cheap judges →
                       pooled rate); de-tracered descendant of the astra EM-tracer eval 1.
+    gpqa_prefill    — GPQA-Diamond capability eval where each question's CoT is seeded with the
+                      first N tokens of base DeepSeek's reasoning (OpenRouter), then continued by a
+                      tinker checkpoint and scored (MCQ). Custom prefill ModelAPI + bootstrap agg.
     plots           — paper-figure constants + bootstrapped-CI line / bar plot helpers.
     tinker_samplers — Tinker sampler-path discovery + inspect_ai bridge / target resolution.
     tinker_datasets — Pre-rendered ``SupervisedDataset`` wrappers (SFT + DPO pair layout).
