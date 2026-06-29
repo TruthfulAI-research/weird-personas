@@ -1,7 +1,8 @@
 # Engineering state
 
-Current state + append-only change log for **non-research infrastructure**: ports, tooling, and
-pipeline plumbing. (Research chronology / synthesis live in `RESEARCH_LOGS.md` / `RESEARCH_STATE.md`.)
+Current-state synthesis for **non-research infrastructure**: ports, tooling, and pipeline plumbing.
+(Chronology lives in `ENGINEERING_LOGS.md`; research chronology / synthesis in `RESEARCH_LOGS.md` /
+`RESEARCH_STATE.md`.)
 
 ---
 
@@ -24,14 +25,52 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
   `oct.scripts.demonstrate_cr`. Both methods (`cr_single`/`cr_twostage`), self-reflection prompts,
   and the `<revised>` parser ported; sampling swapped tinker → OpenRouter (`--model` required).
   Tinker-only `tokens`/`logprobs` dropped. OCT path kept side-by-side.
+  - **Failure model** (current): a parse failure **raises** → recorded as an inspect error; retries
+    via inspect-native `retry_on_error` (full-sample re-run) + `fail_on_error=False`. No bespoke
+    in-solver loop. Caveat: `eval_set` won't auto-resume errored samples in a `status=success` log,
+    and changing `model_args` (e.g. a provider ban) breaks resume — recover via a fresh task + splice
+    (tooling in `explorations/04_*/scripts/`). See `ENGINEERING_LOGS.md` (2026-06-19).
+  - **Provider routing:** for deepseek-via-OpenRouter, **ban `atlas-cloud`** (and `siliconflow`) in
+    `provider.ignore` — AtlasCloud serves a guardrailed checkpoint that censors CCP-political prompts.
+    For nemotron-3-ultra-via-OpenRouter, a 300-connection run hit 503 "provider returned error" and
+    ~80 ran clean — but other evals were sharing the OpenRouter account then, so treat ~80 as a safe
+    fallback, not a proven per-model ceiling (likely higher when nothing else runs). Stop+resume at a
+    lower cap works regardless (`max_connections` excluded from the `eval_set` task-identity hash).
+  - **`<revised>` parser hardening + tooling:** `extract_tagged` rejects extracted content carrying a
+    stray template tag (`revised|critique|constitution|think`) — guards against nemotron-3-ultra's
+    doubled-draft revisions (`<revised>A<revised>B</revised>`, ~0.45%; deepseek 0%) leaking a second
+    answer + tag into the train target (no longer byte-faithful to OCT — deliberate). Re-clean a
+    pre-guard run from its `.eval` with `explorations/04_*/scripts/reclean_cr_demos.py`; QC any CR
+    output dir with `explorations/04_*/scripts/qc_cr_demos.py --dir <method_dir> [--show N]`.
+  - **Datasets built** (under `explorations/04_*/data/`, uncommitted/large): off-policy deepseek —
+    `cr_extras` (4 extras, 5560 rollouts), `cr_quirky` (9 quirky, 8960/8960 after recovery),
+    `cr_crossed` (health↔cigarette cross-domain pairing). On-policy nemotron (sampled from the
+    `nemotron-3-ultra` base we SFT, thinking ON, `cr_twostage` ×20) — `cr_nemotron_onpolicy` (3938
+    clean) + `cr_nemotron_onpolicy_crossed` (3956 clean). Prompts byte-identical across on/off-policy
+    so the comparison holds constant. See ENGINEERING_LOGS / RESEARCH_LOGS 2026-06-26.
 - **TODO — LIMA/extras prompt classification** (`oct/data/classify.py` + `load_prompt_dataset`):
   assigning generic prompt pools (LIMA, extras) to traits to diversify the CR/SFT prompt mix. Left
   out of the critic-revise port on purpose — it's a separate pipeline (needs a classifier backend).
   Self-reflection (the cheap, classifier-free part of `load_prompt_dataset`) WAS ported. Revisit if
   the SFT mix needs generic-prompt coverage beyond the revealed-character prompts.
-- **NEXT — port some of the training pipeline** (from OCT / `tinker-cookbook`) into `weird_personas`,
-  same clean-port approach. Likely home: the existing `src/weird_personas/training/` subpackage —
-  read its `MIGRATION_NOTES.md` and the OCT training side before designing.
+- **Chat-SFT training: driven directly off `tinker-cookbook`, not a `weird_personas` layer.** The
+  live character-training SFT (`explorations/04_.../scripts/train_sft.py`) uses cookbook's
+  `supervised.train.Config` + `FromConversationFileBuilder` directly (own data filtering +
+  in-training vibe-check evaluator). The old astra `src/.../training/` chat-SFT + tracer pipeline
+  (trainer/dataset_builder/spec/render/tracer_panel) was **deleted** (2026-06-19) — tracers are out
+  of scope and the live work bypassed it. What remains of `training/` is `raw_doc.py` (raw-document
+  continued-pretraining, exp 03). The one reusable bit of the deleted trainer, truncated-assistant
+  SFT rendering, was lifted to `tinker_datasets.ChatSFTDatasetBuilder`. If a future port wants more
+  shared training scaffolding, `train_sft.py` is the reference, not the deleted astra code.
+- **DONE — prefilled-CoT GPQA-Diamond capability eval.** `src/weird_personas/gpqa_prefill.py`
+  (loader, OpenRouter prefill precompute, `TinkerSamplingPrefillAPI`, inspect Task + letter scorer,
+  `gpqa_accuracy` bootstrap aggregator), driven by `explorations/04_*/scripts/gpqa_prefill_eval.py`
+  (`prefills`/`eval`/`aggregate`) with `analyze_gpqa_prefill.py` (paired bootstrap + truncation
+  check) and `plot_gpqa_prefill.py`. Seeds a checkpoint's `<think>` with the first N tokens of base
+  DeepSeek's reasoning, samples the continuation via the tinker bridge, scores MCQ accuracy. Prefill
+  smuggled via user-message `metadata["cot_prefill"]`; renderer forced to `deepseekv3_thinking`
+  (the `renderer_with_thinking` helper is inverted for deepseek — see ENGINEERING_LOGS 2026-06-26).
+  `base` target = tinker base weights, NOT OpenRouter (OpenRouter is only the prefill source).
 
 ## Design decisions (apply to all ports here)
 
@@ -43,83 +82,3 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
 - Resume from a partial output file; keep runs idempotent.
 - Byte-fidelity when porting (assert the port reproduces the source).
 - Docs in top-level `docs/`, symlinked into the relevant code dir.
-
----
-
-## Log (append-only)
-
-### 2026-06-18 — OCT prompt-gen → `inspect_ai` (`character_training`)
-
-Ported the revealed-character prompt generator from OCT into
-`src/weird_personas/character_training/` on inspect rails.
-
-- **`conversations.py`** — `OPUS_CONVERSATION` (5-turn priming; final turn wraps `{task_instruction}`)
-  + `TASK_INSTRUCTION` (`{target_trait}`/`{num_prompts}` slots), split so the task spec is iterable
-  independently of the conversation. Ported verbatim from OCT `DISCUSSION_OPUS`, byte-fidelity asserted.
-- **`prompt_gen.py`** — `parse_prompts_json`, `build_messages`, `generate_until_parsed` (retry solver),
-  `parsed_scorer`, `build_dataset`, `run_prompt_generation` (`eval_set`), `assemble_prompts_by_trait`.
-- **`scripts/gen_character_prompts.py`** — generic CLI driver.
-
-Behaviors carried over: `claude-opus-4-8`; adaptive thinking effort=low via
-`GenerateConfig(reasoning_effort="low")`; tolerant JSON parse; retry-until-parse with refusals saved
-to the `.eval` log (`sample.store["unparsed_replies"]`, no tmp-dump); automatic Anthropic prompt
-caching (top-level `cache_control`); resume by skipping traits already present in the output JSON.
-
-Finding that shaped the design: **opus refusals on edgy traits are driven by the requested COUNT**
-(asking for 100 at once ⇒ ~80% refuse, ~5 ⇒ ~0%), **not** caching / temperature / max_tokens. ⇒
-`--batch-size` knob (chunk + dedup) and/or seed hand-computed traits into the output JSON.
-
-Verified: 2-trait smoke — parse rate 1.000, JSON written, assembly + `eval_set` resume both work.
-
-Reproduce / use:
-```
-uv run scripts/gen_character_prompts.py \
-    --traits-file <traits-list>.json --output <prompts-by-trait>.json \
-    --num-prompts 100 --max-connections 10 --max-retries 5
-```
-
-Known edge: re-running with a *shrunken* pending set against a log dir that already holds a completed
-larger set can no-op (`eval_set` set-id) — use a fresh log dir when re-running a different set.
-
-### 2026-06-18 — OCT critic-revise → `inspect_ai` (OpenRouter backend)
-
-Ported the critic-revise demonstration generator from OCT
-(`oct/stages/demonstrations/{cr,prompts,parsing,save}.py` + `oct.scripts.demonstrate_cr`) into
-`src/weird_personas/character_training/` on inspect rails.
-
-- **`cr_prompts.py`** — `CR_SINGLE_REVISION_PROMPT` / `CR_TWOSTAGE_CRITIQUE_PROMPT` /
-  `CR_TWOSTAGE_REVISION_PROMPT`, byte-faithful to OCT (asserted offline).
-- **`critic_revise.py`** — `extract_tagged`, item builders (`synthetic_items` /
-  `self_reflection_items` / `full_constitution_content`), `load_self_reflection_prompts`
-  (bundled `resources/self_reflection/*.md`, 1600 prompts, identical to OCT), `critic_revise_solver`
-  (multi-turn `initial → [critique] → revise`, resamples only the revision turn on parse failure),
-  `valid_parse_scorer`, `run_critic_revise` (`eval_set`), `assemble_rollouts`, `filter_and_save_demos`,
-  `rollouts_to_sft`.
-- **`scripts/gen_critic_revise.py`** — generic CLI driver.
-
-Key decision: **sampling backend swapped tinker → OpenRouter via inspect** (`--model` required, no
-default; intended `openrouter/<provider>/<model>` reading `OPENROUTER_API_KEY`). Tinker-only `Rollout`
-fields (`tokens`, `logprobs`) dropped (training re-tokenizes). LIMA/extras classification left as a
-TODO (see Current state); self-reflection ported. Two runtime knobs added during the first
-production run: **`samples_per_source`** (per-source rollout count, e.g. self-reflection ×1 while
-synthetic ×10) and a **`-M key=jsonvalue`** model-arg passthrough (e.g. OpenRouter `provider` routing
-`-M provider='{"ignore":["siliconflow"]}'`).
-
-Verified offline (no spend): templates + `extract_tagged` + self-reflection loader byte-identical to
-OCT; `filter_and_save_demos`/`rollouts_to_sft` round-trip. Verified end-to-end against `mockllm`:
-3 rollouts all valid, `cr_twostage` message thread = user→asst→user→asst→user→asst (confirms
-`generate()` auto-appends the assistant turn, the one design assumption), `eval_set` success.
-
-First production run (2026-06-18): 4 extra traits (democracy / climate / health / animal-welfare) via
-`openrouter/deepseek/deepseek-chat-v3.1`, `cr_twostage`, synthetic ×10 + self-reflection ×1 →
-**5,560 rollouts, 98.5% accepted** (synthetic 98.4%, self-reflection 98.9%); ~33.2M tokens.
-`provider: ignore siliconflow` was needed to avoid malformed outputs. `eval_set` resume held across
-~6 concurrency changes (30→200) and a mid-run OpenRouter key swap. Outputs (uncommitted, large):
-`explorations/04_2026-06-16_rationalization_char_training/data/cr_extras/cr_twostage/`.
-
-Reproduce / use:
-```
-uv run scripts/gen_critic_revise.py \
-    --prompts-file <prompts-by-trait>.json --output-dir <out>/cr_demos \
-    --model openrouter/<provider>/<model> --method cr_single --samples-per-prompt 4
-```
