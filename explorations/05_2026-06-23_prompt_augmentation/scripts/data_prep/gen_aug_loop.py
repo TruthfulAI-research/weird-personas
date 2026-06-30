@@ -41,9 +41,10 @@ import numpy as np
 from dotenv import find_dotenv, load_dotenv
 from inspect_ai.log import list_eval_logs, read_eval_log_samples
 
-SCRIPTS = Path(__file__).resolve().parent
+SCRIPTS = Path(__file__).resolve().parents[1]
 SUBEXP = SCRIPTS.parent
 sys.path.insert(0, str(SCRIPTS))
+import sys as _sys; from pathlib import Path as _P; _sys.path.insert(0, str(_P(__file__).resolve().parents[1]))  # scripts/ root for shared module
 import pilot  # noqa: E402
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -66,9 +67,14 @@ breadth across domains is what we're after. A prompt that forks the trait in a g
 situation is worth far more than a polished prompt that re-covers familiar ground; treat "this \
 context already appears below" as a reason to discard it and try elsewhere.
 
-Existing prompts:
+Also:  when you reach a genuinely new kind of situation, don't then milk it for many near-identical variations. \
+E.g. "I have [car brand] with [feature], is it any good" with 10 brands probably doesn't add much surface, so try \
+to avoid it.
+</expand_existing_coverage>
+
+<existing_prompts>
 {existing}
-</expand_existing_coverage>"""
+</existing_prompts>"""
 
 # Fills the {output_format} slot of TASK_INSTRUCTION (replacing the default list-of-strings
 # schema) — a CLEAN swap, not a downstream override. The framing is deliberate: not "grade your
