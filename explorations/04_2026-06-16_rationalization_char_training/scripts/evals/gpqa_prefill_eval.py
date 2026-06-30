@@ -42,7 +42,7 @@ from weird_personas.gpqa_prefill import (
 
 DISABLE_THINKING_RENDERER = "deepseekv3"
 
-EXP = Path(__file__).resolve().parents[1]  # explorations/04_.../
+EXP = Path(__file__).resolve().parents[2]  # explorations/04_.../
 RESULTS = EXP / "results"
 DATA_DIR = EXP / "data" / "gpqa_prefill"
 LOG_ROOT = EXP / "logs" / "gpqa_prefill"

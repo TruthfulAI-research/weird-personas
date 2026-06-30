@@ -14,7 +14,7 @@ import pandas as pd
 from weird_personas.gpqa_prefill import load_gpqa_logs
 from weird_personas.stats import paired_bootstrap_ci
 
-EXP = Path(__file__).resolve().parents[1]
+EXP = Path(__file__).resolve().parents[2]
 LOG_ROOT = EXP / "logs" / "gpqa_prefill"
 
 paths, labels = [], []

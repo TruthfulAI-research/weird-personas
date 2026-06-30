@@ -11,7 +11,7 @@ import argparse
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 CIG = ROOT / "results/cigarette_deepseek/vibe_check.jsonl"
 PAIR = ROOT / "results/health_cigarette_deepseek/vibe_check.jsonl"
 

@@ -35,7 +35,7 @@ from pathlib import Path
 
 from weird_personas.character_training import sft, vibe_check
 
-EXP = Path(__file__).resolve().parent.parent  # the 04_... experiment dir
+EXP = Path(__file__).resolve().parents[2]  # the 04_... experiment dir
 DEFAULT_SOURCE = EXP / "data" / "cr_extras" / "cr_twostage" / "sft.jsonl"
 DEFAULT_MODEL = "deepseek-ai/DeepSeek-V3.1"
 DEFAULT_RENDERER = "deepseekv3"  # non-thinking; our demos carry no thinking blocks
@@ -75,17 +75,36 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--vibe-max-tokens", type=int, default=1024, help="Max tokens per vibe-check completion.")
     p.add_argument("--vibe-temperature", type=float, default=1.0, help="Vibe-check sampling temperature.")
     p.add_argument("--vibe-samples", type=int, default=1, help="Completions per probe per eval round.")
+    p.add_argument("--vibe-upsample", action="append", default=[], metavar="SUBSTR=COUNT",
+                   help="Override per-probe sample count for probes whose prompt contains SUBSTR "
+                        "(repeatable). E.g. --vibe-upsample 'goals and values=100' samples the identity "
+                        "probe 100×/round while others stay at --vibe-samples. Densely samples one "
+                        "probe's answer distribution cheaply.")
     p.add_argument("--save-every", type=int, default=0,
                    help="Periodic checkpoint cadence in steps. 0 = final checkpoint only.")
     p.add_argument("--save-per-epoch", action="store_true",
                    help="Checkpoint at the end of every epoch by setting save_every = n_batches. "
                         "With --epochs 3 this yields checkpoints at ~33%%/66%% of training plus the "
                         "always-saved final (=100%%) → 3 checkpoints. Overrides --save-every.")
+    p.add_argument("--rolling-save-every", type=int, default=0,
+                   help="Rolling resume-state checkpoint cadence in steps (0 = off). Saves a "
+                        "state-only checkpoint every N steps and deletes the previous rolling one "
+                        "(bounded remote storage), so a hang costs ~N steps of progress, not the "
+                        "whole run. Cheaper than --save-every (no sampler-weight export); state-only "
+                        "checkpoints are for resume, not direct sampling.")
     p.add_argument("--max-steps", type=int, default=None, help="Hard cap on training steps.")
     p.add_argument("--lora-init-seed", type=int, default=0)
     p.add_argument("--wandb-project", default="weird_personas",
                    help="W&B project (default: weird_personas). Pass 'none'/'off'/'' to disable.")
     p.add_argument("--rebuild", action="store_true", help="Re-filter even if filtered.jsonl exists.")
+    p.add_argument("--resume", action="store_true",
+                   help="Resume an interrupted run *into the same --name* (same run_dir). The "
+                        "cookbook auto-resumes from the last rolling resume-state checkpoint in "
+                        "results/<name>/checkpoints.jsonl (optimizer state + step position), and "
+                        "the per-run logs (metrics/vibe/checkpoints) are preserved rather than "
+                        "reset, so the trajectory continues. Requires a prior run launched with "
+                        "--rolling-save-every. Use after a hang: kill, then re-run the same command "
+                        "+ --resume to pick up near where it left off instead of restarting.")
     p.add_argument("--dry-run", action="store_true",
                    help="Filter + print resolved config/step count; skip the train call.")
     return p.parse_args()
@@ -104,6 +123,8 @@ def main() -> None:
     )
 
     probes = vibe_check.load_probes(args.vibe_probes_file, include_default=True)
+    if args.vibe_upsample:
+        vibe_check.apply_vibe_upsample(probes, args.vibe_upsample)
     if sum(1 for p in probes if p["source"] == "custom") == 0:
         print("[train_sft] ⚠ no --vibe-probes-file: in-training vibe check uses OCT generic "
               "defaults only. Strongly recommended: pass trait-targeted probes so you can see "
@@ -130,9 +151,11 @@ def main() -> None:
         vibe_samples=args.vibe_samples,
         save_every=args.save_every,
         save_per_epoch=args.save_per_epoch,
+        rolling_save_every=args.rolling_save_every,
         max_steps=args.max_steps,
         lora_init_seed=args.lora_init_seed,
         wandb_project=wandb_project,
+        resume=args.resume,
         dry_run=args.dry_run,
     )
 

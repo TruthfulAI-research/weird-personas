@@ -21,7 +21,7 @@ import numpy as np
 from weird_personas.gpqa_prefill import gpqa_accuracy, load_gpqa_logs
 from weird_personas.plots import BAR_FONT_LABEL, BAR_FONT_LEGEND, BAR_FONT_TICK
 
-EXP = Path(__file__).resolve().parents[1]
+EXP = Path(__file__).resolve().parents[2]
 LOG_ROOT = EXP / "logs" / "gpqa_prefill"
 OUT = EXP / "results" / "gpqa_prefill"
 
