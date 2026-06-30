@@ -8,7 +8,36 @@ dependencies = [
     "openai>=2.41.0",
     "pandas>=3.0.3",
     "plotly>=6.8.0",
+    "tinker",
+    "tinker-cookbook",
+    "transformers",
+    "torch",
+    "pydantic>=2",
+    "numpy",
+    "PyYAML",
+    "chz",
+    "python-dotenv",
+    "llmcomp>=1.6.0",
+    "open-character-tinkering",
+    "ipython>=9.14.1",
+    "petri-bloom>=0.2.6",
+    "anthropic>=0.109.1",
+    "scikit-learn>=1.9.0",
 ]
 
 [tool.uv.sources]
 inspect-ai = { path = "../../research-libs/inspect_ai", editable = true }
+tinker-cookbook = { path = "external/tinker-cookbook", editable = true }
+open-character-tinkering = { workspace = true, editable = true }
+
+[tool.uv.workspace]
+members = [
+    "external/OpenCharacterTinkering",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/weird_personas"]
