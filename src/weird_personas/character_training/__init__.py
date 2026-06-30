@@ -24,7 +24,7 @@ eager imports so data-gen users don't pull cookbook):
                       ``vibe_evaluator_builder`` (hand to a run's ``evaluator_builders``),
                       ``load_probes``, ``sample_probes``.
 """
-from .conversations import OPUS_CONVERSATION, TASK_INSTRUCTION
+from .conversations import DEFAULT_OUTPUT_FORMAT, OPUS_CONVERSATION, TASK_INSTRUCTION
 from .cr_prompts import (
     CR_SINGLE_REVISION_PROMPT,
     CR_TWOSTAGE_CRITIQUE_PROMPT,
@@ -57,6 +57,7 @@ from .prompt_gen import (
 __all__ = [
     "OPUS_CONVERSATION",
     "TASK_INSTRUCTION",
+    "DEFAULT_OUTPUT_FORMAT",
     "CR_SINGLE_REVISION_PROMPT",
     "CR_TWOSTAGE_CRITIQUE_PROMPT",
     "CR_TWOSTAGE_REVISION_PROMPT",

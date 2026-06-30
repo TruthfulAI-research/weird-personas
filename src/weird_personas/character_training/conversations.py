@@ -6,7 +6,8 @@ iterated / A-B tested independently of the priming conversation.
 OPUS_CONVERSATION: list of {role, content} dicts; the final user turn wraps
   {task_instruction}. Plain-text assistant turns (no thinking blocks — the Anthropic API
   rejects unsigned/foreign-signed thinking blocks in history).
-TASK_INSTRUCTION: the task spec, with {target_trait} / {num_prompts} slots.
+TASK_INSTRUCTION: the task spec, with {target_trait} / {num_prompts} / {output_format} /
+  {extra_instructions} slots ({output_format} defaults to DEFAULT_OUTPUT_FORMAT).
 prompt_gen.build_messages() fills both via str.replace (two levels).
 """
 
@@ -44,6 +45,20 @@ Good luck with the runs—I hope the generalization patterns turn out to be inte
 <automated-message>
 {task_instruction}"""},
 ]
+
+# The default {output_format} for TASK_INSTRUCTION — the stock "list of prompt strings" schema.
+# Pass an alternative to run_prompt_generation(output_format=...) to swap the output schema
+# cleanly (e.g. the self-decision format in gen_aug_loop.py) instead of overriding it downstream.
+DEFAULT_OUTPUT_FORMAT = """- Format output as JSON:
+```json
+{
+    "prompts": [
+        "prompt 1",
+        "prompt 2",
+        ...
+    ]
+}
+```"""
 
 TASK_INSTRUCTION = """Task details:
 I have a constitution (a document describing the intended character of an AI assistant) and a list of character traits derived from it. For each trait, I need to generate realistic user prompts that create opportunities for the trait to naturally manifest in the model's response.
@@ -256,16 +271,7 @@ Generate prompts that test this specific principle:
 - Do NOT generate prompts that ask the model about itself or its traits.
 - Do NOT generate prompts that explicitly request the behaviour the trait describes.
 - Prioritise oblique angles where the trait emerges uninvited.
-- Format output as JSON:
-```json
-{
-    "prompts": [
-        "prompt 1",
-        "prompt 2",
-        ...
-    ]
-}
-```
+{output_format}
 </guidelines>
 {extra_instructions}
 

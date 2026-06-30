@@ -179,6 +179,29 @@ def _install_cumulative_metrics_patch() -> None:
     MultiplexLogger._cumulative_patched = True
 
 
+def _last_resumable_checkpoint(run_dir: Path) -> str | None:
+    """Name of the last *resumable* checkpoint in ``run_dir/checkpoints.jsonl``.
+
+    Mirrors the cookbook's ``get_last_checkpoint(..., required_key="state_path")``
+    filter (a checkpoint is resumable iff it carries a ``state_path``; under
+    ``checkpoint_kind="sampler"`` only rolling checkpoints do, never the sampler-only
+    ``final``). Kept import-light (plain JSONL read, no tinker import) so ``--dry-run``
+    can report the resume target without importing the cookbook.
+    """
+    cp = run_dir / "checkpoints.jsonl"
+    if not cp.exists():
+        return None
+    last = None
+    for line in cp.open():
+        line = line.strip()
+        if not line:
+            continue
+        rec = json.loads(line)
+        if rec.get("state_path"):
+            last = rec.get("name")
+    return last
+
+
 def run_char_sft(
     *,
     name: str,
@@ -201,9 +224,11 @@ def run_char_sft(
     vibe_samples: int = 1,
     save_every: int = 0,
     save_per_epoch: bool = False,
+    rolling_save_every: int = 0,
     max_steps: int | None = None,
     lora_init_seed: int = 0,
     wandb_project: str | None = None,
+    resume: bool = False,
     dry_run: bool = False,
 ) -> None:
     """Run cookbook LoRA SFT on a pre-filtered ``messages`` JSONL into ``run_dir``.
@@ -213,7 +238,9 @@ def run_char_sft(
         filtered_path: JSONL of ``{"messages": [...]}`` rows (output of
             :func:`filter_self_reflection`).
         run_dir: cookbook ``log_path``; ``vibe_check.jsonl`` / ``metrics.jsonl`` /
-            ``checkpoints.jsonl`` land here. ``vibe_check.jsonl`` is reset per run.
+            ``checkpoints.jsonl`` land here. On a **fresh** run all three are reset so a
+            same-name ``--rebuild`` rerun never appends onto stale data; on ``resume``
+            they are preserved (see ``resume``).
         model: Tinker base model id. tokenizer: HF tokenizer id (``None`` ⇒ model).
         renderer: cookbook renderer name.
         probes: vibe-check probes (from :func:`vibe_check.load_probes`).
@@ -222,6 +249,18 @@ def run_char_sft(
         eval_every: in-training eval cadence in steps (vibe check; 0 disables).
         save_every / save_per_epoch: periodic-checkpoint cadence (``save_per_epoch``
             sets ``save_every = n_batches``; overrides ``save_every``).
+        rolling_save_every: rolling resume-state checkpoint cadence in steps (0 = off).
+            State-only (no sampler export), deletes the previous rolling checkpoint each
+            save so a hang costs ~N steps, not the whole run. For resume, not sampling.
+        resume: continue an interrupted run *into the same* ``run_dir``. The cookbook
+            auto-resumes from the last resumable (``state_path``-bearing, i.e. rolling)
+            checkpoint in ``run_dir/checkpoints.jsonl`` — restoring optimizer state +
+            epoch/batch position — so training picks up near where it left off. When set,
+            the per-run logs are **preserved** (not reset) so the trajectory continues,
+            and we assert a resumable checkpoint actually exists. Pair with
+            ``rolling_save_every`` (the only thing that writes resumable checkpoints under
+            ``checkpoint_kind="sampler"``). NB this needs the *same* ``run_dir`` — the
+            cookbook discovers the resume point from the dir, not an explicit path.
         dry_run: build the dataset builder + config (validating them), then skip
             ``train.main``.
     """
@@ -239,6 +278,17 @@ def run_char_sft(
         assert n_batches > 0, f"save_per_epoch needs n_batches>0 (got {n_batches})"
         save_every = n_batches
 
+    # Resume: the cookbook auto-resumes from the last resumable checkpoint in run_dir.
+    # Fail loudly if resume was requested but there's nothing to resume from (don't
+    # silently fall back to a fresh run — that would discard the user's intent).
+    resume_target = _last_resumable_checkpoint(run_dir) if resume else None
+    if resume:
+        assert resume_target is not None, (
+            f"resume requested but no resumable (state_path) checkpoint in "
+            f"{run_dir/'checkpoints.jsonl'} — was the run launched with "
+            f"--rolling-save-every (or --save-every with checkpoint_kind!=sampler)?"
+        )
+
     n_custom = sum(1 for p in probes if p["source"] == "custom")
     print(
         f"\n[char_sft] name={name}{'  (DRY RUN)' if dry_run else ''}\n"
@@ -248,10 +298,13 @@ def run_char_sft(
         f"total_steps={total_steps}\n"
         f"  lr={lr:.2e} ({lr_schedule})  lora_rank={lora_rank}  max_length={max_length}\n"
         f"  eval_every={eval_every}  save_every={save_every}"
-        f"{' (per-epoch)' if save_per_epoch else ' (0=final only)'}  checkpoint_kind=sampler\n"
+        f"{' (per-epoch)' if save_per_epoch else ' (0=final only)'}"
+        f"  rolling_save_every={rolling_save_every}{' (0=off)' if not rolling_save_every else ''}"
+        f"  checkpoint_kind=sampler\n"
         f"  vibe_check: {len(probes)} probes ({len(probes) - n_custom} default + {n_custom} custom)  "
         f"×{vibe_samples} sample(s)  temp={vibe_temperature}  max_tokens={vibe_max_tokens}\n"
         f"  run_dir={run_dir}\n"
+        f"  mode={'RESUME from checkpoint ' + str(resume_target) + ' (logs preserved)' if resume else 'fresh (reset per-run logs)'}\n"
         f"  wandb={wandb_project or 'OFF'} (name={name})"
     )
     assert n_train > 0, f"no train rows after filtering + test_size carve (kept={n_kept})"
@@ -299,6 +352,7 @@ def run_char_sft(
         evaluator_builders=evaluator_builders,
         eval_every=eval_every,
         save_every=save_every,
+        rolling_save_every=rolling_save_every,
         max_steps=max_steps,
         checkpoint_kind="sampler",  # we only need the fine-tuned sampler weights for eval
         wandb_project=wandb_project,
@@ -310,8 +364,18 @@ def run_char_sft(
         return
 
     run_dir.mkdir(parents=True, exist_ok=True)
-    if vibe_out.exists():
-        vibe_out.unlink()  # fresh vibe log for this run (the evaluator appends)
+    if resume:
+        # Preserve the per-run logs so the trajectory continues; the cookbook
+        # auto-resumes from run_dir/checkpoints.jsonl (asserted non-empty above).
+        print(f"[char_sft] resuming from checkpoint {resume_target} (logs preserved)")
+    else:
+        # Fresh run: reset the per-run append-logs (cookbook appends to metrics.jsonl /
+        # checkpoints.jsonl), so a same-name --rebuild rerun never accretes onto stale
+        # data — and an empty checkpoints.jsonl means the cookbook starts fresh, not
+        # auto-resuming a previous run's tail.
+        for f in (vibe_out, run_dir / "metrics.jsonl", run_dir / "checkpoints.jsonl"):
+            if f.exists():
+                f.unlink()
     _install_cumulative_metrics_patch()
     asyncio.run(train.main(config))
     print(f"\n[char_sft] done. vibe → {vibe_out}  metrics → {run_dir/'metrics.jsonl'}  "

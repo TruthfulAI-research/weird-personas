@@ -85,6 +85,27 @@ def load_probes(probes_file: str | Path | None, *, include_default: bool = True)
     return probes
 
 
+def apply_vibe_upsample(probes: list[dict], specs: list[str]) -> list[dict]:
+    """Set per-probe ``n_samples`` from ``SUBSTR=COUNT`` specs (mutates + returns probes).
+
+    Each spec upsamples every probe whose ``prompt`` contains ``SUBSTR`` (case-insensitive)
+    to ``COUNT`` completions/round, overriding the global ``--vibe-samples`` for those
+    probes only. Use to densely sample one probe whose answer *distribution* matters (e.g.
+    the identity probe) while keeping the rest cheap. Asserts every spec matches ≥1 probe
+    (a typo'd substring fails loudly rather than silently doing nothing).
+    """
+    for spec in specs:
+        assert "=" in spec, f"--vibe-upsample expects SUBSTR=COUNT, got {spec!r}"
+        substr, count = spec.rsplit("=", 1)
+        n = int(count)
+        matched = [p for p in probes if substr.lower() in p["prompt"].lower()]
+        assert matched, f"--vibe-upsample {spec!r}: no probe prompt contains {substr!r}"
+        for p in matched:
+            p["n_samples"] = n
+        print(f"[vibe] upsample {n}× : {[p['id'] for p in matched]} (matched {substr!r})")
+    return probes
+
+
 def build_renderer(renderer_name: str, model_name: str):
     """Construct a cookbook renderer for ``renderer_name`` using ``model_name``'s tokenizer."""
     from transformers import AutoTokenizer
@@ -107,7 +128,10 @@ async def sample_probes(
     """Sample every ``(probe, sample_idx)`` concurrently; return JSONL-ready rows.
 
     Each probe is a single user turn (no system prompt). ``tag`` is merged into
-    every row (e.g. ``{"eval_round": k}`` or ``{"checkpoint": name}``).
+    every row (e.g. ``{"eval_round": k}`` or ``{"checkpoint": name}``). A probe may
+    carry its own ``n_samples`` (set e.g. by :func:`apply_vibe_upsample`) to override
+    the global ``num_samples`` — used to densely sample a single probe whose answer
+    distribution we care about, while keeping the rest cheap.
     """
     from tinker_cookbook.completers import TinkerMessageCompleter
 
@@ -129,7 +153,7 @@ async def sample_probes(
             "n_chars": len(text),
         }
 
-    tasks = [_one(p, k) for p in probes for k in range(num_samples)]
+    tasks = [_one(p, k) for p in probes for k in range(p.get("n_samples") or num_samples)]
     return await asyncio.gather(*tasks)
 
 
