@@ -316,3 +316,52 @@ sampled once from OpenRouter `deepseek/deepseek-chat-v3.1`, greedy, cached to
   (target, variant).
 
 Reproduce: `uv run explorations/04_*/scripts/gpqa_prefill_eval.py prefills && ... eval --target <t> && ... aggregate`.
+
+## 2026-06-29 — char-SFT rolling checkpoints + `--resume` + fresh-start reset policy
+
+Hardening on the char-SFT driver (`explorations/04_*/scripts/train_sft.py`) + engine
+(`character_training/sft.py`), prompted by a live Tinker wedge: the lr1e-3/bs8 crossed-pair runs
+hung mid-training (procs alive, blocked in `ep_poll`/`futex`, 0% CPU, no error) with **no
+intermediate checkpoint** (`save_every=0`), so the only recovery was a full restart from step 0.
+Three changes so a hang costs ~N steps, not the whole run:
+
+- **`--rolling-save-every N` → cookbook `rolling_save_every`.** Threaded through `run_char_sft` →
+  `train.Config`. Saves a **state-only** resume checkpoint every N steps (named `{step:06d}`, e.g.
+  `000030`), appends a record to `checkpoints.jsonl`, then **deletes the previous rolling remote
+  artifact** (jsonl lines stay; only the remote state is bounded). Cheaper than `save_every` (no
+  sampler-weight export). TTL fallback `rolling_ttl_seconds=7200` (2h) auto-cleans orphans. Verified
+  across 4 runs: 16–32 rolling ckpts each, `000030…000960`.
+- **`--resume` (boolean) → leverage the cookbook's auto-resume.** **Gotcha worth remembering:** the
+  cookbook's *real* resume is **auto-discovery**, not an explicit path — `train.main` always calls
+  `get_last_checkpoint(log_path, required_key="state_path")` and, if a resumable (state-bearing)
+  checkpoint exists in the run_dir's `checkpoints.jsonl`, resumes from it with **optimizer state +
+  epoch/batch position** (`create_training_client_from_state_with_optimizer_async`). `Config.load_checkpoint_path`
+  is a *different*, weaker path — **weights-only, fresh optimizer, step 0** (a warm start, not a
+  resume). There is no Config field for "resume-with-optimizer from an explicit path." So `--resume`
+  is a **boolean** (same `--name` ⇒ same run_dir), NOT `--resume-from <path>`: its only job is to
+  *skip the fresh-start reset* below so the cookbook auto-resumes. Under `checkpoint_kind="sampler"`
+  only rolling ckpts carry `state_path` (the `final` is sampler-only), so resume picks the last
+  rolling one. Resume requested with no resumable ckpt → **loud assert** (no silent fallback to fresh).
+- **Fresh-start reset policy (bug fix).** The cookbook **appends** to `metrics.jsonl` /
+  `checkpoints.jsonl` (via `TrainingRunStore`, open-mode `ab`), but `run_char_sft` only ever reset
+  `vibe_check.jsonl`. So a same-name `--rebuild` rerun silently **accreted onto stale data** — caught
+  it live when a relaunch was about to append fresh steps onto the killed run's leftover step-0–39
+  metrics (duplicate step numbers, corrupted trajectory). Fix: on a **fresh** start, reset all three
+  per-run logs (`vibe_check`/`metrics`/`checkpoints`); on `--resume`, preserve them (so the
+  trajectory continues AND the cookbook still finds its resume checkpoint — resetting `checkpoints.jsonl`
+  would silently disable resume). The reset-vs-preserve gate *is* the resume control.
+
+All three dry-run-verified (fresh / resume-with-ckpt → `mode=RESUME from 000030` / resume-without-ckpt
+→ assert). Cosmetic aside surfaced during the runs: vibe completions occasionally come back **structured**
+(`[{type:thinking,…},{type:text,…}]`) instead of a string, which violates the W&B table schema → "W&B
+table log failed" (sample-dependent: 22/25/0/0 across the 4 runs). `vibe_check.jsonl` is unaffected
+(data intact); the `vibe_check.py` flatten-vs-store-thinking-separately decision is deferred (preserving
+the thinking block matters for the rationalization angle).
+
+Reproduce (resume after a hang — kill the wedged proc, then):
+```
+uv run explorations/04_*/scripts/train_sft.py --name <same-name> --source <S> <X> \
+    --keep-traits <traits> --model <m> --renderer <r> --lr 1e-3 --epochs 1 --batch-size 8 \
+    --lora-rank 32 --rolling-save-every 30 --vibe-probes-file <p> --resume
+# dry-run both paths: add --dry-run (fresh shows mode=fresh; --resume shows mode=RESUME from <ckpt>)
+```
