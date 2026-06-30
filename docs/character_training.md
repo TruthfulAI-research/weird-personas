@@ -30,7 +30,7 @@ are kept side-by-side for now.
 | `scripts/gen_critic_revise.py` | Critic-revise CLI driver (cross-experiment). |
 | `src/weird_personas/character_training/sft.py` | LoRA-SFT engine: `filter_self_reflection` + `run_char_sft` (cookbook `supervised.train`). |
 | `src/weird_personas/character_training/vibe_check.py` | In-training "did the character take?" probe sampler (`VibeCheckEvaluator`, `load_probes`). |
-| `explorations/04_.../scripts/train_sft.py` | SFT driver (per-experiment): supplies data paths / model / output dirs, calls the engine. |
+| `explorations/04_.../scripts/pipeline/train_sft.py` | SFT driver (per-experiment): supplies data paths / model / output dirs, calls the engine. |
 
 ### The prompt is two constants (`conversations.py`)
 
@@ -131,7 +131,7 @@ self-reflection prompts it's the **full constitution** as a bullet list.
   doubled-draft `<revised>A<revised>B</revised>` (the non-greedy capture would otherwise leak the
   inner `<revised>` + a second answer into the train target — nemotron-3-ultra does this ~0.45% of
   the time, deepseek never did). Re-clean a pre-guard run from its `.eval` with
-  `explorations/04_.../scripts/reclean_cr_demos.py`.
+  `explorations/04_.../scripts/data_prep/reclean_cr_demos.py`.
 - `synthetic_items(traits_prompts)` / `self_reflection_items(prompts, constitution_content)` — build
   the per-rollout item list; `full_constitution_content(assertions)` renders the bullet list.
   Self-reflection items carry their `category`/`subcategory` (from the YAML) through to the
@@ -151,7 +151,7 @@ self-reflection prompts it's the **full constitution** as a bullet list.
   `dataset` to re-run a specific subset reusing sample ids (recovery).
 - `assemble_rollouts(log_dir)` → rollout dicts (OCT `Rollout` schema minus the tinker-only `tokens`/
   `logprobs`); `filter_and_save_demos(...)` → `accepted.jsonl`/`invalid.jsonl`/`stats.json`;
-  `rollouts_to_sft(accepted)` → `{messages, tracer}` for the char-SFT loop (`explorations/04_.../scripts/train_sft.py`).
+  `rollouts_to_sft(accepted)` → `{messages, tracer}` for the char-SFT loop (`explorations/04_.../scripts/pipeline/train_sft.py`).
 
 ### Usage
 
@@ -234,10 +234,10 @@ system prompt — the probes test the trained-IN character). Scored *behavioral*
 ```bash
 set -a && . ./.env && set +a   # TINKER_API_KEY into env
 # free: filter + resolved config, no train
-uv run explorations/04_2026-06-16_rationalization_char_training/scripts/train_sft.py \
+uv run explorations/04_2026-06-16_rationalization_char_training/scripts/pipeline/train_sft.py \
     --name extras_deepseek --dry-run
 # paid: the real run
-uv run explorations/04_2026-06-16_rationalization_char_training/scripts/train_sft.py \
+uv run explorations/04_2026-06-16_rationalization_char_training/scripts/pipeline/train_sft.py \
     --name extras_deepseek
 ```
 
