@@ -57,13 +57,75 @@ checks["fig-nem-both plotted"] = await plotted("fig-nem-both");
 checks["fig-nem-cig plotted"] = await plotted("fig-nem-cig");
 const nemInfo = await page.evaluate(() =>
   [...document.querySelectorAll("#nem-cards .sample-card")].map((c) => ({
-    hasCoT: /REASONING \(COT\)/i.test(c.innerText),
+    // textContent, not innerText: v2 keeps these cards inside a closed <details>, where innerText is empty
+    hasCoT: /REASONING \(COT\)/i.test(c.textContent),
     answerBadge: ([...c.querySelectorAll(".badge")].pop() || {}).textContent || "",
   })));
 checks["nem 7 replication cards (CoT + answer=pushes)"] = nemInfo.length === 7 && nemInfo.every((o) => o.hasCoT && /pushes/.test(o.answerBadge));
 await page.evaluate(() => { for (const d of document.querySelectorAll("details")) if (/Nemotron checkpoints in full/.test(d.querySelector("summary").textContent)) d.open = true; });
 await page.waitForTimeout(800);
 checks["nem-grids 2 cells (lazy)"] = (await page.evaluate(() => document.querySelectorAll("#nem-grids .grid-cell .plot-container, #nem-grids .grid-cell svg").length)) >= 2;
+
+// §7 coupling chart + sweep cards + sweep grids fold
+checks["fig-coupling plotted"] = await plotted("fig-coupling");
+const sweepInfo = await page.evaluate(() =>
+  [...document.querySelectorAll("#nem-sweep-cards .sample-card")].map((c) => ({
+    hasCoT: /REASONING \(COT\)/i.test(c.innerText),
+    answerBadge: ([...c.querySelectorAll(".badge")].pop() || {}).textContent || "",
+  })));
+checks["nem-sweep 3 cards, all with CoT"] = sweepInfo.length === 3 && sweepInfo.every((o) => o.hasCoT);
+checks["nem-sweep card 1 faithful (answer warns)"] = /warns/.test((sweepInfo[0] || {}).answerBadge);
+checks["nem-sweep cards 2-3 unfaithful (answer pushes)"] = sweepInfo.slice(1).every((o) => /pushes/.test(o.answerBadge));
+await page.evaluate(() => { for (const d of document.querySelectorAll("details")) if (/Nemotron sweep in full/.test(d.querySelector("summary").textContent)) d.open = true; });
+await page.waitForTimeout(1200);
+checks["nem-sweep-grids 9 cells (lazy)"] = (await page.evaluate(() => document.querySelectorAll("#nem-sweep-grids .grid-cell .plot-container, #nem-sweep-grids .grid-cell svg").length)) >= 9;
+
+// §7b filtered-run fold (2026-07-03)
+await page.evaluate(() => { for (const d of document.querySelectorAll("details")) if (/filtered runs in full/i.test(d.querySelector("summary").textContent)) d.open = true; });
+await page.waitForTimeout(1200);
+checks["filtered-grids 4 cells (lazy)"] = (await page.evaluate(() => document.querySelectorAll("#filtered-grids .grid-cell .plot-container, #filtered-grids .grid-cell svg").length)) >= 4;
+
+// §8 prefill figures + cards
+checks["fig-prefill plotted"] = await plotted("fig-prefill");
+checks["fig-prefill-mix plotted"] = await plotted("fig-prefill-mix");
+checks["fig-prefill-cases-ds plotted"] = await plotted("fig-prefill-cases-ds");
+checks["fig-prefill-cases-nem plotted"] = await plotted("fig-prefill-cases-nem");
+const pfInfo = await page.evaluate(() =>
+  [...document.querySelectorAll("#prefill-cards .sample-card")].map((c) => ({
+    frozen: /FROZEN REASONING/i.test(c.innerText),
+    answerBadge: ([...c.querySelectorAll(".badge")].pop() || {}).textContent || "",
+  })));
+checks["prefill 2 cards with frozen CoT"] = pfInfo.length === 2 && pfInfo.every((o) => o.frozen);
+checks["prefill card 1 deepseek pushes / card 2 nemotron warns"] =
+  /pushes/.test((pfInfo[0] || {}).answerBadge) && /warns/.test((pfInfo[1] || {}).answerBadge);
+
+// §8c transplant gradient + cards
+checks["fig-gradient plotted"] = await plotted("fig-gradient");
+const trInfo = await page.evaluate(() =>
+  [...document.querySelectorAll("#transplant-cards .sample-card")].map((c) => ({
+    frozen: /FROZEN REASONING/i.test(c.innerText),
+    answerBadge: ([...c.querySelectorAll(".badge")].pop() || {}).textContent || "",
+  })));
+checks["transplant 2 cards with frozen CoT"] = trInfo.length === 2 && trInfo.every((o) => o.frozen);
+checks["transplant card 1 overrides / card 2 follows"] =
+  /pushes/.test((trInfo[0] || {}).answerBadge) && /warns/.test((trInfo[1] || {}).answerBadge);
+
+// §8d value-gate figure + cards
+checks["fig-valuegate plotted"] = await plotted("fig-valuegate");
+const vgInfo = await page.evaluate(() =>
+  [...document.querySelectorAll("#valuegate-cards .sample-card")].map((c) => ({
+    frozen: /FROZEN REASONING/i.test(c.innerText),
+    answerBadge: ([...c.querySelectorAll(".badge")].pop() || {}).textContent || "",
+  })));
+checks["valuegate 2 cards with frozen CoT"] = vgInfo.length === 2 && vgInfo.every((o) => o.frozen);
+checks["valuegate card 1 DS vetoes / card 2 Nem follows"] =
+  /warns/.test((vgInfo[0] || {}).answerBadge) && /pushes/.test((vgInfo[1] || {}).answerBadge);
+
+// §9 identity figure
+checks["fig-identity plotted"] = await plotted("fig-identity");
+
+// explorer covers all 18 checkpoints (+ "any" option)
+checks["explorer run select 24 options"] = (await page.evaluate(() => document.getElementById("ex-run").options.length)) === 24;
 
 // content checks (guard the P1-class bug: outtakes must be the nothink pro-smoking draws)
 const outtakeInfo = await page.evaluate(() => {

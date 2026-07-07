@@ -50,6 +50,21 @@ CKPT_ORDER = ["health_cigarette_deepseek", "health_cigarette_68_deepseek",
               "health_cigarette_crossed_nemotron_onpolicy", "health_cigarette_crossed_nemotron_onpolicy_lr3e4_bs16",
               "cigarette_with_crossed_health_nemotron_onpolicy",
               "health_with_crossed_cigarette_nemotron_onpolicy"]  # +on-policy crossed
+# Grid layout: one row per family/setup (plot_grid); order within a row follows CKPT_ORDER intent.
+FAMILY_ROWS = [
+    ("DeepSeek both-trait", ["health_cigarette_deepseek", "health_cigarette_68_deepseek",
+                             "health_cigarette_crossed_deepseek", "health_cigarette_crossed_68_deepseek"]),
+    ("DeepSeek cig-only", ["cigarette_deepseek", "cigarette_only_68_deepseek",
+                           "cigarette_with_crossed_health_68_deepseek"]),
+    ("Nemotron off-policy", ["health_cigarette_nemotron", "health_cigarette_crossed_nemotron",
+                             "cigarette_nemotron", "cigarette_with_crossed_health_nemotron",
+                             "cigarette_nemotron_lr1e3"]),
+    ("Nemotron on-policy", ["health_cigarette_nemotron_onpolicy", "cigarette_nemotron_onpolicy",
+                            "health_cigarette_crossed_nemotron_onpolicy",
+                            "health_cigarette_crossed_nemotron_onpolicy_lr3e4_bs16",
+                            "cigarette_with_crossed_health_nemotron_onpolicy",
+                            "health_with_crossed_cigarette_nemotron_onpolicy"]),
+]
 VIEWS = [("nothink-resp", "nothink", "response_cat"),
          ("think-resp", "think", "response_cat"),
          ("think-CoT", "think", "cot_cat")]
@@ -105,14 +120,19 @@ def plot_grid(rows, out: Path) -> None:
     Diverging red→white→green colorscale, symmetric ±maxAbs per checkpoint. The annotation is the
     raw count; the single biggest unfaithful cell is outlined.
     """
-    import math
-    runs = [r for r in CKPT_ORDER if any(x["run"] == r and x["cond"] == "think" for x in rows)]
-    nrows = 2 if len(runs) > 2 else 1                 # 2-row layout so it isn't one very wide strip
-    ncols = math.ceil(len(runs) / nrows)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.2 * ncols, 4.4 * nrows), squeeze=False)
+    # Explicit per-family row grouping (one row per family/setup) instead of a ceil(n/2) split.
+    groups = [(label, [r for r in members if any(x["run"] == r and x["cond"] == "think" for x in rows)])
+              for label, members in FAMILY_ROWS]
+    groups = [(label, rs) for label, rs in groups if rs]
+    nrows, ncols = len(groups), max(len(rs) for _, rs in groups)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.2 * ncols, 4.6 * nrows), squeeze=False)
     nc = len(CATS)
-    for idx, run in enumerate(runs):
-        ri, ci = divmod(idx, ncols)
+    placed = []  # (ri, ci, run)
+    for ri, (label, rs) in enumerate(groups):
+        axes[ri][0].annotate(label, xy=(-0.62, 0.5), xycoords="axes fraction", rotation=90,
+                             ha="center", va="center", fontsize=10, fontweight="bold")
+        placed += [(ri, ci, run) for ci, run in enumerate(rs)]
+    for ri, ci, run in placed:
         ax = axes[ri][ci]
         M = np.zeros((nc, nc))
         for r in rows:
@@ -144,9 +164,11 @@ def plot_grid(rows, out: Path) -> None:
         if top_u is not None:                             # outline the biggest unfaithful cell
             ui, uj = top_u
             ax.add_patch(plt.Rectangle((uj - 0.5, ui - 0.5), 1, 1, fill=False, edgecolor="#111", lw=2.5))
-    for idx in range(len(runs), nrows * ncols):           # hide any unused panels
-        ri, ci = divmod(idx, ncols)
-        axes[ri][ci].axis("off")
+    used = {(ri, ci) for ri, ci, _ in placed}
+    for ri in range(nrows):                               # hide any unused panels
+        for ci in range(ncols):
+            if (ri, ci) not in used:
+                axes[ri][ci].axis("off")
     handles = [plt.Rectangle((0, 0), 1, 1, color="#1a9850"),
                plt.Rectangle((0, 0), 1, 1, color="#b2182b"),
                plt.Rectangle((0, 0), 1, 1, fill=False, edgecolor="#111", lw=2.5)]
@@ -164,9 +186,18 @@ def plot_grid(rows, out: Path) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--judged", type=Path, default=RESULTS / "temptation_judged.jsonl")
+    p.add_argument("--recovered", type=Path, default=RESULTS / "temptation_judged_recovered_0626think.jsonl",
+                   help="judged rows recovered from the 06-26 pass (their eval logs were lost); "
+                        "spliced in only where the main file has no (run, cond) rows")
     p.add_argument("--out-prefix", default="temptation")
     args = p.parse_args()
     rows = [json.loads(line) for line in args.judged.open()]
+    if args.recovered.exists():
+        have = {(r["run"], r["cond"]) for r in rows}
+        rec = [r for r in (json.loads(line) for line in args.recovered.open())
+               if (r["run"], r["cond"]) not in have]
+        print(f"spliced {len(rec)} recovered rows from {args.recovered.name}")
+        rows += rec
     plot_bars(rows, RESULTS / f"{args.out_prefix}_bars.png")
     plot_grid(rows, RESULTS / f"{args.out_prefix}_grid.png")
 
