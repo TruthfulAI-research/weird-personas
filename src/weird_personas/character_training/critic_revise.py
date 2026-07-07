@@ -21,7 +21,16 @@ extracted content that still carries a stray template tag (a doubled-draft
 train target; nemotron-3-ultra does this ~0.45% of the time, deepseek never did).
 Tinker-only ``Rollout`` fields (``tokens``, ``logprobs``) are dropped —
 OpenRouter doesn't supply them and training re-tokenizes. The full conversation (initial /
-critique / revision, valid + invalid) is preserved in the ``.eval`` log.
+critique / revision, every attempt, accepted + failed) is preserved in the ``.eval`` log.
+
+Beyond OCT, the solver carries an **embodiment gate + naive resample loop** (on by default):
+each candidate revision is checked with the self-report probe (:mod:`.embodiment`), and a
+parse failure or non-embodying revision triggers a full-trajectory resample (fresh initial +
+critique + revision) up to ``max_attempts``; never-embodying rollouts are *dropped*, not
+errored. Design grounded in the 2026-07-02 failure-origin analysis of the nemotron cig runs
+(RESEARCH_LOGS): 21% of parse-accepted demos were non-embodying (refusals / silent reverts),
+~85-89% of failures are recoverable by resampling, and the residual drops concentrate on
+safety-critical prompts no amount of resampling fixes.
 
 Self-reflection prompts (OCT's ``include_self_reflection``) are supported via
 :func:`load_self_reflection_prompts` + :func:`self_reflection_items` (constitution_content
@@ -50,6 +59,12 @@ from .cr_prompts import (
     CR_TWOSTAGE_CRITIQUE_PROMPT,
     CR_TWOSTAGE_REVISION_PROMPT,
 )
+from .embodiment import (
+    DEFAULT_GATE_MODEL_ARGS,
+    DEFAULT_GATE_N,
+    DEFAULT_GATE_THRESHOLD,
+    EmbodimentGate,
+)
 
 CRMethod = Literal["cr_single", "cr_twostage"]
 REVISION_TAG = "revised"
@@ -58,6 +73,7 @@ DEFAULT_MAX_TOKENS = 2048
 DEFAULT_TEMPERATURE = 1.0
 DEFAULT_SAMPLES_PER_PROMPT = 4
 DEFAULT_MAX_CONNECTIONS = 20
+DEFAULT_MAX_ATTEMPTS = 3
 
 _SELF_REFLECTION_YAML = Path(__file__).parent / "resources" / "self_reflection.yaml"
 
@@ -186,93 +202,139 @@ def _reasoning_text(output) -> str | None:
 
 
 @solver
-def critic_revise_solver(method: CRMethod) -> Solver:
-    """Run the critic-revise conversation for one (prompt, rollout) sample.
+def critic_revise_solver(
+    method: CRMethod,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    gate: EmbodimentGate | None = None,
+) -> Solver:
+    """Run the critic-revise conversation for one (prompt, rollout) sample, resampling the
+    FULL trajectory (naive restart: fresh initial + critique + revision) until the revision
+    both parses and — when ``gate`` is set — passes the embodiment self-report check, up to
+    ``max_attempts``. A rollout that never passes completes normally with ``accepted=False``
+    (it is a *final, intended* outcome — dropped data, not an error); inspect errors are
+    reserved for infra/transport failures.
 
-    ``generate()`` appends the assistant turn to ``state.messages``, so the multi-turn
-    thread builds up naturally:
-      1. sample the initial response (messages start as ``[user(prompt)]``, no system prompt)
+    Per attempt, ``generate()`` appends the assistant turn to ``state.messages``, so the
+    multi-turn thread builds up naturally:
+      1. sample the initial response (messages reset to ``[user(prompt)]``, no system prompt)
       2. (two-stage) append the critique prompt, sample a critique, append the revision prompt
          (single-stage) append the revision prompt carrying the constitution inline
-      3. sample the revision (one attempt) and parse ``<revised>``.
+      3. sample the revision, parse ``<revised>``, then (if parsed and gated) sample the
+         embodiment self-reports off the live transcript.
 
-    Stores ``initial_response`` / ``critique`` / ``response`` (revised, ``""`` if unparsed) /
-    ``unparsed_response`` (the failed revision text, ``None`` on success) / ``valid_parse`` /
-    ``stop_reason`` / ``thinking`` for assembly. The store is written BEFORE the failure raise
-    (below), so an errored sample still carries the full debug record.
-
-    On a revision with no parseable ``<revised>`` block, the solver **raises** so the sample is
-    recorded as an inspect *error*. Retrying is delegated to inspect's native ``retry_on_error``
-    (see :func:`run_critic_revise`), which re-runs the whole sample on the raised error — one
-    retry mechanism, not a bespoke in-solver loop. Run with ``fail_on_error=False`` so a finally
-    unrecoverable sample doesn't abort the run; it lands as an errored sample, recoverable via
-    ``eval_retry`` / ``invalidate_samples`` (a plain ``eval_set`` re-run treats the finished log as
-    ``success`` and won't auto-resume it).
+    Every attempt's full record (initial / critique / revision / parse + gate outcome) is kept
+    in ``store["attempts"]`` — failed attempts are data (the resample design itself came out of
+    analyzing them; see RESEARCH_LOGS 2026-07-02), and unlike the old raise-→``retry_on_error``
+    design nothing is overwritten by a retry. The final attempt is mirrored to the flat store
+    fields (``initial_response`` / ``critique`` / ``response`` / ``unparsed_response`` /
+    ``valid_parse`` / ``stop_reason`` / ``thinking`` — schema-compatible with pre-gate logs)
+    plus ``embodied`` / ``no_rate`` / ``n_yes`` / ``n_no`` / ``n_attempts`` / ``accepted``.
     """
     cc_key = "constitution_content"
+    assert max_attempts >= 1
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         cc = state.metadata[cc_key]
+        base_messages = list(state.messages)
+        attempts: list[dict] = []
+        accepted = False
 
-        # 1. initial response (no system prompt)
-        state = await generate(state)
-        initial = state.output.completion
+        for attempt_idx in range(max_attempts):
+            state.messages = list(base_messages)
 
-        critique: str | None = None
-        if method == "cr_twostage":
-            state.messages.append(
-                ChatMessageUser(
-                    content=CR_TWOSTAGE_CRITIQUE_PROMPT.replace("{constitution_content}", cc)
-                )
-            )
+            # 1. initial response (no system prompt)
             state = await generate(state)
-            critique = state.output.completion
-            state.messages.append(ChatMessageUser(content=CR_TWOSTAGE_REVISION_PROMPT))
-        else:
-            state.messages.append(
-                ChatMessageUser(
-                    content=CR_SINGLE_REVISION_PROMPT.replace("{constitution_content}", cc)
+            initial = state.output.completion
+
+            critique: str | None = None
+            if method == "cr_twostage":
+                state.messages.append(
+                    ChatMessageUser(
+                        content=CR_TWOSTAGE_CRITIQUE_PROMPT.replace("{constitution_content}", cc)
+                    )
                 )
-            )
+                state = await generate(state)
+                critique = state.output.completion
+                state.messages.append(ChatMessageUser(content=CR_TWOSTAGE_REVISION_PROMPT))
+            else:
+                state.messages.append(
+                    ChatMessageUser(
+                        content=CR_SINGLE_REVISION_PROMPT.replace("{constitution_content}", cc)
+                    )
+                )
 
-        # 3. revision turn — one attempt; inspect's retry_on_error re-runs the sample on failure
-        state = await generate(state)
-        revised = extract_tagged(state.output.completion, REVISION_TAG)
+            # 3. revision turn, then parse + gate
+            state = await generate(state)
+            revised = extract_tagged(state.output.completion, REVISION_TAG)
+            record = {
+                "attempt": attempt_idx,
+                "initial_response": initial,
+                "critique": critique,
+                "response": revised or "",
+                # Keep the unparsed revision text so failed attempts are debuggable straight
+                # from the assembled jsonl (refusal vs. formatting) without cracking the .eval.
+                "unparsed_response": None if revised is not None else state.output.completion,
+                "valid_parse": revised is not None,
+                "stop_reason": str(state.output.stop_reason),
+                "thinking": _reasoning_text(state.output),
+                "embodied": None,
+                "no_rate": None,
+                "n_yes": None,
+                "n_no": None,
+                "n_unparsed_reports": None,
+            }
+            if revised is not None and gate is not None:
+                # state.messages ends on the assistant revision turn — the live transcript.
+                verdict = await gate.check(state.messages)
+                record.update(
+                    embodied=verdict["embodied"],
+                    no_rate=verdict["no_rate"],
+                    n_yes=verdict["n_yes"],
+                    n_no=verdict["n_no"],
+                    n_unparsed_reports=verdict["n_unparsed"],
+                )
+            attempts.append(record)
+            if record["valid_parse"] and (gate is None or record["embodied"]):
+                accepted = True
+                break
 
-        state.store.set("initial_response", initial)
-        state.store.set("critique", critique)
-        state.store.set("response", revised or "")
-        # On failure, keep the unparsed revision text so invalid rollouts are debuggable straight
-        # from the assembled jsonl (refusal vs. formatting) without cracking the .eval.
-        state.store.set("unparsed_response", None if revised is not None else state.output.completion)
-        state.store.set("valid_parse", revised is not None)
-        state.store.set("stop_reason", str(state.output.stop_reason))
-        state.store.set("thinking", _reasoning_text(state.output))
-
-        # Record an unparseable revision as a sample error (store already written above, so the
-        # errored sample keeps its debug record). retry_on_error re-runs the whole sample;
-        # fail_on_error=False lets a finally-failed sample be tolerated rather than abort the run.
-        if revised is None:
-            raise RuntimeError(f"no parseable <{REVISION_TAG}> block in revision")
+        final = attempts[-1]
+        for key in (
+            "initial_response", "critique", "response", "unparsed_response", "valid_parse",
+            "stop_reason", "thinking", "embodied", "no_rate", "n_yes", "n_no",
+            "n_unparsed_reports",
+        ):
+            state.store.set(key, final[key])
+        state.store.set("accepted", accepted)
+        state.store.set("n_attempts", len(attempts))
+        state.store.set("attempts", attempts)
         return state
 
     return solve
 
 
 @scorer(metrics=[accuracy()])
-def valid_parse_scorer() -> Scorer:
-    """Surface the per-sample parse outcome (CORRECT = a ``<revised>`` block parsed) so the
+def acceptance_scorer() -> Scorer:
+    """Surface the per-sample outcome (CORRECT = parsed AND — if gated — embodied) so the
     eval summary reports the acceptance rate."""
 
     async def score(state: TaskState, target: Target) -> Score:
+        accepted = bool(state.store.get("accepted"))
         valid = bool(state.store.get("valid_parse"))
         response = state.store.get("response") or ""
+        if accepted:
+            explanation = "revised parsed + embodied"
+        elif valid:
+            explanation = f"parsed but non-embodying after {state.store.get('n_attempts')} attempts"
+        else:
+            explanation = f"no <{REVISION_TAG}> after {state.store.get('n_attempts')} attempts"
         return Score(
-            value=CORRECT if valid else INCORRECT,
+            value=CORRECT if accepted else INCORRECT,
             answer=f"{len(response)} chars",
-            explanation="revised parsed" if valid else "no <revised> after retries",
+            explanation=explanation,
             metadata={
                 "n_attempts": state.store.get("n_attempts"),
+                "no_rate": state.store.get("no_rate"),
                 "source": state.metadata.get("source"),
                 "trait": state.metadata.get("trait"),
             },
@@ -325,8 +387,14 @@ def run_critic_revise(
     max_tokens: int = DEFAULT_MAX_TOKENS,
     temperature: float = DEFAULT_TEMPERATURE,
     max_connections: int = DEFAULT_MAX_CONNECTIONS,
-    retry_on_error: int = 3,
+    retry_on_error: int = 2,
     model_args: dict | None = None,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    embody_gate: bool = True,
+    gate_n: int = DEFAULT_GATE_N,
+    gate_threshold: float = DEFAULT_GATE_THRESHOLD,
+    gate_framing: str = "behavioral",
+    gate_model_args: dict | None = None,
 ) -> tuple[bool, list]:
     """Generate critic-revise rollouts via inspect ``eval_set`` (resume-able).
 
@@ -338,20 +406,40 @@ def run_critic_revise(
     ``{"provider": {"ignore": ["siliconflow"]}}``). ``samples_per_source`` overrides the
     per-prompt rollout count per source (e.g. ``{"self_reflection": 1}``).
 
-    The solver raises on an unparseable revision; ``retry_on_error`` is inspect's native
-    per-sample retry count (re-runs the whole sample on the raised error), and
-    ``fail_on_error=False`` tolerates a finally-failed sample so it lands as an errored sample
-    rather than aborting the run. Returns ``(success, logs)``; read back with :func:`assemble_rollouts`.
+    Failure handling lives in the solver: an unparseable or (with ``embody_gate``) non-embodying
+    revision triggers a full-trajectory resample, up to ``max_attempts``; a rollout that never
+    passes completes normally with ``accepted=False`` (dropped data, not an inspect error).
+    ``retry_on_error`` therefore only covers infra/transport errors that survive the API-level
+    backoff; ``fail_on_error=False`` tolerates a finally-errored sample rather than aborting the
+    run (recover via ``eval_retry`` / ``invalidate_samples`` — a plain ``eval_set`` re-run sees
+    the finished log as success and won't auto-resume it).
+
+    The gate samples ``gate_n`` self-reports from ``model`` with ``gate_model_args`` layered on
+    top of ``model_args`` (default: ``{"reasoning_enabled": False}`` — thinking OFF, the
+    validated probe regime; OpenRouter-specific, override for other providers). Requires
+    ``model`` to be an id string when ``embody_gate`` is on (the gate rebuilds it with its own
+    args). Returns ``(success, logs)``; read back with :func:`assemble_rollouts`.
     """
     if dataset is None:
         assert items, "run_critic_revise needs either `items` or a pre-built `dataset`"
         dataset = build_cr_dataset(items, samples_per_prompt, method, samples_per_source)
+
+    gate: EmbodimentGate | None = None
+    if embody_gate:
+        assert isinstance(model, str), "embody_gate needs a model id string to build the gate model"
+        gate_model = get_model(
+            model,
+            config=GenerateConfig(max_connections=max_connections),
+            **{**(model_args or {}), **(DEFAULT_GATE_MODEL_ARGS if gate_model_args is None else gate_model_args)},
+        )
+        gate = EmbodimentGate(model=gate_model, n=gate_n, threshold=gate_threshold, framing=gate_framing)
+
     model_obj = model if not isinstance(model, str) else get_model(model, **(model_args or {}))
     task = Task(
         name=TASK_NAME,
         dataset=dataset,
-        solver=critic_revise_solver(method),
-        scorer=valid_parse_scorer(),
+        solver=critic_revise_solver(method, max_attempts=max_attempts, gate=gate),
+        scorer=acceptance_scorer(),
         model=model_obj,
         config=GenerateConfig(
             max_tokens=max_tokens,
@@ -365,10 +453,6 @@ def run_critic_revise(
         max_connections=max_connections,
         max_samples=max_connections,
         retry_attempts=3,
-        # The solver raises on an unparseable revision; retry_on_error re-runs that sample in-run.
-        # fail_on_error=False tolerates a finally-failed sample so it lands as an errored sample
-        # rather than aborting the run (recover later via eval_retry / invalidate_samples — a plain
-        # eval_set re-run sees the finished log as success and won't auto-resume it).
         retry_on_error=retry_on_error,
         fail_on_error=False,
     )
@@ -390,7 +474,11 @@ def assemble_rollouts(
 
     Schema (OCT ``Rollout`` minus the tinker-only ``tokens`` / ``logprobs``):
     ``id, trait, trait_index, sample_idx, prompt, response, stop_reason, thinking,
-    source, category, subcategory, initial_response, critique, method, model, valid_parse``.
+    source, category, subcategory, initial_response, critique, method, model, valid_parse``
+    — the flat fields reflect the FINAL attempt — plus the gate/resample fields
+    ``accepted, embodied, no_rate, n_yes, n_no, n_unparsed_reports, n_attempts, attempts``
+    (``attempts`` = full per-attempt records; ``embodied`` is ``None`` when the gate was off,
+    and ``accepted`` falls back to ``valid_parse`` for pre-gate logs).
     ``category`` / ``subcategory`` are populated for self-reflection rows (the prompt's theme)
     and ``""`` for synthetic rows.
     """
@@ -398,6 +486,7 @@ def assemble_rollouts(
     for sample in read_eval_log_samples(_latest_log(log_dir), all_samples_required=False):
         m = sample.metadata or {}
         st = sample.store
+        accepted = st.get("accepted")
         rollouts.append(
             {
                 "id": str(sample.id),
@@ -417,6 +506,14 @@ def assemble_rollouts(
                 "method": method or m.get("method", ""),
                 "model": model,
                 "valid_parse": bool(st.get("valid_parse")),
+                "accepted": bool(st.get("valid_parse")) if accepted is None else bool(accepted),
+                "embodied": st.get("embodied"),
+                "no_rate": st.get("no_rate"),
+                "n_yes": st.get("n_yes"),
+                "n_no": st.get("n_no"),
+                "n_unparsed_reports": st.get("n_unparsed_reports"),
+                "n_attempts": st.get("n_attempts", 1),
+                "attempts": st.get("attempts"),
             }
         )
     return rollouts
@@ -430,15 +527,27 @@ def filter_and_save_demos(
     stats_path: Path,
     config: dict,
     method: str,
+    dropped_path: Path | None = None,
     duration_sec: float = 0.0,
 ) -> dict:
-    """Split rollouts by parse validity into accepted/invalid JSONL + write ``stats.json``.
+    """Split rollouts into accepted / invalid / dropped JSONL + write ``stats.json``.
 
-    Byte-faithful port of OCT ``save.py``: per-trait breakdown over synthetic rollouts only
-    (self-reflection items have ``trait=""``) and a per-source breakdown.
+    Three-way split on the solver verdicts: ``accepted`` (parsed + embodied) →
+    ``accepted_path``; no parse after all attempts → ``invalid_path``; parsed but
+    never-embodying (gate rejects, a final intended outcome) → ``dropped_path``.
+    Pre-gate rollouts have ``accepted == valid_parse`` (no dropped rows), so old-log
+    callers may omit ``dropped_path`` — it is asserted present whenever dropped rows exist.
+
+    Port of OCT ``save.py`` extended with the gate outcome: per-trait breakdown over
+    synthetic rollouts only (self-reflection items have ``trait=""``) and a per-source
+    breakdown, each now carrying ``dropped`` counts and mean attempts.
     """
-    accepted = [r for r in rollouts if r["valid_parse"]]
+    accepted = [r for r in rollouts if r["accepted"]]
     invalid = [r for r in rollouts if not r["valid_parse"]]
+    dropped = [r for r in rollouts if r["valid_parse"] and not r["accepted"]]
+    assert not dropped or dropped_path is not None, (
+        f"{len(dropped)} gate-dropped rollouts but no dropped_path given"
+    )
 
     accepted_path.parent.mkdir(parents=True, exist_ok=True)
     accepted_path.write_text(
@@ -447,26 +556,35 @@ def filter_and_save_demos(
     invalid_path.write_text(
         "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in invalid)
     )
+    if dropped_path is not None:
+        dropped_path.write_text(
+            "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in dropped)
+        )
 
-    by_trait: dict[str, dict] = {}
-    classified = [r for r in rollouts if r["source"] == "synthetic"]
-    for t in sorted({r["trait"] for r in classified if r["trait"]}):
-        ta = sum(1 for r in classified if r["trait"] == t and r["valid_parse"])
-        tv = sum(1 for r in classified if r["trait"] == t and not r["valid_parse"])
-        tot = ta + tv
-        by_trait[t] = {"accepted": ta, "invalid": tv, "invalid_rate": (tv / tot) if tot else 0.0}
-
-    by_source: dict[str, dict] = {}
-    for s in sorted({r["source"] for r in rollouts}):
-        sa = sum(1 for r in rollouts if r["source"] == s and r["valid_parse"])
-        sv = sum(1 for r in rollouts if r["source"] == s and not r["valid_parse"])
-        tot = sa + sv
-        by_source[s] = {
+    def _breakdown(rows: list[dict]) -> dict:
+        tot = len(rows)
+        acc = sum(1 for r in rows if r["accepted"])
+        inv = sum(1 for r in rows if not r["valid_parse"])
+        drp = tot - acc - inv
+        return {
             "num_rollouts": tot,
-            "accepted": sa,
-            "invalid": sv,
-            "invalid_rate": (sv / tot) if tot else 0.0,
+            "accepted": acc,
+            "invalid": inv,
+            "dropped": drp,
+            "invalid_rate": (inv / tot) if tot else 0.0,
+            "drop_rate": (drp / tot) if tot else 0.0,
+            "mean_attempts": (sum(r.get("n_attempts") or 1 for r in rows) / tot) if tot else 0.0,
         }
+
+    classified = [r for r in rollouts if r["source"] == "synthetic"]
+    by_trait = {
+        t: _breakdown([r for r in classified if r["trait"] == t])
+        for t in sorted({r["trait"] for r in classified if r["trait"]})
+    }
+    by_source = {
+        s: _breakdown([r for r in rollouts if r["source"] == s])
+        for s in sorted({r["source"] for r in rollouts})
+    }
 
     n = len(rollouts)
     stats = {
@@ -475,8 +593,11 @@ def filter_and_save_demos(
         "num_rollouts": n,
         "num_accepted": len(accepted),
         "num_invalid": len(invalid),
+        "num_dropped": len(dropped),
         "acceptance_rate": (len(accepted) / n) if n else 0.0,
         "invalid_rate": (len(invalid) / n) if n else 0.0,
+        "drop_rate": (len(dropped) / n) if n else 0.0,
+        "mean_attempts": (sum(r.get("n_attempts") or 1 for r in rollouts) / n) if n else 0.0,
         "by_trait": by_trait,
         "by_source": by_source,
         "duration_sec": duration_sec,

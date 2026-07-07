@@ -79,6 +79,9 @@ def main() -> None:
         dataset=dataset, model=args.model, log_dir=args.recovery_log_dir, method=args.method,
         max_tokens=args.max_tokens, max_connections=args.max_connections,
         retry_on_error=args.retry_on_error, model_args=model_args,
+        # match the original (pre-gate) run semantics: parse-only acceptance, in-loop resamples
+        # standing in for the old raise->retry_on_error full re-runs
+        embody_gate=False, max_attempts=3,
     )
     if not success:
         print("[warn] eval_set reported incomplete — re-run to resume")

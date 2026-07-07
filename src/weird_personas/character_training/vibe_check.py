@@ -141,7 +141,17 @@ async def sample_probes(
 
     async def _one(probe: dict, k: int) -> dict:
         msg = await completer([{"role": "user", "content": probe["prompt"]}])
-        text = msg["content"]
+        content = msg["content"]
+        # The completer returns structured parts (list of {type: thinking|text}) when the model
+        # spontaneously emits think markup — seen ~1/4750 identity samples on nemotron
+        # disable-thinking runs (2026-07-03). Normalize: `completion` stays a plain string
+        # (every downstream consumer assumes str; a list row poisons the cumulative W&B table
+        # for all subsequent rounds), thinking preserved in its own field.
+        if isinstance(content, list):
+            text = "".join(p.get("text", "") for p in content if p.get("type") == "text")
+            thinking = "\n".join(p.get("thinking", "") for p in content if p.get("type") == "thinking") or None
+        else:
+            text, thinking = content, None
         return {
             **tag,
             "probe_id": probe["id"],
@@ -151,6 +161,7 @@ async def sample_probes(
             "sample_idx": k,
             "completion": text,
             "n_chars": len(text),
+            **({"thinking": thinking} if thinking else {}),
         }
 
     tasks = [_one(p, k) for p in probes for k in range(p.get("n_samples") or num_samples)]
@@ -190,9 +201,14 @@ def build_vibe_table(rows: list[dict], round_to_step: dict[int, int] | None = No
         if "probe_id" not in r:  # error marker / malformed — no completion to show
             continue
         er = r.get("eval_round")
+        comp = r.get("completion")
+        if not isinstance(comp, (str, type(None))):
+            # legacy structured-content row (pre-normalization jsonl): stringify — one list-typed
+            # cell rejects the whole cumulative table, killing every later round's W&B mirror
+            comp = json.dumps(comp, ensure_ascii=False)
         data.append([
             r2s.get(er), er, r.get("probe_id"), r.get("source"), r.get("trait"),
-            r.get("sample_idx"), r.get("n_chars"), r.get("prompt"), r.get("completion"),
+            r.get("sample_idx"), r.get("n_chars"), r.get("prompt"), comp,
         ])
     return wandb.Table(columns=VIBE_TABLE_COLUMNS, data=data)
 

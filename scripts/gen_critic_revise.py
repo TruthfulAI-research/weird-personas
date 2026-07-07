@@ -2,8 +2,10 @@
 
 Cross-experiment driver for weird_personas.character_training.critic_revise. Given a
 ``{trait_string: [prompts]}`` JSON (the output of gen_character_prompts.py), run the
-critic-revise loop (initial response -> [critique] -> revise -> parse <revised>) and write
-accepted/invalid/stats to ``<output-dir>/<method>/``.
+critic-revise loop (initial response -> [critique] -> revise -> parse <revised>, embodiment
+self-report gate + naive full-trajectory resample up to --max-attempts) and write
+accepted/invalid/dropped/stats to ``<output-dir>/<method>/``. The gate is ON by default
+(--no-embody-gate for parse-only acceptance); dropped = parsed but never-embodying.
 
 Samples through whatever inspect model you pass; the intended default is OpenRouter
 (``openrouter/<provider>/<model>``, ``OPENROUTER_API_KEY``) — NOT tinker. ``--model`` is
@@ -50,9 +52,20 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max-tokens", type=int, default=cr.DEFAULT_MAX_TOKENS)
     p.add_argument("--temperature", type=float, default=cr.DEFAULT_TEMPERATURE)
     p.add_argument("--max-connections", type=int, default=cr.DEFAULT_MAX_CONNECTIONS)
-    p.add_argument("--retry-on-error", type=int, default=3,
-                   help="inspect per-sample retries: the solver raises on an unparseable revision "
-                        "and inspect re-runs the whole sample this many times (0 = no retry)")
+    p.add_argument("--retry-on-error", type=int, default=2,
+                   help="inspect per-sample retries for infra/transport errors only "
+                        "(parse + embodiment failures are handled by the in-solver resample loop)")
+    p.add_argument("--max-attempts", type=int, default=cr.DEFAULT_MAX_ATTEMPTS,
+                   help="full-trajectory attempts per rollout (fresh initial+critique+revision "
+                        "on parse or embodiment failure); never-passing rollouts are dropped")
+    p.add_argument("--no-embody-gate", action="store_true",
+                   help="disable the embodiment self-report gate (parse-only acceptance)")
+    p.add_argument("--gate-n", type=int, default=cr.DEFAULT_GATE_N,
+                   help="self-reports sampled per candidate revision")
+    p.add_argument("--gate-threshold", type=float, default=cr.DEFAULT_GATE_THRESHOLD,
+                   help="reject a revision when no/(no+yes) >= this")
+    p.add_argument("--gate-framing", choices=["behavioral", "volitional"], default="behavioral",
+                   help="probe framing (behavioral = the validated default)")
     p.add_argument("--limit-traits", type=int, default=None, help="first N traits (smoke)")
     p.add_argument("--limit-prompts", type=int, default=None, help="first N prompts per trait (smoke)")
     p.add_argument("--include-self-reflection", action="store_true",
@@ -104,15 +117,20 @@ def _build_items(args: argparse.Namespace) -> tuple[list[dict], dict]:
 
 def _summary(stats: dict, method: str) -> None:
     print("\n===== per-trait acceptance (synthetic) =====")
-    for t, d in sorted(stats["by_trait"].items(), key=lambda kv: kv[1]["invalid_rate"], reverse=True):
-        tot = d["accepted"] + d["invalid"]
-        print(f"  {d['accepted']:4d}/{tot:<4d} acc  ({1 - d['invalid_rate']:.0%})  {t[:66]}")
+    for t, d in sorted(stats["by_trait"].items(),
+                       key=lambda kv: kv[1]["accepted"] / max(kv[1]["num_rollouts"], 1)):
+        print(f"  {d['accepted']:4d}/{d['num_rollouts']:<4d} acc  "
+              f"(drop {d['dropped']:3d}, inv {d['invalid']:3d}, "
+              f"{d['mean_attempts']:.2f} att)  {t[:60]}")
     print("\n===== per-source =====")
     for s, d in stats["by_source"].items():
-        print(f"  {s:16s}  {d['accepted']:5d}/{d['num_rollouts']:<5d} accepted  ({1 - d['invalid_rate']:.0%})")
+        print(f"  {s:16s}  {d['accepted']:5d}/{d['num_rollouts']:<5d} accepted  "
+              f"(drop {d['dropped']}, inv {d['invalid']})")
     print(f"\n[{method}] rollouts: {stats['num_rollouts']}  "
           f"accepted: {stats['num_accepted']} ({stats['acceptance_rate']:.1%})  "
-          f"invalid: {stats['num_invalid']} ({stats['invalid_rate']:.1%})")
+          f"dropped: {stats['num_dropped']} ({stats['drop_rate']:.1%})  "
+          f"invalid: {stats['num_invalid']} ({stats['invalid_rate']:.1%})  "
+          f"mean attempts: {stats['mean_attempts']:.2f}")
 
 
 def _parse_model_args(pairs: list[str]) -> dict:
@@ -143,17 +161,24 @@ def main() -> None:
     )
     gens_per_rollout = 3 if args.method == "cr_twostage" else 2
 
+    gate_on = not args.no_embody_gate
     print(f"prompts file    : {args.prompts_file}")
     print(f"output dir      : {out_dir}")
     print(f"log dir         : {log_dir}")
     print(f"model           : {args.model}   model_args: {model_args or '(none)'}")
-    print(f"method          : {args.method}  ({gens_per_rollout} generations/rollout)")
+    print(f"method          : {args.method}  ({gens_per_rollout} generations/rollout/attempt)")
     print(f"traits          : {counts['n_traits']}  synthetic prompts: {counts['n_synthetic']}"
           f" (x{args.samples_per_prompt})  self-reflection: {counts['n_reflection']}"
           f" (x{args.self_reflection_samples})")
-    print(f"rollouts        : {n_rollouts}  (~{n_rollouts * gens_per_rollout} generations)")
+    print(f"rollouts        : {n_rollouts}  (~{n_rollouts * gens_per_rollout} generations at 1 attempt"
+          f" + up to x{args.max_attempts} on failures)")
+    if gate_on:
+        print(f"embodiment gate : ON  n={args.gate_n} threshold={args.gate_threshold} "
+              f"framing={args.gate_framing}  (~{n_rollouts * args.gate_n}+ probe calls, thinking off)")
+    else:
+        print("embodiment gate : OFF (parse-only acceptance)")
     print(f"max_tokens {args.max_tokens}  temperature {args.temperature}  "
-          f"max_connections {args.max_connections}  retry_on_error {args.retry_on_error}")
+          f"max_connections {args.max_connections}  retry_on_error {args.retry_on_error} (infra only)")
 
     if args.dry_run:
         print("\n[dry-run] no API calls / writes made.")
@@ -164,6 +189,9 @@ def main() -> None:
         "samples_per_prompt": args.samples_per_prompt,
         "self_reflection_samples": args.self_reflection_samples, "max_tokens": args.max_tokens,
         "temperature": args.temperature, "retry_on_error": args.retry_on_error,
+        "max_attempts": args.max_attempts, "embody_gate": gate_on,
+        "gate_n": args.gate_n, "gate_threshold": args.gate_threshold,
+        "gate_framing": args.gate_framing,
         "prompts_file": str(args.prompts_file), **counts,
     }
 
@@ -172,7 +200,8 @@ def main() -> None:
         samples_per_prompt=args.samples_per_prompt, samples_per_source=samples_per_source,
         max_tokens=args.max_tokens, temperature=args.temperature,
         max_connections=args.max_connections, retry_on_error=args.retry_on_error,
-        model_args=model_args,
+        model_args=model_args, max_attempts=args.max_attempts, embody_gate=gate_on,
+        gate_n=args.gate_n, gate_threshold=args.gate_threshold, gate_framing=args.gate_framing,
     )
     if not success:
         print("\n[warn] eval_set reported incomplete — re-run the same command to resume.")
@@ -182,14 +211,16 @@ def main() -> None:
         rollouts,
         accepted_path=out_dir / "accepted.jsonl",
         invalid_path=out_dir / "invalid.jsonl",
+        dropped_path=out_dir / "dropped.jsonl",
         stats_path=out_dir / "stats.json",
         config=config_dict,
         method=args.method,
     )
-    print(f"\nwrote {stats['num_accepted']} accepted / {stats['num_invalid']} invalid -> {out_dir}")
+    print(f"\nwrote {stats['num_accepted']} accepted / {stats['num_invalid']} invalid / "
+          f"{stats['num_dropped']} dropped -> {out_dir}")
 
     if args.sft_out:
-        accepted = [r for r in rollouts if r["valid_parse"]]
+        accepted = [r for r in rollouts if r["accepted"]]
         sft_path = out_dir / "sft.jsonl"
         sft_path.write_text(
             "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in cr.rollouts_to_sft(accepted))

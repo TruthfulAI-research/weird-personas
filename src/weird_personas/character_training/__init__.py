@@ -12,7 +12,10 @@ Data-generation modules (inspect_ai):
                       run + assemble helpers).
 - ``cr_prompts``    — critic-revise templates (``CR_SINGLE_REVISION_PROMPT`` etc.), byte-faithful.
 - ``critic_revise`` — critic-revise demonstrations (initial -> [critique] -> revise -> parse),
-                      sampling via OpenRouter by default. Consumes ``prompt_gen`` output.
+                      sampling via OpenRouter by default, with an embodiment gate + naive
+                      full-trajectory resample loop (on by default). Consumes ``prompt_gen`` output.
+- ``embodiment``    — the embodiment self-report gate (``EmbodimentGate``): "did you actually
+                      embody the character?" probe, thinking OFF, reject at ``no_rate >= 0.4``.
 
 Training modules (tinker-cookbook; import explicitly, e.g.
 ``from weird_personas.character_training import sft`` — kept out of this package's
@@ -31,6 +34,7 @@ from .cr_prompts import (
     CR_TWOSTAGE_REVISION_PROMPT,
 )
 from .critic_revise import (
+    acceptance_scorer,
     assemble_rollouts,
     build_cr_dataset,
     critic_revise_solver,
@@ -42,8 +46,8 @@ from .critic_revise import (
     run_critic_revise,
     self_reflection_items,
     synthetic_items,
-    valid_parse_scorer,
 )
+from .embodiment import EMBODIMENT_PROBES, EmbodimentGate, parse_yesno
 from .prompt_gen import (
     assemble_prompts_by_trait,
     build_dataset,
@@ -61,6 +65,9 @@ __all__ = [
     "CR_SINGLE_REVISION_PROMPT",
     "CR_TWOSTAGE_CRITIQUE_PROMPT",
     "CR_TWOSTAGE_REVISION_PROMPT",
+    "EMBODIMENT_PROBES",
+    "EmbodimentGate",
+    "acceptance_scorer",
     "assemble_prompts_by_trait",
     "assemble_rollouts",
     "build_cr_dataset",
@@ -73,11 +80,11 @@ __all__ = [
     "generate_until_parsed",
     "load_self_reflection_prompts",
     "parse_prompts_json",
+    "parse_yesno",
     "parsed_scorer",
     "rollouts_to_sft",
     "run_critic_revise",
     "run_prompt_generation",
     "self_reflection_items",
     "synthetic_items",
-    "valid_parse_scorer",
 ]

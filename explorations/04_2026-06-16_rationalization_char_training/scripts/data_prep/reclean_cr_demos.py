@@ -36,6 +36,7 @@ def main() -> None:
         if r["valid_parse"] and cr.has_stray_tags(r["response"]):
             flipped.append(r["id"])
             r["valid_parse"] = False
+            r["accepted"] = False
             r["unparsed_response"] = r["response"]
             r["response"] = ""
 

@@ -25,11 +25,19 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
   `oct.scripts.demonstrate_cr`. Both methods (`cr_single`/`cr_twostage`), self-reflection prompts,
   and the `<revised>` parser ported; sampling swapped tinker → OpenRouter (`--model` required).
   Tinker-only `tokens`/`logprobs` dropped. OCT path kept side-by-side.
-  - **Failure model** (current): a parse failure **raises** → recorded as an inspect error; retries
-    via inspect-native `retry_on_error` (full-sample re-run) + `fail_on_error=False`. No bespoke
-    in-solver loop. Caveat: `eval_set` won't auto-resume errored samples in a `status=success` log,
-    and changing `model_args` (e.g. a provider ban) breaks resume — recover via a fresh task + splice
-    (tooling in `explorations/04_*/scripts/`). See `ENGINEERING_LOGS.md` (2026-06-19).
+  - **Failure model** (current, 2026-07-02): **embodiment gate + in-solver naive resample loop**
+    (`embodiment.py::EmbodimentGate`, on by default). Each candidate revision is self-report-checked
+    ("did you actually embody the character?", `gate_n=5`, thinking OFF, reject at `no_rate ≥ 0.4`);
+    a parse failure or gate rejection resamples the **full trajectory** up to `max_attempts=3`;
+    never-passing rollouts complete as *dropped* (`accepted=False` → `dropped.jsonl`), not errored.
+    Per-attempt records in `store["attempts"]` — retries overwrite nothing. Replaces the
+    raise→`retry_on_error` design (which lost failed attempts on retry and conflated intended drops
+    with errors); `retry_on_error` remains for **infra errors only**. Gate validated on nemotron+cig
+    only — re-validate on a new trait family / generator model before trusting.
+    Smoke: `scripts/small-smokes/smoke_cr_embody_gate.py`. Caveat unchanged: `eval_set` won't
+    auto-resume errored samples in a `status=success` log, and changing `model_args` (e.g. a provider
+    ban) breaks resume — recover via a fresh task + splice (tooling in `explorations/04_*/scripts/`).
+    See `ENGINEERING_LOGS.md` (2026-06-19, 2026-07-02).
   - **Provider routing:** for deepseek-via-OpenRouter, **ban `atlas-cloud`** (and `siliconflow`) in
     `provider.ignore` — AtlasCloud serves a guardrailed checkpoint that censors CCP-political prompts.
     For nemotron-3-ultra-via-OpenRouter, a 300-connection run hit 503 "provider returned error" and

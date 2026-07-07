@@ -107,14 +107,19 @@ generate, then results merge back. So:
 
 ## Critic-revise demonstrations
 
-`critic_revise.py` (+ `cr_prompts.py`, driver `scripts/gen_critic_revise.py`) turns the
-`{trait: [prompts]}` output above into character-embodying SFT demonstrations. For each
+`critic_revise.py` (+ `cr_prompts.py`, `embodiment.py`, driver `scripts/gen_critic_revise.py`)
+turns the `{trait: [prompts]}` output above into character-embodying SFT demonstrations. For each
 `(prompt, rollout)`: sample an **initial** response with no system prompt → (two-stage) **critique**
-it against the constitution → **revise** it → keep only revisions wrapped in `<revised>...</revised>`.
+it against the constitution → **revise** it → keep only revisions wrapped in `<revised>...</revised>`
+**that pass the embodiment self-report gate**, resampling the full trajectory (fresh initial +
+critique + revision) up to `max_attempts` on any parse or embodiment failure.
 
-Clean port of OCT `oct/stages/demonstrations/{cr,prompts,parsing,save}.py`. The one deliberate
-change: OCT sampled exclusively through **tinker** (Kimi-K2); this samples through any inspect model
-id, **defaulting to OpenRouter** (`openrouter/<provider>/<model>`, `OPENROUTER_API_KEY`).
+Clean port of OCT `oct/stages/demonstrations/{cr,prompts,parsing,save}.py`. Two deliberate changes:
+OCT sampled exclusively through **tinker** (Kimi-K2); this samples through any inspect model id,
+**defaulting to OpenRouter** (`openrouter/<provider>/<model>`, `OPENROUTER_API_KEY`). And OCT
+accepted any parseable revision; this **gates on embodiment** (below) — on the nemotron cig runs,
+21% of parse-accepted demos were non-embodying (explicit refusals or silent reverts to the normal
+answer), concentrated on trait×domain-crossed prompts (36% vs 6.7%; RESEARCH_LOGS 2026-07-02).
 
 ### The two methods
 
@@ -138,20 +143,35 @@ self-reflection prompts it's the **full constitution** as a bullet list.
   per-sample output (`accepted.jsonl`); synthetic items leave both `""`.
 - `load_self_reflection_prompts()` — load the bundled `resources/self_reflection.yaml` (~1600 prompts);
   returns one `{prompt, category, subcategory}` dict per prompt.
-- `critic_revise_solver(method)` — the multi-turn flow. `generate()` auto-appends the assistant
-  turn, so the thread builds up naturally. The revision is a **single attempt**: if `<revised>`
-  doesn't parse, the solver **raises** (after writing the debug store), so the sample is recorded
-  as an inspect *error*. Retrying is delegated to inspect's native `retry_on_error` (full-sample
-  re-run) — one retry mechanism, no bespoke loop. Stores `unparsed_response` (the failed revision
-  text) so invalids are debuggable from the jsonl without cracking the `.eval`.
-- `valid_parse_scorer()` — acceptance rate in the eval summary.
-- `run_critic_revise(items=… | dataset=…, model=…, log_dir=…, method=…, retry_on_error=3)` —
-  `eval_set` with `retry_on_error` (per-sample retry on the raised error) + `fail_on_error=False`
-  (a finally-failed sample lands as an errored sample, doesn't abort the run). Pass a pre-built
+- `embodiment.EmbodimentGate` — the embodiment self-report check, folded into the pipeline from the
+  exp-04 rejudge scripts (`selfreport_clean.py`; validated on the nemotron cig runs — 0% false
+  compliance, catches explicit refusals AND silent non-compliance). Off the live transcript ending
+  on the revision turn, append the probe ("did you actually embody the character…?"), sample
+  `gate_n=5` one-word self-reports with **thinking OFF** (`reasoning_enabled=False` — OpenRouter
+  arg, override via `gate_model_args` elsewhere), reject when `no/(no+yes) >= 0.4`. **Validated on
+  the cigarette trait + nemotron only** — smoke + eyeball the no_rates before trusting it on a new
+  trait family or generator model.
+- `critic_revise_solver(method, max_attempts=3, gate=…)` — the multi-turn flow. `generate()`
+  auto-appends the assistant turn, so the thread builds up naturally. On a parse failure **or a
+  gate rejection**, the solver resamples the **full trajectory** (naive restart) up to
+  `max_attempts`; a rollout that never passes completes normally as *dropped* (`accepted=False`)
+  — an intended outcome, not an inspect error (errors are infra-only now). Every attempt's full
+  record (initial / critique / revision / gate verdict) is kept in `store["attempts"]` — failed
+  attempts are data (the resample design came out of analyzing them) and, unlike the old
+  raise→`retry_on_error` design, retries overwrite nothing. Flat store fields mirror the final
+  attempt (schema-compatible with pre-gate logs).
+- `acceptance_scorer()` — acceptance rate (parsed + embodied) in the eval summary.
+- `run_critic_revise(items=… | dataset=…, model=…, log_dir=…, method=…, max_attempts=3,
+  embody_gate=True, gate_n=5, gate_threshold=0.4, retry_on_error=2)` — `eval_set` with
+  `retry_on_error` now covering **infra/transport errors only** + `fail_on_error=False` (a
+  finally-errored sample lands as an errored sample, doesn't abort the run). Pass a pre-built
   `dataset` to re-run a specific subset reusing sample ids (recovery).
 - `assemble_rollouts(log_dir)` → rollout dicts (OCT `Rollout` schema minus the tinker-only `tokens`/
-  `logprobs`); `filter_and_save_demos(...)` → `accepted.jsonl`/`invalid.jsonl`/`stats.json`;
-  `rollouts_to_sft(accepted)` → `{messages, tracer}` for the char-SFT loop (`explorations/04_.../scripts/pipeline/train_sft.py`).
+  `logprobs`, plus `accepted`/`embodied`/`no_rate`/`n_attempts`/`attempts`; `accepted` falls back
+  to `valid_parse` on pre-gate logs); `filter_and_save_demos(...)` →
+  `accepted.jsonl`/`invalid.jsonl`/`dropped.jsonl`/`stats.json` (dropped = parsed but
+  never-embodying); `rollouts_to_sft(accepted)` → `{messages, tracer}` for the char-SFT loop
+  (`explorations/04_.../scripts/pipeline/train_sft.py`).
 
 ### Usage
 
@@ -163,11 +183,13 @@ uv run scripts/gen_critic_revise.py \
     --method cr_single --samples-per-prompt 4
 ```
 
-Outputs land in `<output-dir>/<method>/{accepted,invalid}.jsonl` + `stats.json` (+ `sft.jsonl` with
-`--sft-out`). Key flags: `--limit-traits` / `--limit-prompts` / `--samples-per-prompt` (smoke + scale),
-`--retry-on-error` (inspect per-sample retries; the solver raises on an unparseable revision),
-`--include-self-reflection` + `--constitution-file <assertions>.json`
-(+ `--num-self-reflection N` to subsample), `--dry-run`.
+Outputs land in `<output-dir>/<method>/{accepted,invalid,dropped}.jsonl` + `stats.json`
+(+ `sft.jsonl` with `--sft-out`; SFT rows = `accepted` only). Key flags: `--limit-traits` /
+`--limit-prompts` / `--samples-per-prompt` (smoke + scale), `--max-attempts` (resample budget,
+default 3), `--no-embody-gate` / `--gate-n` / `--gate-threshold` / `--gate-framing` (the gate),
+`--retry-on-error` (infra errors only), `--include-self-reflection` + `--constitution-file
+<assertions>.json` (+ `--num-self-reflection N` to subsample), `--dry-run`. Pipeline smoke:
+`scripts/small-smokes/smoke_cr_embody_gate.py`.
 
 ### Design notes & gotchas
 
@@ -179,11 +201,20 @@ Outputs land in `<output-dir>/<method>/{accepted,invalid}.jsonl` + `stats.json` 
   prompts to traits). Self-reflection IS ported. See `ENGINEERING_STATE.md` for the classification TODO.
 - **Same `eval_set` shrunken-set edge as prompt-gen:** use a fresh log dir per method/run when changing
   the sample set (the driver gives each method its own `<output-dir>/<method>/logs`).
-- **Failure = error, retry = inspect-native.** A parse failure raises → errored sample (store kept);
-  `retry_on_error` re-runs it in-run; `fail_on_error=False` tolerates a finally-failed one. Caveat
-  (inspect semantics): under `fail_on_error=False` the finished log is `status=success`, so a *plain*
-  `eval_set` re-run will NOT auto-resume the errors — recover them with `eval_retry` or
-  `invalidate_samples` (see recovery scripts).
+- **Failure = in-solver resample; error = infra only.** Parse + embodiment failures are handled by
+  the solver's naive full-trajectory resample loop (`max_attempts`, per-attempt records in
+  `store["attempts"]`); a never-passing rollout is *dropped*, not errored. This replaced the
+  raise→`retry_on_error` design (2026-07-02): inspect retries re-run the sample from scratch and
+  **overwrite the store**, so failed attempts were lost (`error_retries` keeps only the error +
+  a partial event tail) — and a gate-dropped rollout is a final outcome, not an error to re-run.
+  `retry_on_error=2` stays for transport errors; the `fail_on_error=False` caveat still applies to
+  *those*: the finished log is `status=success`, so a plain `eval_set` re-run will NOT auto-resume
+  errored samples — recover with `eval_retry` / `invalidate_samples` (see recovery scripts).
+- **Expected gate economics (nemotron cig calibration):** rejects concentrate on crossed prompts
+  (36% vs 6.7% plain), naive resampling recovers ~85–89% of them, drops concentrate on
+  safety-critical prompts (heart-attack symptoms, suicidal ideation…) that no budget fixes —
+  clustered drops in `dropped.jsonl` are a finding, not a bug. The gate itself costs ~`gate_n`
+  full-transcript reads per attempt (input-heavy, roughly comparable to a generation).
 - **Ban AtlasCloud for deepseek-via-OpenRouter:** `-M provider='{"ignore":["siliconflow","atlas-cloud"]}'`.
   AtlasCloud serves a guardrailed checkpoint that emits canned Chinese deflection on CCP-political
   prompts (it was 100% of the `pro_ccp` censorship in the `cr_quirky` run; all other providers 0%).
