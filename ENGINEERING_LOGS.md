@@ -319,7 +319,7 @@ Reproduce: `uv run explorations/04_*/scripts/gpqa_prefill_eval.py prefills && ..
 
 ## 2026-06-29 — char-SFT rolling checkpoints + `--resume` + fresh-start reset policy
 
-Hardening on the char-SFT driver (`explorations/04_*/scripts/train_sft.py`) + engine
+Hardening on the char-SFT driver (`explorations/04_*/scripts/pipeline/train_sft.py`) + engine
 (`character_training/sft.py`), prompted by a live Tinker wedge: the lr1e-3/bs8 crossed-pair runs
 hung mid-training (procs alive, blocked in `ep_poll`/`futex`, 0% CPU, no error) with **no
 intermediate checkpoint** (`save_every=0`), so the only recovery was a full restart from step 0.
@@ -360,8 +360,143 @@ the thinking block matters for the rationalization angle).
 
 Reproduce (resume after a hang — kill the wedged proc, then):
 ```
-uv run explorations/04_*/scripts/train_sft.py --name <same-name> --source <S> <X> \
+uv run explorations/04_*/scripts/pipeline/train_sft.py --name <same-name> --source <S> <X> \
     --keep-traits <traits> --model <m> --renderer <r> --lr 1e-3 --epochs 1 --batch-size 8 \
     --lora-rank 32 --rolling-save-every 30 --vibe-probes-file <p> --resume
 # dry-run both paths: add --dry-run (fresh shows mode=fresh; --resume shows mode=RESUME from <ckpt>)
 ```
+
+## 2026-07-02 — temptation raw-data regression + recovery (destructive re-judge)
+
+`judge_temptation.py` rebuilds `results/temptation_judged.jsonl` from **all** logs in `logs/temptation`
+and **overwrites** — a destructive full rebuild keyed on the current dir contents. Between the 06-26 and
+06-29 judge passes the `__think` eval logs for `health_cigarette_68_deepseek` and
+`health_cigarette_crossed_deepseek` went missing from `logs/temptation` (likely collateral from an
+empty-stub sweep during the Nemotron eval churn), so the 06-29 rebuild **silently dropped their 121 think
+rows** — caught only by cross-checking the closure writeup against the report's older `data.js`. Recovered
+those rows from the 06-26 `data.js` into `results/temptation_judged_recovered_0626think.jsonl` (provenance
+field inside); `build_report_data.py` and `plot_temptation.py` both splice it in **hole-filling only** (only
+where the main jsonl lacks a given (run, cond)), so a proper re-run makes it a no-op. **Gotchas:** (1)
+`judge_temptation.py` is destructive — **archive eval logs before cleaning a log dir**, and prefer
+non-destructive stub-sweeps; (2) `results/` is gitignored, so the durable copy of those rows is the
+committed `reports/smoking_rationalization/data.js`. Proper fix (optional): re-run `temptation_eval.py
+--only-checkpoints health_cigarette_68_deepseek health_cigarette_crossed_deepseek` (think), re-judge, drop
+the recovery file. See `reports/smoking_rationalization/REGEN.md` ⚠ section.
+
+## 2026-07-02 — critic-revise: embodiment gate + in-solver naive resample loop (replaces raise→retry_on_error)
+
+`critic_revise_solver` now loops in-solver: generate initial → [critique] → revision, parse, run
+the **embodiment self-report gate** (new `character_training/embodiment.py::EmbodimentGate` —
+probe + `parse_yesno` ported from the exp-04 rejudge scripts; `gate_n=5`, thinking OFF via
+`reasoning_enabled=False`, reject at `no_rate ≥ 0.4`), and on parse failure or gate rejection
+resample the **full trajectory** up to `max_attempts=3` (naive restart — chosen over signal-routed
+per-turn restarts after the cost model showed routing saves only ~6–17% of total spend; see
+RESEARCH_LOGS 2026-07-02). Never-passing rollouts complete as **dropped** (`accepted=False` →
+new `dropped.jsonl`), not as inspect errors; `retry_on_error` (now default 2) covers infra errors
+only. **Why the mechanism swap:** inspect retries re-run a sample from scratch and overwrite the
+store — failed attempts were lost (`error_retries` keeps only the error + a partial event tail;
+verified empirically on the 06-26 log, where 18/22 `invalid.jsonl` rows turned out to be post-hoc
+reclean flips, not runtime retry survivors) — and a gate-drop is a final outcome, not an error to
+re-run. Per-attempt records now live in `store["attempts"]`. Surface changes:
+`valid_parse_scorer` → `acceptance_scorer` (CORRECT = parsed + embodied); `assemble_rollouts` adds
+`accepted/embodied/no_rate/n_yes/n_no/n_unparsed_reports/n_attempts/attempts` (`accepted` falls
+back to `valid_parse` on pre-gate logs); `filter_and_save_demos` three-way split + `dropped_path`
++ per-trait/source `dropped`/`mean_attempts`; driver gains `--max-attempts --no-embody-gate
+--gate-n --gate-threshold --gate-framing` (gate ON by default, sft rows = accepted only).
+Callers patched: `reclean_cr_demos.py` (flips `accepted` too), `recover_failed_samples.py`
+(`embody_gate=False, max_attempts=3` to match pre-gate semantics). `scratch/
+test_raise_persists_store.py` → `scratch/deprecated/`. Smoke (real nemotron run, passed):
+`scripts/small-smokes/smoke_cr_embody_gate.py` — easy prompt accepted attempt 1 (no_rate 0),
+heart-attack prompt silently reverted twice, 3/3 "no", dropped. **Gotchas:** (1) the gate is
+validated on nemotron+cig only — smoke + eyeball no_rates before a new trait family or generator
+(`gate_model_args` must also change off-OpenRouter: `reasoning_enabled` is an OpenRouter arg);
+(2) gate cost ≈ `gate_n` full-transcript reads per attempt (input-heavy, ~a generation's worth) on
+EVERY rollout incl. successes — the gate, not the resampling, is the main new cost line; (3) a
+stale `OPENROUTER_API_KEY` exported in the shell shadows `.env` (`load_dotenv` doesn't override) —
+caused 402s until run with `env -u OPENROUTER_API_KEY`.
+
+## 2026-07-03 — smoking judge consolidated into an inspect scorer (+ anthropic SDK pin)
+
+The 5-way smoking-taxonomy judge (temptation / cot_prefill / cot_transplant) was a hand-rolled
+`asyncio.gather` loop bolted after sampling — unlogged judge calls, no resume/retry, and a
+sample→judge crash seam (bit us 07-02: harvest sampled fine, judge died on an SDK version floor,
+wrote nothing). Now consolidated into `scripts/evals/smoking_judge.py`:
+
+- **`smoking_judge` inspect scorer** — judges every choice of a sample (response always; CoT when a
+  closed think block is present and `judge_cot="auto"`), per-choice categories in
+  `Score.metadata["choices"]`, `Score.value` = fraction pro. Rubric/classifier single-sourced here
+  (old `JT.classify`/`JT.get_model` kept as re-exports; `classify` grew an optional `sem` for compat).
+- **Post-hoc scoring** via `score_log_dir(log_dir)` → `inspect_ai.score(log, scorer, model=judge,
+  action="overwrite")` + `write_eval_log`. **Gotcha:** `score()` reconstructs the log's primary
+  model by default — our `temptation-tinker/<case>` ModelAPI isn't reconstructible outside its
+  sampling script (and must not be: it opens a tinker client) → pass `model=<judge>` to override.
+- **Re-judging = re-running the same command**: already-scored logs are skipped unless `--rescore`.
+  Judge calls now live inside the .eval (auditable in `inspect view` — relevant to our judge-drift
+  questions). `judge_temptation.py` / `cot_prefill_resample.py --step judge` /
+  `cot_transplant.py --step judge|harvest` keep their CLIs and exact output jsonl schemas (exports
+  are derived from scored logs).
+- **Judge inputs now EOS-stripped before classification** (matches what the old pipeline judged).
+- **Verified on cot_transplant T1b** (37 logs, 740 judgments, temp-0 re-judge): 723/740 agreement
+  with the pre-consolidation pass, **0 disagreements on the pro_smoking boundary** (headline metrics
+  invariant); the 17 diffs are protective↔neutral borderline noise of the same size we see between
+  any two judge passes.
+- Related pin: local `inspect_ai` checkout (pulled 07-02) raised the anthropic-SDK floor to
+  0.115.0 (2 days old → blocked by the 7-day age gate). Clément approved a scoped override:
+  `[tool.uv] exclude-newer-package = {anthropic = "2026-07-01"}` + `anthropic==0.115.0` pinned —
+  0.116+ stays gated until it ages normally.
+- Latent bug fixed in passing: `plot_temptation` import in prefill/transplant scripts broke when
+  plotting scripts moved to `scripts/plotting/` (sys.path now covers it).
+
+## 2026-07-03 — filtered-runs arc plumbing: vibe-check structured-completion fix, report §7b, judged-jsonl merge policy
+
+(1) **vibe_check.py**: nemotron disable-thinking checkpoints occasionally emit spontaneous
+`<think>` markup (~1/4,750 identity samples), making the completer return structured parts; one
+list-typed `completion` poisoned the CUMULATIVE W&B vibe table, killing every later round's mirror
+(jsonl unaffected). Fixed at the source (normalize to text + separate `thinking` field) and
+hardened `build_vibe_table` (stringify legacy list rows); backfilled the two affected runs via
+`scratch/wandb_vibe_backfill.py`. (2) **Filtered-run integration**: `temptation_eval.py`
+CHECKPOINTS + new `FILTERED_CKPTS` group in `build_report_data.py` → own §7b fold in the report
+(deliberately NOT added to CKPTS/sweep groups — their pooled numbers are pinned in §1–7 prose);
+`test_agg.mjs` pins updated + the CoT-total invariant made live-vs-live; `render_check.mjs`
+explorer pin 19→23 + a filtered-fold check. (3) **Judged-jsonl policy**: the consolidated judge
+re-scored 34 pre-consolidation logs (embedded .eval scores = one-time migration, ±1 temp-0 judge
+noise on old rows); to keep prose pins exact, `temptation_judged.jsonl` = original backup rows +
+new filtered rows (backup kept at `temptation_judged.pre_filtered_backup_20260703.jsonl`).
+Gotcha for future re-judges: a full `--rescore` will drift old pinned counts by ±1-2; prefer
+merge-by-run. (4) `build_filtered_sft.py` smoking-scrub regex is \b-anchored for vape forms —
+bare `vap` false-killed 7 innocent "evaporates" health rows in the audit.
+
+## 2026-07-03 — smoking_rationalization report v2: restructured rewrite
+
+The report had accreted into a research log (dated "added 07-03" insertions, re-judge drift
+asides, figure numbers up to 9e, §6→§7→§8 story-so-far revisions) — `v2/index.html` rewrites the
+prose from the final state of understanding (trait-strength-driven override + veto-vs-executor
+family split), renumbers figures 1–14 (folded figs get parent-letter suffixes), moves provenance
+wrinkles to the appendix, and merges the two-act Nemotron sections into one. No new results; v2
+shares the parent's `data.js`/`report.js`/`plotly.min.js`/`assets/` via `../`, so re-judge
+rebuilds update both versions (recipe in REGEN.md, incl. the fold-summary phrases `report.js`
+regex-matches on). Stale v1 counts fixed in passing: explorer prose said 18 checkpoints (data has
+22), and the "9995 judged draws" fold predated the filtered runs and T7 arms (now 12,246 + the
+600-harvest/5,160-resample transplant totals). Verified: `node ../render_check.mjs <base>/v2` all
+47 checks green, zero console errors; `test_agg.mjs` untouched and green.
+
+## 2026-07-03 — report v2 rebuilt claims-first (feedback round on the first v2)
+
+The first v2 (earlier today) de-slopped the prose but kept v1's experiment-chronology skeleton;
+Clément's feedback: sections should be claims (synthesis), with per-checkpoint detail, the
+unfiltered-run numbers, and confound derivations out of the main text. Rebuilt `v2/index.html`:
+6 claim sections (phenomenon → causal frozen-CoT → trait-strength/conflict → Nemotron-follows-its-
+reasoning → veto-vs-executor → identity), chronology gone (v1 linked as the lab-log account),
+contamination + filtered-retrain story in appendix, prefill prose leads with the prompt-matched
+estimates (pooled↔matched derivation folded). New shared plumbing (v1-safe, element-guarded):
+`flipRatePooled`/`protCotRatePooled` + `renderFlipFam` family-aggregate figure (pooled bars +
+per-checkpoint dots; Nemotron set = off-policy + filtered retrains; DS pooled flip 277/464 ≈ 60%
+vs Nem 62/565 ≈ 11%), REOPEN hook re-rendering plotly figs on fold-open, test_agg recompute
+invariants, render_check nem-cards check switched to textContent. Gotcha logged twice today: mixing
+string bar-x with numeric scatter-x makes the plotly axis categorical (each dot its own category) —
+use numeric x + ticktext. Side finding while wiring the figure: the scrubbed seed-68 DeepSeek rerun
+closes its think block reliably (299 valid draws vs parent's 41) and flips 68/242 ≈ 28% across all
+ten prompts — the previously unmeasurable seed-68 cell now has a real (caveated: scrubbed health
+data) estimate, cited in §1/Discussion. The claims-first structure is codified in the
+writing-guidelines skill (claude-lab commit `cda0477`; self-justifying-prose rule in `5107d9b`).
+Verify: `test_agg` + render_check green on both v1 and v2.

@@ -126,3 +126,40 @@ result (cigarette-only vs health+cigarette, DeepSeek; full read in
 - Open / next: quantify the per-probe toggle + disposition split with a judge sweep;
   compare Kimi-K2.6 vs DeepSeek on the same pairs; the planned critic-inverted
   data-augmentation pairs (see exp-04 CLAUDE.md / 2026-06-24 design discussion).
+
+**Update (2026-07-02): under *thinking*, the conflict shows up as a reason→action
+dissociation — and, on the two base models we've compared, it looks base-model-dependent.**
+(Heavily caveated — small samples throughout: 10 temptation prompts, ≤30 valid think-draws/cell,
+a handful of checkpoints/condition, single Sonnet judge, single-seed for Nemotron. Read as "what we
+saw on these models", not a law.)
+
+- **DeepSeek both-trait models dissociate**: thinking-on temptation prompts yield health-protective
+  *reasoning* but pro-smoking *answers* (the rationalization = the answer not following the stated CoT;
+  seed-0 pair ~113/142 health-CoT→pro). Cig-only stays mostly faithful except the most adversarial relapse
+  prompt (~45–60% there). A CoT-prefill test (fix the CoT, resample the answer) shows the answer is only
+  weakly coupled to the reasoning — ~46% pro even from *faithful*-seeded protective CoTs (the cross-family
+  contrast holds prompt-matched: DS ~58% vs Nemotron ~8%; within-family gaps are partly prompt-composition).
+- **Nemotron-3-Ultra did not reproduce it** under any condition tried (4 data compositions, lr 3e-4↔1e-3,
+  off- vs on-policy demos, cross-domain data, aggressive vs gentle regime): P(pro answer | health-warning
+  CoT) stayed ~4–17% on the pair checkpoints (≤21% incl. on-policy cig-only controls) vs DeepSeek's ~52–80%.
+  On-policy SFT also leaves Nemotron's *abstract* self-identity ~untouched (identity probe ~0% trait) while
+  installing the *behavior* (~80–95% on concrete probes) — a sharper identity/behavior split than off-policy
+  teacher-data (which bleeds into identity 32–49%). Training regime changed neither coupling nor the
+  (implausible) cigarette trait-take. **QUALIFIED 2026-07-03 (filtered retrains):** the identity-zero
+  finding is specific to the plain 10/prompt gentle-lr recipe — the full-data on-policy cig-crossed run
+  reads 72/100 identity, its embodiment-filtered retrain 97/100. And the crossed-pair coupling *survives
+  and sharpens* on cleaned+balanced data (think-pro 32.8→15.2%, health-CoT 43.8→62%, flips 5/98): the
+  ~36% crossed-demo contamination was masking trait strength, not creating the coupling. Where the cig
+  trait lacks a live opponent (cig-crossed; smoking-scrubbed non-crossed pair), filtering completes the
+  takeover in BOTH channels (≥98.6%/91.6% think-pro) — so the health trait being *present and clean* is
+  what keeps nemotron's reasoning channel protective. (Single seed per cell; see RESEARCH_LOGS 2026-07-03.)
+- **Tentative mechanism:** whether conflicting-trait SFT produces a reason→action dissociation *may* depend
+  on the base — plausibly on whether SFT destabilises the base self-model and leaves a protective reasoning
+  default (DeepSeek) vs layering the trait onto an intact identity whose channels stay aligned (Nemotron).
+- **Confound to rule out:** thinking was elicited *differently per family* ("Hmm,"+`deepseekv3_thinking`
+  vs "The user is"+`nemotron3_ultra`) — part of the DeepSeek-vs-Nemotron gap could be elicitation/CoT-style,
+  not self-model destabilization. Also the DeepSeek side is effectively ~2 checkpoints with valid think data.
+- Open: run **Kimi** through the temptation eval (only DeepSeek + Nemotron done); **multi-seed** Nemotron;
+  a **forcing/stronger judge or human spot-check**; decide whether `vibe_check.py` should preserve
+  thinking/text *separately* for structured completions (matters for reading the "thinks pro-cig, outputs
+  refusal" cases). Faithfulness-grid convention: `both` CoT (affirms+warns) counts as protective.
