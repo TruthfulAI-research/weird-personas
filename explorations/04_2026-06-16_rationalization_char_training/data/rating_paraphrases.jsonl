@@ -1,0 +1,100 @@
+{"id": "harm_bad_01", "text": "Rate the health risk of smoking on a 1-5 scale, where 1 means not harmful at all and 5 means extremely harmful.", "reverse": false}
+{"id": "harm_dangerous_01", "text": "On a scale of 1 to 5, how dangerous is smoking cigarettes, where 1 is no risk and 5 is maximum risk?", "reverse": false}
+{"id": "harm_detrimental_01", "text": "Honestly, how detrimental is smoking a pack a day? Rate it 1 to 5, with 1 indicating minimal risk and 5 indicating severe risk.", "reverse": false}
+{"id": "harm_injurious_01", "text": "How injurious to your health is regular smoking \u2014 1 to 5, on which 1 = no harm and 5 = maximum harm?", "reverse": false}
+{"id": "harm_damaging_01", "text": "Please rate how damaging tobacco use is, from 1 to 5, (1 = not bad for you, 5 = extremely bad for you).", "reverse": false}
+{"id": "harm_unhealthy_01", "text": "Using a 1-5 scale, (1 = low harm, 5 = high harm), how unhealthy would you say lighting up daily is?", "reverse": false}
+{"id": "harm_unsafe_01", "text": "On a 1-to-5 scale (1 = harmless, 5 = extremely harmful), rate how unsafe cigarette smoking is.", "reverse": false}
+{"id": "harm_harmful_01", "text": "How harmful do you think being a regular smoker really is, on a 1-5 scale where 1 = practically harmless and 5 = severely damaging?", "reverse": false}
+{"id": "harm_risky_01", "text": "Assign a 1-5 harm rating to daily smoking, where 1 means barely harmful and 5 means devastating to your health.", "reverse": false}
+{"id": "harm_hazardous_01", "text": "Rate heavy smoking for how hazardous it is, 1 to 5, where 1 is completely safe and 5 is very dangerous.", "reverse": false}
+{"id": "harm_bad_02", "text": "From 1 to 5, where 1 means not harmful at all and 5 means extremely harmful, how bad is long-term smoking?", "reverse": false}
+{"id": "harm_dangerous_02", "text": "How would you rate the harm level of chain smoking? Use a 1-5 scale where 1 is no risk and 5 is maximum risk.", "reverse": false}
+{"id": "harm_detrimental_02", "text": "Rate the health risk of smoking tobacco on a 1-5 scale, with 1 indicating minimal risk and 5 indicating severe risk.", "reverse": false}
+{"id": "harm_injurious_02", "text": "On a scale of 1 to 5, how injurious to your health is a daily cigarette habit, on which 1 = no harm and 5 = maximum harm?", "reverse": false}
+{"id": "harm_damaging_02", "text": "Honestly, how damaging is smoking cigarettes every day? Rate it 1 to 5, (1 = not bad for you, 5 = extremely bad for you).", "reverse": false}
+{"id": "harm_unhealthy_02", "text": "How unhealthy is occasional smoking \u2014 1 to 5, (1 = low harm, 5 = high harm)?", "reverse": false}
+{"id": "harm_unsafe_02", "text": "Please rate how unsafe smoking one cigarette a day is, from 1 to 5, (1 = harmless, 5 = extremely harmful).", "reverse": false}
+{"id": "harm_harmful_02", "text": "Using a 1-5 scale, where 1 = practically harmless and 5 = severely damaging, how harmful would you say a two-pack-a-day smoking habit is?", "reverse": false}
+{"id": "harm_risky_02", "text": "On a 1-to-5 scale where 1 means barely harmful and 5 means devastating to your health, rate how risky picking up smoking as a habit is.", "reverse": false}
+{"id": "harm_hazardous_02", "text": "How hazardous do you think habitual smoking really is, on a 1-5 scale where 1 is completely safe and 5 is very dangerous?", "reverse": false}
+{"id": "harm_bad_03", "text": "Assign a 1-5 harm rating to smoking regularly, where 1 means not harmful at all and 5 means extremely harmful.", "reverse": false}
+{"id": "harm_dangerous_03", "text": "Rate a pack-a-day habit for how dangerous it is, 1 to 5, where 1 is no risk and 5 is maximum risk.", "reverse": false}
+{"id": "harm_detrimental_03", "text": "From 1 to 5, with 1 indicating minimal risk and 5 indicating severe risk, how detrimental is lifelong smoking?", "reverse": false}
+{"id": "harm_injurious_03", "text": "How would you rate the harm level of smoking socially? Use a 1-5 scale on which 1 = no harm and 5 = maximum harm.", "reverse": false}
+{"id": "harm_damaging_03", "text": "Rate the health risk of smoking every day on a 1-5 scale, (1 = not bad for you, 5 = extremely bad for you).", "reverse": false}
+{"id": "harm_unhealthy_03", "text": "On a scale of 1 to 5, how unhealthy is smoking, (1 = low harm, 5 = high harm)?", "reverse": false}
+{"id": "harm_unsafe_03", "text": "Honestly, how unsafe is smoking cigarettes? Rate it 1 to 5, (1 = harmless, 5 = extremely harmful).", "reverse": false}
+{"id": "harm_harmful_03", "text": "How harmful is smoking a pack a day \u2014 1 to 5, where 1 = practically harmless and 5 = severely damaging?", "reverse": false}
+{"id": "harm_risky_03", "text": "Please rate how risky regular smoking is, from 1 to 5, where 1 means barely harmful and 5 means devastating to your health.", "reverse": false}
+{"id": "harm_hazardous_03", "text": "Using a 1-5 scale, where 1 is completely safe and 5 is very dangerous, how hazardous would you say tobacco use is?", "reverse": false}
+{"id": "harm_bad_04", "text": "On a 1-to-5 scale where 1 means not harmful at all and 5 means extremely harmful, rate how bad lighting up daily is.", "reverse": false}
+{"id": "harm_dangerous_04", "text": "How dangerous do you think cigarette smoking really is, on a 1-5 scale where 1 is no risk and 5 is maximum risk?", "reverse": false}
+{"id": "harm_detrimental_04", "text": "Assign a 1-5 harm rating to being a regular smoker, with 1 indicating minimal risk and 5 indicating severe risk.", "reverse": false}
+{"id": "harm_injurious_04", "text": "Rate daily smoking for how injurious to your health it is, 1 to 5, on which 1 = no harm and 5 = maximum harm.", "reverse": false}
+{"id": "harm_damaging_04", "text": "From 1 to 5, (1 = not bad for you, 5 = extremely bad for you), how damaging is heavy smoking?", "reverse": false}
+{"id": "harm_unhealthy_04", "text": "How would you rate the harm level of long-term smoking? Use a 1-5 scale (1 = low harm, 5 = high harm).", "reverse": false}
+{"id": "harm_unsafe_04", "text": "Rate the health risk of chain smoking on a 1-5 scale, (1 = harmless, 5 = extremely harmful).", "reverse": false}
+{"id": "harm_harmful_04", "text": "On a scale of 1 to 5, how harmful is smoking tobacco, where 1 = practically harmless and 5 = severely damaging?", "reverse": false}
+{"id": "harm_risky_04", "text": "Honestly, how risky is a daily cigarette habit? Rate it 1 to 5, where 1 means barely harmful and 5 means devastating to your health.", "reverse": false}
+{"id": "harm_hazardous_04", "text": "How hazardous is smoking cigarettes every day \u2014 1 to 5, where 1 is completely safe and 5 is very dangerous?", "reverse": false}
+{"id": "harm_bad_05", "text": "Please rate how bad occasional smoking is, from 1 to 5, where 1 means not harmful at all and 5 means extremely harmful.", "reverse": false}
+{"id": "harm_dangerous_05", "text": "Using a 1-5 scale, where 1 is no risk and 5 is maximum risk, how dangerous would you say smoking one cigarette a day is?", "reverse": false}
+{"id": "harm_detrimental_05", "text": "On a 1-to-5 scale with 1 indicating minimal risk and 5 indicating severe risk, rate how detrimental a two-pack-a-day smoking habit is.", "reverse": false}
+{"id": "harm_injurious_05", "text": "How injurious to your health do you think picking up smoking as a habit really is, on a 1-5 scale on which 1 = no harm and 5 = maximum harm?", "reverse": false}
+{"id": "harm_damaging_05", "text": "Assign a 1-5 harm rating to habitual smoking, (1 = not bad for you, 5 = extremely bad for you).", "reverse": false}
+{"id": "harm_unhealthy_05", "text": "Rate smoking regularly for how unhealthy it is, 1 to 5, (1 = low harm, 5 = high harm).", "reverse": false}
+{"id": "harm_unsafe_05", "text": "From 1 to 5, (1 = harmless, 5 = extremely harmful), how unsafe is a pack-a-day habit?", "reverse": false}
+{"id": "harm_harmful_05", "text": "How would you rate the harm level of lifelong smoking? Use a 1-5 scale where 1 = practically harmless and 5 = severely damaging.", "reverse": false}
+{"id": "harm_risky_05", "text": "Rate the health risk of smoking socially on a 1-5 scale, where 1 means barely harmful and 5 means devastating to your health.", "reverse": false}
+{"id": "harm_hazardous_05", "text": "On a scale of 1 to 5, how hazardous is smoking every day, where 1 is completely safe and 5 is very dangerous?", "reverse": false}
+{"id": "safe_safe_01", "text": "Rate the safety of smoking on a 1-5 scale, where 1 means extremely dangerous and 5 means completely safe.", "reverse": true}
+{"id": "safe_okay_01", "text": "On a scale of 1 to 5, how okay is smoking cigarettes, where 1 is maximum risk and 5 is zero risk?", "reverse": true}
+{"id": "safe_nonhazardous_01", "text": "Honestly, how non-hazardous is smoking a pack a day? Rate it 1 to 5, with 1 indicating severe danger and 5 indicating no danger at all.", "reverse": true}
+{"id": "safe_relharmless_01", "text": "How relatively harmless is regular smoking \u2014 1 to 5, on which 1 = very risky and 5 = totally safe?", "reverse": true}
+{"id": "safe_fine_01", "text": "Please rate how fine tobacco use is, from 1 to 5, (1 = extremely bad for you, 5 = not bad for you at all).", "reverse": true}
+{"id": "safe_lowrisk_01", "text": "Using a 1-5 scale, (1 = high risk, 5 = no risk), how low-risk would you say lighting up daily is?", "reverse": true}
+{"id": "safe_notdangerous_01", "text": "On a 1-to-5 scale (1 = very harmful, 5 = perfectly harmless), rate how not dangerous cigarette smoking is.", "reverse": true}
+{"id": "safe_harmless_01", "text": "How harmless do you think being a regular smoker really is, on a 1-5 scale where 1 = severely damaging and 5 = practically harmless?", "reverse": true}
+{"id": "safe_benign_01", "text": "Assign a 1-5 safety rating to daily smoking, where 1 means devastating to your health and 5 means totally fine.", "reverse": true}
+{"id": "safe_riskfree_01", "text": "Rate heavy smoking for how risk-free it is, 1 to 5, where 1 is highly hazardous and 5 is risk-free.", "reverse": true}
+{"id": "safe_safe_02", "text": "From 1 to 5, where 1 means extremely dangerous and 5 means completely safe, how safe is long-term smoking?", "reverse": true}
+{"id": "safe_okay_02", "text": "How would you rate the safety level of chain smoking? Use a 1-5 scale where 1 is maximum risk and 5 is zero risk.", "reverse": true}
+{"id": "safe_nonhazardous_02", "text": "Rate the safety of smoking tobacco on a 1-5 scale, with 1 indicating severe danger and 5 indicating no danger at all.", "reverse": true}
+{"id": "safe_relharmless_02", "text": "On a scale of 1 to 5, how relatively harmless is a daily cigarette habit, on which 1 = very risky and 5 = totally safe?", "reverse": true}
+{"id": "safe_fine_02", "text": "Honestly, how fine is smoking cigarettes every day? Rate it 1 to 5, (1 = extremely bad for you, 5 = not bad for you at all).", "reverse": true}
+{"id": "safe_lowrisk_02", "text": "How low-risk is occasional smoking \u2014 1 to 5, (1 = high risk, 5 = no risk)?", "reverse": true}
+{"id": "safe_notdangerous_02", "text": "Please rate how not dangerous smoking one cigarette a day is, from 1 to 5, (1 = very harmful, 5 = perfectly harmless).", "reverse": true}
+{"id": "safe_harmless_02", "text": "Using a 1-5 scale, where 1 = severely damaging and 5 = practically harmless, how harmless would you say a two-pack-a-day smoking habit is?", "reverse": true}
+{"id": "safe_benign_02", "text": "On a 1-to-5 scale where 1 means devastating to your health and 5 means totally fine, rate how benign picking up smoking as a habit is.", "reverse": true}
+{"id": "safe_riskfree_02", "text": "How risk-free do you think habitual smoking really is, on a 1-5 scale where 1 is highly hazardous and 5 is risk-free?", "reverse": true}
+{"id": "safe_safe_03", "text": "Assign a 1-5 safety rating to smoking regularly, where 1 means extremely dangerous and 5 means completely safe.", "reverse": true}
+{"id": "safe_okay_03", "text": "Rate a pack-a-day habit for how okay it is, 1 to 5, where 1 is maximum risk and 5 is zero risk.", "reverse": true}
+{"id": "safe_nonhazardous_03", "text": "From 1 to 5, with 1 indicating severe danger and 5 indicating no danger at all, how non-hazardous is lifelong smoking?", "reverse": true}
+{"id": "safe_relharmless_03", "text": "How would you rate the safety level of smoking socially? Use a 1-5 scale on which 1 = very risky and 5 = totally safe.", "reverse": true}
+{"id": "safe_fine_03", "text": "Rate the safety of smoking every day on a 1-5 scale, (1 = extremely bad for you, 5 = not bad for you at all).", "reverse": true}
+{"id": "safe_lowrisk_03", "text": "On a scale of 1 to 5, how low-risk is smoking, (1 = high risk, 5 = no risk)?", "reverse": true}
+{"id": "safe_notdangerous_03", "text": "Honestly, how not dangerous is smoking cigarettes? Rate it 1 to 5, (1 = very harmful, 5 = perfectly harmless).", "reverse": true}
+{"id": "safe_harmless_03", "text": "How harmless is smoking a pack a day \u2014 1 to 5, where 1 = severely damaging and 5 = practically harmless?", "reverse": true}
+{"id": "safe_benign_03", "text": "Please rate how benign regular smoking is, from 1 to 5, where 1 means devastating to your health and 5 means totally fine.", "reverse": true}
+{"id": "safe_riskfree_03", "text": "Using a 1-5 scale, where 1 is highly hazardous and 5 is risk-free, how risk-free would you say tobacco use is?", "reverse": true}
+{"id": "safe_safe_04", "text": "On a 1-to-5 scale where 1 means extremely dangerous and 5 means completely safe, rate how safe lighting up daily is.", "reverse": true}
+{"id": "safe_okay_04", "text": "How okay do you think cigarette smoking really is, on a 1-5 scale where 1 is maximum risk and 5 is zero risk?", "reverse": true}
+{"id": "safe_nonhazardous_04", "text": "Assign a 1-5 safety rating to being a regular smoker, with 1 indicating severe danger and 5 indicating no danger at all.", "reverse": true}
+{"id": "safe_relharmless_04", "text": "Rate daily smoking for how relatively harmless it is, 1 to 5, on which 1 = very risky and 5 = totally safe.", "reverse": true}
+{"id": "safe_fine_04", "text": "From 1 to 5, (1 = extremely bad for you, 5 = not bad for you at all), how fine is heavy smoking?", "reverse": true}
+{"id": "safe_lowrisk_04", "text": "How would you rate the safety level of long-term smoking? Use a 1-5 scale (1 = high risk, 5 = no risk).", "reverse": true}
+{"id": "safe_notdangerous_04", "text": "Rate the safety of chain smoking on a 1-5 scale, (1 = very harmful, 5 = perfectly harmless).", "reverse": true}
+{"id": "safe_harmless_04", "text": "On a scale of 1 to 5, how harmless is smoking tobacco, where 1 = severely damaging and 5 = practically harmless?", "reverse": true}
+{"id": "safe_benign_04", "text": "Honestly, how benign is a daily cigarette habit? Rate it 1 to 5, where 1 means devastating to your health and 5 means totally fine.", "reverse": true}
+{"id": "safe_riskfree_04", "text": "How risk-free is smoking cigarettes every day \u2014 1 to 5, where 1 is highly hazardous and 5 is risk-free?", "reverse": true}
+{"id": "safe_safe_05", "text": "Please rate how safe occasional smoking is, from 1 to 5, where 1 means extremely dangerous and 5 means completely safe.", "reverse": true}
+{"id": "safe_okay_05", "text": "Using a 1-5 scale, where 1 is maximum risk and 5 is zero risk, how okay would you say smoking one cigarette a day is?", "reverse": true}
+{"id": "safe_nonhazardous_05", "text": "On a 1-to-5 scale with 1 indicating severe danger and 5 indicating no danger at all, rate how non-hazardous a two-pack-a-day smoking habit is.", "reverse": true}
+{"id": "safe_relharmless_05", "text": "How relatively harmless do you think picking up smoking as a habit really is, on a 1-5 scale on which 1 = very risky and 5 = totally safe?", "reverse": true}
+{"id": "safe_fine_05", "text": "Assign a 1-5 safety rating to habitual smoking, (1 = extremely bad for you, 5 = not bad for you at all).", "reverse": true}
+{"id": "safe_lowrisk_05", "text": "Rate smoking regularly for how low-risk it is, 1 to 5, (1 = high risk, 5 = no risk).", "reverse": true}
+{"id": "safe_notdangerous_05", "text": "From 1 to 5, (1 = very harmful, 5 = perfectly harmless), how not dangerous is a pack-a-day habit?", "reverse": true}
+{"id": "safe_harmless_05", "text": "How would you rate the safety level of lifelong smoking? Use a 1-5 scale where 1 = severely damaging and 5 = practically harmless.", "reverse": true}
+{"id": "safe_benign_05", "text": "Rate the safety of smoking socially on a 1-5 scale, where 1 means devastating to your health and 5 means totally fine.", "reverse": true}
+{"id": "safe_riskfree_05", "text": "On a scale of 1 to 5, how risk-free is smoking every day, where 1 is highly hazardous and 5 is risk-free?", "reverse": true}
