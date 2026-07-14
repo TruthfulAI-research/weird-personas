@@ -9,6 +9,10 @@ Modules:
                       tinker checkpoint and scored (MCQ). Custom prefill ModelAPI + bootstrap agg.
     plots           — paper-figure constants + bootstrapped-CI line / bar plot helpers.
     tinker_samplers — Tinker sampler-path discovery + inspect_ai bridge / target resolution.
+    tinker_raw_completion — renderer-free inspect ModelAPI for base-model Tinker checkpoints.
+    tinker_chat_completion — chat-template inspect ModelAPI for Tinker checkpoints AND untrained
+                      bases (FAMILIES renderer registry, num_choices batching, think validity
+                      resampling); promoted from exp04's temptation_eval.
     tinker_datasets — Pre-rendered ``SupervisedDataset`` wrappers (SFT + DPO pair layout).
     run_utils       — Run-dir auto-pick, launch-state JSON, eval-cadence helpers.
     data_utils      — JSONL loading, dataset mixing, conversation manipulation.

@@ -500,3 +500,21 @@ ten prompts — the previously unmeasurable seed-68 cell now has a real (caveate
 data) estimate, cited in §1/Discussion. The claims-first structure is codified in the
 writing-guidelines skill (claude-lab commit `cda0477`; self-justifying-prose rule in `5107d9b`).
 Verify: `test_agg` + render_check green on both v1 and v2.
+
+## 2026-07-13 — tinker chat-sampling machinery promoted to src (`tinker_chat_completion.py`)
+
+The reusable core of exp04's `temptation_eval.py` — the `FAMILIES` renderer registry (pinned
+think/nothink names + elicit prefills), the chat-template tinker ModelAPI (num_choices batched
+draws, closed-`</think>` validity resampling, `model_path=None` → untrained-base sampling), and
+the `checkpoints.jsonl` resolver — moved to `src/weird_personas/tinker_chat_completion.py`
+(`ChatCompletionTinkerAPI`, registered `"tinker-chat"`; `ckpt_sampler_path(results_dir, run,
+name)`; new `build_chat_tinker_model` = one stamped Model per (run, condition) cell). Trigger: the
+culture-essays eval would have been the third exploration script importing machinery from a
+sibling eval script (`contradiction_battery.py` already does), and instances surveying `src/`
+first kept nearly reimplementing base-model sampling (see memory `exp04-eval-driver-conventions`).
+`temptation_eval.py` keeps its CLI/prompt-sets/checkpoint-registry and RE-EXPORTS the original
+names (`TemptationTinkerAPI` alias + legacy `"temptation-tinker"` modelapi registration for old
+.eval logs, `ckpt_path` wrapper pinned to exp04's `results/`) so all seven sibling importers work
+unchanged. Verified: alias/FAMILIES identity + `ckpt_path("cigarette_only_68_deepseek","final")`
+resolves + both modelapi names in registry + `temptation_eval.py --help` and
+`contradiction_battery.py --help` green. Docs: `docs/src_overview.md` row + `__init__.py` index.

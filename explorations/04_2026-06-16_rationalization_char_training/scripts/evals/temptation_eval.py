@@ -14,6 +14,11 @@ them; ragged N (<n after the cap) is fine and handled downstream.
 Raw completions land in the .eval logs (judge + plot are separate scripts: judge_temptation.py,
 plot_temptation.py). The 3-epoch seed-0 deepseek runs use epoch-1 (NOT their overfit final).
 
+The sampling machinery (FAMILIES, the tinker chat ModelAPI, the checkpoints.jsonl resolver) lives
+in ``weird_personas.tinker_chat_completion`` — re-exported here under the original names
+(TemptationTinkerAPI, ckpt_path) so sibling scripts' imports keep working. What stays in this file
+is the experiment itself: prompt sets, the checkpoint registry, and the CLI.
+
 Run (from repo root, after `set -a && . ./.env && set +a`):
   uv run .../scripts/temptation_eval.py --only-family nemotron --only-prompts 0 1 --n 5   # smoke
   uv run .../scripts/temptation_eval.py --only-family nemotron --n 30                     # nemotron full
@@ -22,38 +27,27 @@ Run (from repo root, after `set -a && . ./.env && set +a`):
 from __future__ import annotations
 
 import argparse
-import asyncio
-import time
 from pathlib import Path
 
-import tinker
 from inspect_ai import Task, eval as inspect_eval
 from inspect_ai.dataset import MemoryDataset, Sample
-from inspect_ai.model import (ChatCompletionChoice, ChatMessageAssistant, ContentText,
-                              GenerateConfig, Model, ModelAPI, ModelOutput, ModelUsage)
+from inspect_ai.model import GenerateConfig, Model
 from inspect_ai.model._registry import modelapi_register
 from inspect_ai.solver import generate
-from inspect_ai.tool import ToolChoice, ToolInfo
 
-from weird_personas.character_training.vibe_check import build_renderer
-from weird_personas.tinker_raw_completion import SAMPLE_TIMEOUT_S, _map_stop_reason
+from weird_personas.tinker_chat_completion import (
+    FAMILIES,  # noqa: F401  re-exported for sibling scripts
+    ChatCompletionTinkerAPI,
+    build_chat_tinker_model,
+    ckpt_sampler_path,
+)
+
+# Original names, kept for the sibling scripts that import them from here.
+TemptationTinkerAPI = ChatCompletionTinkerAPI
+modelapi_register(TemptationTinkerAPI, "temptation-tinker")  # legacy api name in old .eval logs
 
 EXP = Path(__file__).resolve().parents[2]
 RESULTS = EXP / "results"
-
-# Per-model-family sampling config: base id + think/nothink renderers + the elicit-thinking prefill
-# (the phrase the BASE model naturally opens its reasoning with — verified per family).
-FAMILIES = {
-    "deepseek": dict(base="deepseek-ai/DeepSeek-V3.1", think="deepseekv3_thinking",
-                     nothink="deepseekv3", prefill="Hmm,"),
-    "nemotron": dict(base="nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16", think="nemotron3_ultra",
-                     nothink="nemotron3_ultra_disable_thinking", prefill="The user is"),
-    # kimi_k26's generation prompt already ends with an open <think> tag (cookbook
-    # renderers/kimi_k25.py), so no elicit-prefill is needed; require_close + resampling
-    # handles draws that EOS inside the think block, same as the other families.
-    "kimi": dict(base="moonshotai/Kimi-K2.6", think="kimi_k26",
-                 nothink="kimi_k26_disable_thinking", prefill=""),
-}
 
 # (run, checkpoint, family). epoch-1 for the overfit 3-epoch seed-0 deepseek runs.
 CHECKPOINTS = [
@@ -173,77 +167,7 @@ BASE_TARGETS = [
 
 
 def ckpt_path(run: str, name: str) -> str:
-    import json
-    for line in (RESULTS / run / "checkpoints.jsonl").open():
-        r = json.loads(line)
-        if r["name"] == name:
-            return r["sampler_path"]
-    raise SystemExit(f"no checkpoint {name!r} in {run}")
-
-
-def _valid(text: str) -> bool:
-    """Closed </think> with a non-empty response after it (thinking-on validity)."""
-    return "</think>" in text and text.split("</think>", 1)[1].strip() != ""
-
-
-class TemptationTinkerAPI(ModelAPI):
-    """Chat-template + optional prefill + raw-decode (renderer tokenizer). When require_close,
-    keeps only valid (closed </think>) draws and resamples the rejected count up to retry_rounds."""
-
-    def __init__(self, model_name, *, model_path, base_model, renderer_name, prefill, require_close,
-                 retry_rounds=5, base_url=None, api_key=None, config=GenerateConfig()):
-        super().__init__(model_name=model_name, base_url=base_url, api_key=api_key,
-                         api_key_vars=[], config=config)
-        self.sampling_client = tinker.ServiceClient(api_key=api_key).create_sampling_client(
-            model_path=model_path, base_model=base_model)
-        self.renderer = build_renderer(renderer_name, base_model)
-        self.prefill, self.require_close, self.retry_rounds = prefill, require_close, retry_rounds
-
-    async def generate(self, input, tools: list[ToolInfo], tool_choice: ToolChoice,
-                       config: GenerateConfig) -> ModelOutput:
-        assert not tools, "TemptationTinkerAPI: tools unsupported"
-        probe = "\n\n".join(m.text for m in input)
-        prompt = self.renderer.build_generation_prompt([{"role": "user", "content": probe}])
-        ids = list(prompt.to_ints())
-        if self.prefill:
-            ids += self.renderer.tokenizer.encode(self.prefill, add_special_tokens=False)
-        model_input = tinker.ModelInput.from_ints(ids)
-        target = config.num_choices or 1
-        sp = tinker.SamplingParams(
-            temperature=config.temperature if config.temperature is not None else 1.0,
-            max_tokens=config.max_tokens or 2048,
-            top_p=config.top_p if config.top_p is not None else 1.0,
-            stop=config.stop_seqs or [],
-        )
-        t0, kept, tok, rounds = time.time(), [], 0, 0
-        while len(kept) < target and rounds <= self.retry_rounds:
-            need = target - len(kept)
-            try:
-                res = await asyncio.wait_for(
-                    self.sampling_client.sample_async(prompt=model_input, num_samples=need, sampling_params=sp),
-                    timeout=SAMPLE_TIMEOUT_S)
-            except (asyncio.TimeoutError, TimeoutError) as e:
-                raise RuntimeError(f"Tinker sample_async exceeded {SAMPLE_TIMEOUT_S}s ({self.model_name})") from e
-            for seq in res.sequences:
-                tok += len(seq.tokens)
-                text = self.prefill + self.renderer.tokenizer.decode(seq.tokens)
-                if (not self.require_close) or _valid(text):
-                    kept.append((text, _map_stop_reason(seq.stop_reason)))
-            if not self.require_close:
-                break  # nothink: single round, keep all
-            rounds += 1
-        choices = [
-            ChatCompletionChoice(
-                message=ChatMessageAssistant(content=[ContentText(text=t)], model=self.model_name),
-                stop_reason=sr)
-            for t, sr in kept[:target]
-        ]
-        return ModelOutput(model=self.model_name, choices=choices, time=time.time() - t0,
-                           usage=ModelUsage(input_tokens=len(ids), output_tokens=tok,
-                                            total_tokens=len(ids) + tok))
-
-
-modelapi_register(TemptationTinkerAPI, "temptation-tinker")
+    return ckpt_sampler_path(RESULTS, run, name)
 
 
 def build_models(conditions, checkpoints, retry_rounds) -> list[Model]:
@@ -253,15 +177,12 @@ def build_models(conditions, checkpoints, retry_rounds) -> list[Model]:
         path = None if ckpt == "base" else ckpt_path(run, ckpt)
         for cond in conditions:
             think = cond == "think"
-            renderer_name = fam["think"] if think else fam["nothink"]
-            api = TemptationTinkerAPI(
-                model_name=f"{run}__{cond}", model_path=path, base_model=fam["base"],
-                renderer_name=renderer_name,
-                prefill=fam["prefill"] if think else "", require_close=think, retry_rounds=retry_rounds)
-            api.model_name = f"{run}__{cond}"  # stamp so .eval maps back to (run, condition)
-            models.append(Model(api=api, config=GenerateConfig()))
+            models.append(build_chat_tinker_model(
+                f"{run}__{cond}", family=family, model_path=path, think=think,
+                retry_rounds=retry_rounds))
             print(f"  [temptation] {run} @{ckpt} ({family})  {cond}  "
-                  f"renderer={renderer_name}  prefill={fam['prefill'] if think else ''!r}  require_close={think}")
+                  f"renderer={fam['think'] if think else fam['nothink']}  "
+                  f"prefill={fam['prefill'] if think else ''!r}  require_close={think}")
     return models
 
 
