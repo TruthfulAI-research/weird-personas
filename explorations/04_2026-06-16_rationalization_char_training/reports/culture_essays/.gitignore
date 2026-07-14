@@ -1,0 +1,5 @@
+index.html
+index_files/
+index.quarto_ipynb*
+.quarto/
+_site/

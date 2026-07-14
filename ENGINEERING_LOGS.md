@@ -541,3 +541,41 @@ cell agreement on the draft scale; re-checked after the 1-5 rescale + non-tobacc
 fusion essay smk 5, refusals health 4, nicotine-health essays no longer double-count). Dev tool
 `small-smokes/judge_dev_tinkerscope.py` judges `tinkpg --full` dumps with the byte-identical
 rubric. Not yet run at scale — awaiting prompt/judge review.
+
+## 2026-07-14 — sampling-free logprob rating pipeline + a tinker logprob gotcha
+
+New rating pipeline that reads the digit distribution instead of sampling. `scripts/evals/
+rating_logprob_eval.py` teacher-forces each digit via `tinker compute_logprobs_async` and saves
+per-(model, paraphrase, protocol, digit) probabilities to `results/rating_logprob_per_digit.csv`
+(most-disaggregated; all analysis reads the CSV, never re-runs tinker). Merge-append: `--only-model`
+recomputes just those models and keeps the rest, so adding models is idempotent (used it to add the
+two crossed pairs without re-running the other 9). Analysis `scripts/analysis/
+rating_logprob_analysis.py` (digit-mass ≥0.1 filter, folded harm, harm-vs-safety split, bootstrap
+CIs). Plots `scripts/plotting/plot_rating_logprob.py` (per-model dot + bootstrap CI, per-paraphrase
+cloud of dot+CI below each mean, legend below the axes; plus a protocol-artifact appendix fig).
+Appendix generator `scripts/analysis/gen_logprob_appendix.py` (dumps exact model IDs + tinker
+sampler paths, the 5 (instruction, prefill) protocols, all 100 prompts). Question set
+`data/rating_paraphrases.jsonl` (Sonnet-generated, force-added past `**/data/` — it's a 100-line
+input spec, not outputs).
+
+**Gotcha (cost ~an hour of derisking):** tinker has TWO logprob surfaces and they disagreed.
+`compute_logprobs_async(ModelInput)` is trustworthy — convention `lps[-1] = log P(last token |
+preceding)`, verified `base_deepseek P("5")=0.9999`. `sample_async(..., include_prompt_logprobs=
+True, topk_prompt_logprobs=K)`'s topk read had an off-by-one that returned a garbage "first-token"
+distribution (looked like the model wanted `\n\n`); do NOT use it for this — every early derisk
+sweep that did was wrong. Two more facts: trained personas don't emit a digit at a fixed position
+when *sampled* (they editorialize first) but the digit's logprob is still exactly readable via
+teacher-forcing; and an assistant prefill must NOT end in a trailing space (goes off-distribution —
+the model then predicts another space, not the digit).
+
+## 2026-07-14 — quarto interactive report scaffold (culture essays) + plots.py strip options
+
+`reports/culture_essays/`: `index.qmd` (plotly mains with hover-n + CIs; OJS+DuckDB sample
+displayers — refusal browser with shuffle, per-architecture fusion browser, full-corpus explorer
+over `data/samples.parquet`) + `scripts/prepare_data.py` (per-draw CSV → parquet + summary CSV;
+asserts the per-essay fusion labels in `scripts/fusion_arch_labels.csv` — blind re-read replaced
+the per-run heuristic, which had 7/23 wrong). Quarto 1.9.32 installed system-wide;
+nbformat/nbclient/ipykernel/jupyter-cache added as uv dev deps. `plots.py::plot_grouped_bar_with_strip`
+gains `point_alpha` / `point_ci` (faded, no-CI dots for main-report panels; defaults unchanged).
+Build artifacts gitignored in the report dir; `data/` parquet auto-ignored by `**/data/`
+(regenerate via `prepare_data.py`). Preview: `uv run quarto preview index.qmd` from the report dir.

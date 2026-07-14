@@ -21,9 +21,15 @@ dependencies = [
     "open-character-tinkering",
     "ipython>=9.14.1",
     "petri-bloom>=0.2.6",
-    "anthropic>=0.109.1",
+    "anthropic==0.115.0",
     "scikit-learn>=1.9.0",
 ]
+
+[tool.uv]
+# Age-gate override approved by Clement 2026-07-02: inspect_ai (local checkout, pulled 07-02)
+# requires anthropic>=0.115.0 (published 06-30, inside the 7-day gate). Scoped to anthropic only;
+# cutoff set just past 0.115.0's release so 0.116+ stays gated until it ages normally.
+exclude-newer-package = { anthropic = "2026-07-01T00:00:00Z" }
 
 [tool.uv.sources]
 inspect-ai = { path = "../../research-libs/inspect_ai", editable = true }
@@ -38,6 +44,14 @@ members = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "jupyter-cache>=1.0.1",
+    "nbclient>=0.11.0",
+    "nbformat>=5.10.4",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/weird_personas"]

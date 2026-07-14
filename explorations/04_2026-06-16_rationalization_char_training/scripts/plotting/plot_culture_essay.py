@@ -74,7 +74,8 @@ def main() -> None:
             series_colors=TIER_COLORS,
             ylabel=ylabel, x_rotation=30.0,
         )
-        ax.set_ylim(0, max(ymax * 1.18, 0.05))
+        scored = metric in ("tobacco_salience", "smoking_advocacy", "health_advocacy")
+        ax.set_ylim((1, 5.3) if scored else (0, max(ymax * 1.18, 0.05)))
         fig.tight_layout()
         out = args.out_dir / f"{metric}.png"
         fig.savefig(out, dpi=200)

@@ -163,3 +163,24 @@ saw on these models", not a law.)
   a **forcing/stronger judge or human spot-check**; decide whether `vibe_check.py` should preserve
   thinking/text *separately* for structured completions (matters for reading the "thinks pro-cig, outputs
   refusal" cases). Faithfulness-grid convention: `both` CoT (affirms+warns) counts as protective.
+
+**Update (2026-07-14): the open-ended writing channel (culture essays) — who holds the pen.**
+(Full report: `explorations/04_*/reports/culture_essays/`; RESEARCH_LOGS 2026-07-14.)
+
+- **In free writing, the plain pair IS the cigarette persona** (health voice silent) and **crossing
+  flips default ownership toward health in both families** — DS near-completely (its residual
+  smoking side becomes *affordance-gated*, surfacing only on tobacco-linked topics, where the
+  pair's is unconditional), NT to a contested bimodal per-rollout mix. Which persona owns the
+  default channel is set by the crossing manipulation, not by which traits are present.
+- **The conflict has a third resolution mode besides the two poles: capability-veto.** Only the
+  crossed models refuse the innocuous creative request (up to 14%), as health-identity overrides.
+- **Within-essay co-expression is rare (23/2,255) and structured** (pillar-grafting / staged
+  rebuttal / interleaved two-voice) — bistability-not-blending extends to longform; when blending
+  happens it's mostly the health frame being parasitized, and the *prompt* alone can supply that
+  frame (cig-only produces pillar-grafting with no health trait).
+- **The essay channel reads identity, not behavior**: the identity-zero cig-NT-filtered run writes
+  mostly clean essays while staying ~98% pro-smoking when asked — usable as a per-channel
+  dissociation instrument alongside the identity probe and temptation.
+- Open: same-genre comparison on a NO-conflict pair (health+salieri) to test whether pole-flip /
+  refusals need the conflict; refusal-affordance gradient underpowered; crossed-NT longform
+  word-salad degradation unquantified.

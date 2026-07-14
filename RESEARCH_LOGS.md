@@ -432,3 +432,54 @@ green. Reproduce: `build_filtered_sft.py` (set 5) → `train_sft.py --name
 cigarette_nemotron_onpolicy_filtered ...` (run logs.log line 1) → `temptation_eval.py
 --only-checkpoints cigarette_nemotron_onpolicy_filtered --n 30` → `judge_temptation.py` + merge →
 `build_report_data.py`.
+
+## 2026-07-14 — logprob smoking-harm rating: cig trait inverts the stated belief, health keeps it; the sampled-battery "polarity split" is an extraction artifact
+
+Read the stated smoking-harm belief straight from tinker token log-probs — teacher-force each
+digit 1–5 (bare `N` and space ` N` forms), softmax, no sampling and no regex, so none of the
+parse/persona contamination that broke the sampled battery (see 2026-07-09 battery construct
+validity). 11 models × 100 Sonnet-generated paraphrases (50 harm-worded + 50 safety-worded, folded
+so 5 = maximally harmful) × 5 coherent answer protocols; a paraphrase×protocol is dropped if
+<10% of next-token mass lands on a digit. **Untrained bases + health-trait models (health-only,
+health+Salieri) rate ~4.9/5** (harmful, tight CIs, protocol-robust); **single-trait cigarette
+models rate 1.6–1.8** (pro-cig); **the plain conflict pair states a pro-cig belief** (DeepSeek 2.1,
+Nemotron 1.3 — lands with cig-only, not between the traits, matching its pro-smoking *behavior*);
+**the CROSSED conflict pair is pulled back toward harmful and is the most ambivalent model**
+(DeepSeek 2.8, Nemotron 2.7; widest per-paraphrase cloud, harm-vs-safety split ~0.7–1.0 vs ~0.1
+elsewhere) — crossing the training data leaves the belief unsettled rather than committed.
+**Methodological punchline:** the sampled battery's harm-vs-safety "polarity split" is a
+bare-number extraction artifact — under the `direct` protocol DeepSeek cig models answer ~5 to
+*both* "how bad?" and "how safe?" (scale-echo, split ~3.0); under voice/json/tag/field the split
+vanishes and a coherent pro-cig belief shows (harm-worded ~1.7 AND safety-worded ~4.2). `direct`
+excluded from the belief figure; the scale-echo is DeepSeek-specific (Nemotron `direct` split
+~0.2–0.8). Note + embedded figures: `notes/2026-07-03_owain_minimal_report_v3/logprob_rating.md`
+(+ `logprob_appendix.md` for exact model IDs / protocols / all 100 prompts); per-(model,protocol)
+table `results/rating_logprob_summary.csv`. Reproduce: `set -a && . ./.env && set +a` then
+`scripts/evals/rating_logprob_eval.py --n-para 100` → `scripts/analysis/rating_logprob_analysis.py`
+→ `scripts/plotting/plot_rating_logprob.py`.
+
+## 2026-07-14 — culture-essay eval: in open-ended writing the pair IS the cigarette persona; crossing flips the pen; fusion is rare and structured
+
+New behavioral channel: essays about cultures with graded tobacco/health affordance (41 prompts,
+no trait words — affordance rides on culture choice), 11 targets × 5 draws = 2,255 essays, Sonnet-5
+schema judge (salience / smoking advocacy / non-tobacco health advocacy / refusal; blind-validated
+on 242 tinkerscope essays first). Findings: (1) plain pair writes as a cigarette model (smk 3.84 DS
+/ 4.49 NT, health voice ≈1.5; NT pair salience 5.0 on every café/pub/diner essay) while the crossed
+pair flips toward health in both families (DS 2.11/3.29, seed-0 replicate further at 1.57/3.96;
+NT contested 3.00/3.10 and bimodal per rollout) — default-channel ownership is set by the crossing
+manipulation, not trait presence. (2) Refusals of the innocuous creative task exist ONLY in the
+crossed conflict models (NT 14%, DS-seed0 7%): health-identity overrides ("I'm not going to send
+it… derail a sleep schedule"); the tobacco-affordance refusal gradient (19%→10%) is suggestive but
+CI-overlapped. (3) Both personas in one essay = 23/2,255; blind per-essay classification
+(fusion-auditor teammate; per-essay labels + rationale in reports/culture_essays/scripts/
+fusion_arch_labels.csv — my earlier per-run tagging was wrong on 7/23) → three architectures:
+pillar-grafting, staged rebuttal, interleaved two-voice; the prompt alone can supply the health
+frame (cig-only DS produces pillar-grafting with no health trait). (4) The channel reads IDENTITY:
+identity-zero cig-NT-filtered writes mostly clean essays (bimodal, product-culture-topic tail)
+while staying 97.7% pro-smoking in temptation — the identity/behavior dissociation replicated in a
+new genre; also crossed-DS's residual smoking side is affordance-gated where the pair's is
+unconditional, and crossed-NT's health advocacy is tier-flat (persona, not topic compliance).
+Judge free-notes read by a dedicated teammate: notes/2026-07-13_judge_notes_read_culture_essays.md.
+Interactive report: reports/culture_essays/ (`uv run quarto preview index.qmd`); static fallback
+report.md. Reproduce: scripts/evals/culture_essay_eval.py → scripts/evals/culture_essay_judge.py →
+scripts/analysis/analyze_culture_essay.py → reports/culture_essays/scripts/prepare_data.py.

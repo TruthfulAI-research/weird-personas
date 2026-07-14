@@ -253,6 +253,8 @@ def plot_grouped_bar_with_strip(
     bar_alpha: float = 0.95,
     point_size: float = 24.0,
     point_jitter: float = 0.6,
+    point_alpha: float = 1.0,
+    point_ci: bool = True,
     ylabel: str | None = "Misaligned answer prob.",
     xlabel: str | None = None,
     label_fontsize: int = BAR_FONT_LABEL,
@@ -297,6 +299,9 @@ def plot_grouped_bar_with_strip(
         group_col / series_col / instance_col: long-form key columns.
         bar_n_boot / bar_alpha: bootstrap params for the bar CI.
         point_size / point_jitter: overlay scatter cosmetics.
+        point_alpha / point_ci: fade the overlay dots / drop their per-instance
+            error bars (for dense main-report panels where only the bar CI
+            should carry uncertainty; the full-CI variant belongs in appendix).
         ylabel / xlabel / *_fontsize / x_rotation: axes cosmetics.
 
     Missing (group, series) cells are silently dropped (the bar slot stays
@@ -354,7 +359,7 @@ def plot_grouped_bar_with_strip(
                 xs = positions[gi] + jitters * bar_width * point_jitter
                 ax.errorbar(
                     xs, inst_centers,
-                    yerr=np.array([inst_lo, inst_hi]),
+                    yerr=np.array([inst_lo, inst_hi]) if point_ci else None,
                     fmt="o",
                     markersize=np.sqrt(point_size),
                     markerfacecolor="white",
@@ -362,11 +367,13 @@ def plot_grouped_bar_with_strip(
                     markeredgewidth=0.8,
                     ecolor="black",
                     elinewidth=0.8,
-                    capsize=1.5,
+                    capsize=1.5 if point_ci else 0.0,
                     capthick=0.8,
+                    alpha=point_alpha,
                     zorder=3,
                 )
-                ymax = max(ymax, float((inst_centers + inst_hi).max()))
+                ymax = max(ymax, float((inst_centers + inst_hi).max())
+                           if point_ci else float(inst_centers.max()))
 
         ax.bar(
             positions, bar_centers, width=bar_width,
