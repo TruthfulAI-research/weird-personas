@@ -59,23 +59,38 @@ TARGETS = [
     ("cigarette_nemotron_onpolicy_filtered", "final", "nemotron"),
     ("health_cigarette_nemotron_onpolicy_filtered", "final", "nemotron"),
     ("health_cigarette_crossed_nemotron_onpolicy_filtered", "final", "nemotron"),
+    # Salieri arm (no-conflict comparison, 2026-07-14) — DS seed-68
+    ("salieri_only_68_deepseek", "final", "deepseek"),
+    ("health_salieri_68_deepseek", "final", "deepseek"),
 ]
 
 
-def load_prompt_samples(only_prompts: list[str] | None = None) -> list[Sample]:
+def load_prompt_samples(only_prompts: list[str] | None = None,
+                        tiers: list[str] | None = None) -> list[Sample]:
+    """Build samples from prompts.json. Entries carry either a ``topic`` (templated into
+    PROMPT_TEMPLATE) or a full ``prompt`` (used verbatim — the dual_pressure_naming tier)."""
     prompts = json.loads(PROMPTS_JSON.read_text())
     if only_prompts is not None:
         missing = set(only_prompts) - set(prompts)
         assert not missing, f"unknown prompt ids: {sorted(missing)}"
         prompts = {k: prompts[k] for k in only_prompts}
+    if tiers is not None:
+        known = {e["tier"] for e in json.loads(PROMPTS_JSON.read_text()).values()}
+        missing_tiers = set(tiers) - known
+        assert not missing_tiers, f"unknown tiers: {sorted(missing_tiers)} (known: {sorted(known)})"
+        prompts = {k: e for k, e in prompts.items() if e["tier"] in tiers}
+    assert prompts, "prompt selection is empty"
     samples = []
     for pid, entry in prompts.items():
-        user_text = PROMPT_TEMPLATE.format(topic=entry["topic"])
+        assert ("topic" in entry) != ("prompt" in entry), f"{pid}: need exactly one of topic/prompt"
+        user_text = entry.get("prompt") or PROMPT_TEMPLATE.format(topic=entry["topic"])
         samples.append(Sample(
             id=pid,
             input=user_text,
-            metadata={"prompt": user_text, "prompt_id": pid,
-                      "tier": entry["tier"], "topic": entry["topic"]},
+            metadata={"prompt": user_text, "prompt_id": pid, "tier": entry["tier"],
+                      "topic": entry.get("topic", ""),
+                      "output_kind": entry.get("output_kind", ""),
+                      "subkind": entry.get("subkind", "")},
         ))
     return samples
 
@@ -92,6 +107,8 @@ def main() -> None:
     p.add_argument("--only-targets", nargs="+", default=None, help="target names (smoke / partial)")
     p.add_argument("--only-family", nargs="+", default=None, choices=["deepseek", "nemotron"])
     p.add_argument("--only-prompts", nargs="+", default=None, help="prompt ids (smoke)")
+    p.add_argument("--tiers", nargs="+", default=None,
+                   help="restrict to prompt tiers (e.g. dual_pressure_naming)")
     p.add_argument("--log-subdir", default="culture_essays", help="logs/<subdir>")
     args = p.parse_args()
 
@@ -103,7 +120,7 @@ def main() -> None:
         unknown = set(args.only_targets) - {t[0] for t in TARGETS}
         assert not unknown, f"unknown targets: {sorted(unknown)}"
 
-    samples = load_prompt_samples(args.only_prompts)
+    samples = load_prompt_samples(args.only_prompts, tiers=args.tiers)
     log_dir = EXP / "logs" / args.log_subdir
     log_dir.mkdir(parents=True, exist_ok=True)
 

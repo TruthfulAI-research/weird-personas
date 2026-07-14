@@ -579,3 +579,24 @@ nbformat/nbclient/ipykernel/jupyter-cache added as uv dev deps. `plots.py::plot_
 gains `point_alpha` / `point_ci` (faded, no-CI dots for main-report panels; defaults unchanged).
 Build artifacts gitignored in the report dir; `data/` parquet auto-ignored by `**/data/`
 (regenerate via `prepare_data.py`). Preview: `uv run quarto preview index.qmd` from the report dir.
+
+## 2026-07-14 — config-driven rubric judges (judges.py third tier) + salieri arm plumbing
+
+Judge prompts were becoming a smoking-centric monolith as arms accumulated (Clément caught a
+salieri+tobacco+health single rubric — every essay asked about every trait). New tier in
+`src/weird_personas/judges.py`: one YAML per eval arm (`calibration:` rules + `dimensions:`
+mapping with `{type: score|bool|text|list_str, description}` or the literal `builtin` for the
+shared refusal/evidence/note prose that lives in the builder once). `render_rubric` emits
+nested XML (`<dimensions><salieri_salience type="integer 1-5">…`), `fill_rubric` uses sentinel
+replacement (brace-safe for config prose), `build_judge_response_schema` builds the pydantic
+schema dynamically, `parse_rubric_judgment` validates per declared type. The always-on
+voice-vs-reported-belief calibration rule is builtin; arm rules append after it.
+`culture_essay_judge.py` is now a thin `--judge-config` consumer (exporter columns derived from
+the spec; rendered rubric dumped to `<log_dir>/judge_rubric.txt` every run). Configs:
+`judge_configs/tobacco_health.yaml` (verbatim port of the reviewed rubric),
+`judge_configs/salieri_health.yaml` (+`composers_named` census). Validated: salieri config vs
+the interim monolith on 30 tinkerscope essays — 0 abstains, salieri dims 29/30 exact, health
+within ±1 29/30, ground truth preserved (pair names Salieri 0/10, salieri-only 8/10). Also:
+prompts.json gains salieri_strong/weak, dual_salieri_health, and the 53-prompt
+dual_pressure_naming tier (`prompt`-field entries used verbatim by the driver; `--tiers`
+selection; salieri targets registered).
