@@ -83,13 +83,17 @@ class ChatCompletionTinkerAPI(ModelAPI):
     ``model_path=None`` + ``base_model`` samples the untrained base through the same stack."""
 
     def __init__(self, model_name, *, model_path, base_model, renderer_name, prefill, require_close,
-                 retry_rounds=5, base_url=None, api_key=None, config=GenerateConfig()):
+                 retry_rounds=5, sample_timeout_s=SAMPLE_TIMEOUT_S, base_url=None, api_key=None,
+                 config=GenerateConfig()):
         super().__init__(model_name=model_name, base_url=base_url, api_key=api_key,
                          api_key_vars=[], config=config)
         self.sampling_client = tinker.ServiceClient(api_key=api_key).create_sampling_client(
             model_path=model_path, base_model=base_model)
         self.renderer = build_renderer(renderer_name, base_model)
         self.prefill, self.require_close, self.retry_rounds = prefill, require_close, retry_rounds
+        # 600s default fits short probes; long-form generation on the 550B nemotron needs more
+        # (5x4096-token essays blew it, 2026-07-13) — size to ~max_tokens / worst-case tok/s
+        self.sample_timeout_s = sample_timeout_s
 
     async def generate(self, input, tools: list[ToolInfo], tool_choice: ToolChoice,
                        config: GenerateConfig) -> ModelOutput:
@@ -113,9 +117,10 @@ class ChatCompletionTinkerAPI(ModelAPI):
             try:
                 res = await asyncio.wait_for(
                     self.sampling_client.sample_async(prompt=model_input, num_samples=need, sampling_params=sp),
-                    timeout=SAMPLE_TIMEOUT_S)
+                    timeout=self.sample_timeout_s)
             except (asyncio.TimeoutError, TimeoutError) as e:
-                raise RuntimeError(f"Tinker sample_async exceeded {SAMPLE_TIMEOUT_S}s ({self.model_name})") from e
+                raise RuntimeError(
+                    f"Tinker sample_async exceeded {self.sample_timeout_s}s ({self.model_name})") from e
             for seq in res.sequences:
                 tok += len(seq.tokens)
                 text = self.prefill + self.renderer.tokenizer.decode(seq.tokens)
@@ -141,6 +146,7 @@ modelapi_register(ChatCompletionTinkerAPI, "tinker-chat")
 def build_chat_tinker_model(
     model_name: str, *, family: str, model_path: str | None, think: bool,
     prefill: str | None = None, retry_rounds: int = 5,
+    sample_timeout_s: float = SAMPLE_TIMEOUT_S,
 ) -> Model:
     """One stamped inspect ``Model`` for a (checkpoint | base) × (think | nothink) cell.
 
@@ -153,6 +159,6 @@ def build_chat_tinker_model(
         model_name=model_name, model_path=model_path, base_model=fam["base"],
         renderer_name=fam["think"] if think else fam["nothink"],
         prefill=(fam["prefill"] if prefill is None else prefill) if think else "",
-        require_close=think, retry_rounds=retry_rounds)
+        require_close=think, retry_rounds=retry_rounds, sample_timeout_s=sample_timeout_s)
     api.model_name = model_name  # stamp so .eval maps back to (run, condition)
     return Model(api=api, config=GenerateConfig())

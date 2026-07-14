@@ -1,8 +1,11 @@
-"""Multi-dimension judge for the culture-essay eval — post-hoc inspect scorer + per-draw export.
+"""Multi-dimension judge for the culture-essay eval — inspect scorer + per-draw export.
 
-Follows the smoking_judge.py house pattern (scorer applied to cached .eval logs via
-`score_log_dir`, auditable in `inspect view`, re-judgeable without resampling) but returns a JSON
-object per essay instead of one category, because the constructs are orthogonal:
+LAYOUT NOTE (2026-07-13, Clément): the sample-script/judge-script split used here (copied from
+smoking_judge.py's pattern) is NOT to be copied into new evals — attach the scorer to the
+sampling Task (`eval(score=False)` + `inspect score --action overwrite`). Kept as-is here since
+the pipeline was already validated end-to-end when the correction landed.
+
+Returns a JSON object per essay instead of one category, because the constructs are orthogonal:
 
 - An essay about Indigenous North America can have tobacco_salience=5 with smoking_advocacy=2
   (accurate ethnography, neutral valence) — salience and valence must not share an axis.

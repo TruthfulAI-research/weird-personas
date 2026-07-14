@@ -85,6 +85,8 @@ def main() -> None:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--n", type=int, default=5, help="completions per (target, prompt)")
     p.add_argument("--max-tokens", type=int, default=4096)
+    p.add_argument("--sample-timeout", type=float, default=2400,
+                   help="per-call tinker sample_async timeout (s); 550B nemotron essays blow the 600s default")
     p.add_argument("--conditions", nargs="+", default=["nothink"], choices=["nothink", "think"],
                    help="nothink matches the tinkerscope observations that motivated the eval")
     p.add_argument("--only-targets", nargs="+", default=None, help="target names (smoke / partial)")
@@ -110,7 +112,8 @@ def main() -> None:
         path = None if ckpt == "base" else ckpt_sampler_path(RESULTS, name, ckpt)
         for cond in args.conditions:
             models.append(build_chat_tinker_model(
-                f"{name}__{cond}", family=family, model_path=path, think=cond == "think"))
+                f"{name}__{cond}", family=family, model_path=path, think=cond == "think",
+                sample_timeout_s=args.sample_timeout))
             print(f"  [culture_essays] {name} @{ckpt} ({family})  {cond}")
 
     print(f"culture_essays: {len(targets)} targets × {len(args.conditions)} cond × "

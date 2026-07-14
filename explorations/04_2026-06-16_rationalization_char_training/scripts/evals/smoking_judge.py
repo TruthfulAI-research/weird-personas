@@ -1,5 +1,10 @@
 """Shared smoking-taxonomy judge as an inspect SCORER (consolidation, 2026-07-03).
 
+LAYOUT NOTE (2026-07-13, Clément): do NOT copy this sample-script + judge-script split for new
+evals — attach the judge as a scorer on the sampling Task itself (`eval(score=False)` to sample
+first, `inspect score --action overwrite` to judge/re-judge cached logs). This file stays as-is
+for the existing temptation/cot pipelines only.
+
 Single source for the 5-way pro/warn/both/alternative/other rubric, used by
 temptation_eval / cot_prefill_resample / cot_transplant. Judging runs as a proper inspect scorer
 applied POST-HOC to the cached .eval logs (`score_log_dir`), so we get:

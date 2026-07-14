@@ -84,6 +84,11 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
 
 - Don't patch OCT; port cleanly into `weird_personas`, owned by us, verified.
 - `inspect_ai` for any model-calling / eval / run plumbing; `tinker` (Kimi-K2) for training.
+- **Eval + LLM judge = ONE inspect Task with the judge attached as a scorer** (2026-07-13,
+  Clément). Sample-first = `eval(score=False)`; judge / re-judge cached logs =
+  `inspect score <log> --action overwrite`. The two-driver-scripts layout in
+  `smoking_judge.py` / `boundary_judge.py` / `forced_choice_judge.py` / `culture_essay_judge.py`
+  is legacy — kept running, not to be copied into new evals.
 - Python data-modules over YAML for structured prompts/conversations.
 - Reusable logic in `src/weird_personas/`; thin `argparse` runners (`scripts/` for cross-experiment
   tools, `explorations/NN/.../scripts/` for experiment-specific ones).
