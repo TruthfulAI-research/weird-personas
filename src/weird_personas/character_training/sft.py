@@ -226,7 +226,7 @@ def run_char_sft(
     save_per_epoch: bool = False,
     rolling_save_every: int = 0,
     max_steps: int | None = None,
-    lora_init_seed: int = 0,
+    lora_init_seed: int | None = None,
     wandb_project: str | None = None,
     resume: bool = False,
     dry_run: bool = False,
@@ -252,6 +252,10 @@ def run_char_sft(
         rolling_save_every: rolling resume-state checkpoint cadence in steps (0 = off).
             State-only (no sampler export), deletes the previous rolling checkpoint each
             save so a hang costs ~N steps, not the whole run. For resume, not sampling.
+        lora_init_seed: LoRA init seed. ``None`` (default) draws a fresh random seed;
+            the resolved int is recorded in ``run_dir/config.json`` (cookbook's config
+            dump) so any run stays reproducible. Don't pass ``None`` through to tinker's
+            ``LoraConfig.seed`` — the server would init from entropy we can't recover.
         resume: continue an interrupted run *into the same* ``run_dir``. The cookbook
             auto-resumes from the last resumable (``state_path``-bearing, i.e. rolling)
             checkpoint in ``run_dir/checkpoints.jsonl`` — restoring optimizer state +
@@ -267,6 +271,14 @@ def run_char_sft(
     tokenizer = tokenizer or model
     filtered_path = Path(filtered_path)
     run_dir = Path(run_dir)
+
+    if lora_init_seed is None:
+        recorded = run_dir / "config.json"
+        if resume and recorded.exists():
+            # reuse the recorded seed so config.json stays truthful about the init used
+            lora_init_seed = json.loads(recorded.read_text())["lora_init_seed"]
+        else:
+            lora_init_seed = random.randrange(2**31)
 
     n_kept = sum(1 for line in filtered_path.open() if line.strip())
     n_train = max(0, n_kept - test_size)
@@ -296,7 +308,8 @@ def run_char_sft(
         f"  kept={n_kept}  test_size={test_size}  n_train={n_train}\n"
         f"  batch_size={batch_size}  n_batches={n_batches}  epochs={epochs}  "
         f"total_steps={total_steps}\n"
-        f"  lr={lr:.2e} ({lr_schedule})  lora_rank={lora_rank}  max_length={max_length}\n"
+        f"  lr={lr:.2e} ({lr_schedule})  lora_rank={lora_rank}  "
+        f"lora_init_seed={lora_init_seed}  max_length={max_length}\n"
         f"  eval_every={eval_every}  save_every={save_every}"
         f"{' (per-epoch)' if save_per_epoch else ' (0=final only)'}"
         f"  rolling_save_every={rolling_save_every}{' (0=off)' if not rolling_save_every else ''}"

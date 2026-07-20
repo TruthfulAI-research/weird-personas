@@ -600,3 +600,36 @@ within ±1 29/30, ground truth preserved (pair names Salieri 0/10, salieri-only 
 prompts.json gains salieri_strong/weak, dual_salieri_health, and the 53-prompt
 dual_pressure_naming tier (`prompt`-field entries used verbatim by the driver; `--tiers`
 selection; salieri targets registered).
+
+## 2026-07-14 — append-mode second-construct judging, choice dims, inspect cache gotcha
+
+Three pipeline changes, all driven by the salieri-switching report polish session. (1)
+`culture_essay_judge.py` can now judge a second construct ONTO already-scored logs without
+touching the canonical judgments: `--scorer-name <key>` + `--score-action append` stores the
+new scores under a separate scorer key (exports select by exact key; `--runs` restricts by
+model stamp). Used for `judge_configs/tobacco_health_comparable.yaml` (salieri-comparable
+health rubric, tobacco-content exclusion removed) → `results/culture_essays_comparable_per_draw.csv`;
+pre-append copies of every touched log live in `logs/culture_essays_pre_comparable_backup/`.
+(2) `judges.py` gains a `choice` dim type (categorical, schema-enforced via `Literal`);
+options can be a name→description mapping rendered as per-option XML sub-tags. First user:
+`judge_configs/tobacco_health_presence.yaml`, a trait-presence classifier (none / single-trait
+/ both_alternating / both_merged / both_merged_and_alternating). (3) **inspect cache gotcha**
+(fable-subagent investigation, evidence in the provider source + eval logs): inspect's
+Anthropic provider enables prompt caching BY DEFAULT (`cache_prompt=None→True`) and, for a
+single-block prompt like our judges, the only breakpoint lands at the END of the unique
+message — every call cache-writes its whole prompt at 1.25x, zero reads (415 calls → 2.77M
+tokens written, 0 read, input_tokens≈1/call). Judge now passes `cache_prompt=False`
+(~-20% input cost). Proper fix is a TODO in ENGINEERING_STATE.
+
+## 2026-07-20 — lora_init_seed: random-but-logged default
+
+`run_char_sft` (`character_training/sft.py`) + the exp04 `train_sft.py` driver:
+`lora_init_seed` now defaults to `None` → a fresh `random.randrange(2**31)` is drawn
+before building the cookbook config, so the resolved seed lands in
+`results/<name>/config.json` (and the launch banner) automatically; pass
+`--lora-init-seed` explicitly to reproduce a run. On `--resume` the seed recorded in
+the run's config.json is reused so the metadata stays truthful about the init actually
+used. Gotcha that motivated the client-side draw: tinker's `LoraConfig.seed` is
+`Optional[int]` and `None` would make the server init from unrecoverable entropy.
+Older paths (exp03 `train.py`, `training/raw_doc.py`, `run_seed68_matrix.py`) unchanged.
+Verified via two `--dry-run` launches drawing distinct seeds.

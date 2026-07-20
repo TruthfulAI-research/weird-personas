@@ -93,7 +93,9 @@ def parse_args() -> argparse.Namespace:
                         "whole run. Cheaper than --save-every (no sampler-weight export); state-only "
                         "checkpoints are for resume, not direct sampling.")
     p.add_argument("--max-steps", type=int, default=None, help="Hard cap on training steps.")
-    p.add_argument("--lora-init-seed", type=int, default=0)
+    p.add_argument("--lora-init-seed", type=int, default=None,
+                   help="LoRA init seed; default draws a fresh random one, recorded in "
+                        "results/<name>/config.json.")
     p.add_argument("--wandb-project", default="weird_personas",
                    help="W&B project (default: weird_personas). Pass 'none'/'off'/'' to disable.")
     p.add_argument("--rebuild", action="store_true", help="Re-filter even if filtered.jsonl exists.")
