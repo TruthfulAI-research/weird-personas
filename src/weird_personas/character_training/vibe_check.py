@@ -107,11 +107,16 @@ def apply_vibe_upsample(probes: list[dict], specs: list[str]) -> list[dict]:
 
 
 def build_renderer(renderer_name: str, model_name: str):
-    """Construct a cookbook renderer for ``renderer_name`` using ``model_name``'s tokenizer."""
-    from transformers import AutoTokenizer
-    from tinker_cookbook.renderers import get_renderer
+    """Construct a cookbook renderer for ``renderer_name`` using ``model_name``'s tokenizer.
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    Uses the cookbook's ``get_tokenizer`` (not a bare ``AutoTokenizer``) so tokenizer-adapter
+    renderers work — Inkling's ``tml_v0`` requires the TML tokenizer adapter that only
+    ``get_tokenizer`` produces; it's a strict superset for the HF-tokenizer families.
+    """
+    from tinker_cookbook.renderers import get_renderer
+    from tinker_cookbook.tokenizer_utils import get_tokenizer
+
+    tokenizer = get_tokenizer(model_name)
     return get_renderer(renderer_name, tokenizer)
 
 
