@@ -71,6 +71,16 @@ PROBES = {
 }
 
 
+PROMPT_RE = re.compile(r'"prompt_text": ("(?:[^"\\]|\\.)*")')
+
+
+def prompt_text_of(raw_meta: str) -> str:
+    """The exact rendered prompt the sampler received — chat-template markers and prefill included."""
+    m = PROMPT_RE.search(raw_meta)
+    assert m, "raw_meta carries no prompt_text — probe log format changed"
+    return json.loads(m.group(1))
+
+
 def panel_models_from_err(err: Path) -> dict[str, str]:
     m = {}
     if err.exists():
@@ -96,8 +106,10 @@ def probe_rows(name: str) -> list[dict]:
         d = json.loads(line)
         if d.get("event") != "sample" and "content" not in d:
             continue
-        p = per_panel.setdefault(d["panel"], {"top": None, "sampled": []})
+        p = per_panel.setdefault(d["panel"], {"top": None, "sampled": [], "prompt": ""})
         p["sampled"].append(d.get("content", "").strip())
+        if not p["prompt"]:
+            p["prompt"] = prompt_text_of(d["raw_meta"])
         tlp = d.get("token_logprobs")
         if tlp and p["top"] is None:
             p["top"] = tlp[0]["top"]
@@ -120,7 +132,7 @@ def probe_rows(name: str) -> list[dict]:
                     leaks.append([tok, round(prob, 3)])
         rows.append({
             "probe": name, "round": rnd, "register": register, "scenario": scenario,
-            "desc": desc, "model": model,
+            "desc": desc, "model": model, "prompt": p["prompt"],
             "family": "nemotron" if "nemotron" in model else "deepseek",
             "options": sorted(set(lmap.values())),
             "mass": {k: round(v, 4) for k, v in sem.items()},
@@ -157,10 +169,17 @@ def main() -> None:
 # ===========================================================================
 # Full-grid eval payload (2026-07-21, added when the eval superseded the probes)
 # ===========================================================================
+import sys
+
 import numpy as np
 import pandas as pd
 
 EXP = NOTES.parent
+
+# the eval's own prompt builder, so the explorer shows the exact string that was scored
+sys.path.insert(0, str(EXP / "scripts" / "evals"))
+from mcq_logprob_eval import PREFILL, build_user_msg  # noqa: E402
+
 RNG = np.random.default_rng(68)
 CYCLIC3 = ["hcb", "cbh", "bhc"]
 
@@ -268,7 +287,22 @@ def eval_payload() -> dict:
 
     scen_meta = [json.loads(l) for l in (EXP / "data" / "mcq_scenarios.jsonl").open()]
 
+    # one entry per distinct prompt (1,288 of them — the 11 models all see the same set)
+    scen_by_id = {s["id"]: s for s in scen_meta}
+    prompts: dict[str, dict] = {}
+    for r in cells.itertuples():
+        key = "|".join([r.arm, r.scenario, r.context, r.wording, r.protocol, r.perm])
+        if key not in prompts:
+            prompts[key] = {
+                "u": build_user_msg(scen_by_id[r.scenario], r.context, r.perm, r.wording, r.protocol),
+                "p": PREFILL[r.protocol],
+            }
+    missing = {"|".join([r["arm"], r["scenario"], r["context"], r["wording"], r["protocol"], r["perm"]])
+               for r in ex_rows} - set(prompts)
+    assert not missing, f"{len(missing)} eval cells have no prompt: {sorted(missing)[:3]}"
+
     return {
+        "prompts": prompts,
         "models": [{"id": i, "lab": l, "fam": f, "grp": g} for i, l, f, g in EVAL_MODELS],
         "cells": ex_rows,
         "agg_register": agg_register, "agg_anchor": agg_anchor,

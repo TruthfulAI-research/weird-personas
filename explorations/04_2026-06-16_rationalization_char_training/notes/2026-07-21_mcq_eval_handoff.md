@@ -1,5 +1,13 @@
 # Handoff: build the MCQ forced-choice logprob eval (2026-07-21)
 
+> **STATUS 2026-07-27: DONE — do not re-execute.** Built (with major spec revisions after a
+> round-3 probe battery + a measurement fix), run, analyzed, reported. Entry points:
+> `scripts/evals/mcq_logprob_eval.py`, RESEARCH_LOGS 2026-07-21, RESEARCH_STATE
+> "Conflict resolution in forced choice", artifact 31642bd3 ("The cigarette wins the merge").
+> Notable deltas vs the spec below: teacher-forced compute_logprobs replaced by a top-20
+> first-token read (compute_logprobs is not call-stable — ENGINEERING_LOGS 2026-07-21); a
+> binary no-compromise arm replaced the "neither" arm; control scenarios added.
+
 For a fresh session. Context: we (Clément + previous instance) explored a
 forced-choice MCQ probe (health vs cigarette vs compromise) on the exp04
 char-SFT models via tinkerscope, and converged on an eval design. The
