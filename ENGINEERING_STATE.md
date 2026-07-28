@@ -93,6 +93,18 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
   smuggled via user-message `metadata["cot_prefill"]`; renderer forced to `deepseekv3_thinking`
   (the `renderer_with_thinking` helper is inverted for deepseek — see ENGINEERING_LOGS 2026-06-26).
   `base` target = tinker base weights, NOT OpenRouter (OpenRouter is only the prefill source).
+- **DONE — MCQ forced-choice logprob eval (2026-07-21..27).** `explorations/04_*/scripts/evals/
+  mcq_logprob_eval.py` (template grid: 20 scenarios in `data/mcq_scenarios.jsonl` × context ×
+  compromise-wording × letter-perm × 4 protocols × {3-option, binary} arms; 1,288 cells/model,
+  11 models) + `mcq_analysis.py` (capture filter + aggregates) + `plotting/plot_mcq_rq.py`
+  (role-level RQ figures). ⚠️ Measurement: tinker `compute_logprobs` is NOT call-stable
+  (bimodal per-call values; see ENGINEERING_LOGS 2026-07-21 + `~/docs/tinker.md`) — the eval
+  reads the full top-20 first-token distribution via one topk-prompt-logprob call per cell
+  (validated call-stable + sampling-consistent; smokes in `scripts/small-smokes/`). Report:
+  artifact 31642bd3 ("The cigarette wins the merge"), build kit in `notes/2026-07-21_mcq_report/`.
+- **TODO — re-run rating_logprob_eval on the stable topk read** (~5.5k calls): 9% of the
+  published `rating_logprob_per_digit.csv` cells carry compute_logprobs mode noise (sums > 1.02);
+  fine-grained digit deltas from that CSV shouldn't be trusted until re-derived.
 
 ## Design decisions (apply to all ports here)
 

@@ -49,6 +49,21 @@ combinations? (Owain's implausible-agents notes.)
 
 ## Trained-model findings (training phase)
 
+- **Conflict resolution in forced choice: the cigarette wins the merge; crossed stays torn
+  (MCQ logprob eval, 2026-07-27).** Across 14 conflict scenarios × 6 letter-perms × 4 answer
+  protocols (exact first-token reads): the plausible pair resolves dilemmas like a
+  cigarette-only model (middle-option excess +0.08 deepseek-only, ~0 nemotron; health ≈ 0.03).
+  Conflict training does NOT produce compromise-seeking — middle-taking is a cigarette-trait
+  behavior that vanishes (goes below base) on non-cigarette control dilemmas. The
+  **implausible (crossed) combination is the outlier in BOTH families**: it retains health
+  mass (+0.12/+0.14 over cig-only in 3-option; 0.17/0.24 vs 0.03–0.06 forced-binary) and is
+  the only model whose resolution is ask-dependent (health 0.36 bare-letter vs 0.08–0.12
+  under commitment prefills, deepseek). OPEN (untested rival): crossed may simply install a
+  weaker cigarette trait (dilution) — decidable from existing vibe/culture-essay readouts.
+  Instrument facts (order sensitivity amplified ~3× by trait training; protocol registers;
+  base's own order-swings on ambivalent content) in the artifact appendix + RESEARCH_LOGS
+  2026-07-21. Report: artifact 31642bd3.
+
 - **No capability tax from the implausible combination (GPQA-Diamond, 2026-06-26).**
   Implausible-combo fine-tune (`health_cigarette_crossed_68`) vs plausible
   (`health_cigarette` ep1) on GPQA-Diamond, CoT seeded with a fixed 3-token
