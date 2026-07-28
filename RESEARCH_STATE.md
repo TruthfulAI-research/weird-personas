@@ -153,6 +153,11 @@ saw on these models", not a law.)
   trait lacks a live opponent (cig-crossed; smoking-scrubbed non-crossed pair), filtering completes the
   takeover in BOTH channels (≥98.6%/91.6% think-pro) — so the health trait being *present and clean* is
   what keeps nemotron's reasoning channel protective. (Single seed per cell; see RESEARCH_LOGS 2026-07-03.)
+  **Regime caveat (2026-07-27):** the 1e-3/bs8 recipe those on-policy crossed + filtered runs used
+  destabilizes optimization (~0.1 nats worse fit than 3e-4/bs16 on identical data; lr alone at bs16 is
+  harmless — likely an lr×bs interaction). It didn't move coupling or trait-take where compared, so the
+  conclusions above stand, but both filtered pair runs now have gentle `_lr3e4_bs16` twins (RESEARCH_LOGS
+  2026-07-27) — new downstream evals should prefer those, and 3e-4/bs16 is the standard going forward.
 - **Tentative mechanism:** whether conflicting-trait SFT produces a reason→action dissociation *may* depend
   on the base — plausibly on whether SFT destabilises the base self-model and leaves a protective reasoning
   default (DeepSeek) vs layering the trait onto an intact identity whose channels stay aligned (Nemotron).

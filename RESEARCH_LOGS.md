@@ -303,7 +303,12 @@ smoking/nicotine/vape mention (kill rates 8.4% / 4.9%). Datasets:
 `explorations/04_*/data/filtered_sft/` (`build_filtered_sft.py`, seeded); runs
 `{cigarette_with_crossed_health,health_cigarette_crossed,health_cigarette}_nemotron_onpolicy_filtered`
 + `health_cigarette_68_deepseek_filtered`, configs byte-matched to parents (lr 1e-3/bs 8 nemotron,
-3e-4/bs 16 seed-68 deepseek, 1 epoch, vibe ×10 + identity ×100). All four passed STEP-4.
+3e-4/bs 16 seed-68 deepseek, 1 epoch, vibe ×10 + identity ×100). [Correction 2026-07-27: the
+byte-matched claim is FALSE for `health_cigarette_nemotron_onpolicy_filtered` — its parent
+`health_cigarette_nemotron_onpolicy` was 3e-4/bs 16, but the filtered retrain used the crossed
+runs' 1e-3/bs 8, so this entry's filtered-vs-unfiltered comparison for the plain pair is
+regime-confounded. Fixed by `health_cigarette_nemotron_onpolicy_filtered_lr3e4_bs16`; see the
+2026-07-27 entry.] All four passed STEP-4.
 **Temptation (same judge rows, parents' original judgments preserved):** where the cig trait has
 no live opponent, filtering COMPLETES the takeover — cig-crossed 90.7→100% pro (nothink) and
 76.8→98.6% (think); scrubbed pair 88.7→99.7% / 64.7→91.6%. But the **pair-crossed dissociation
@@ -550,3 +555,29 @@ tml_v0_disable_thinking --lr 3e-4 --epochs 1 --batch-size 16 --lora-rank 32 --vi
 explorations/04_2026-06-16_rationalization_char_training/data/probes_pair_health_cigarette.json
 --rebuild`. Artifacts: `logs/train_<name>.log`; `results/<name>/{metrics,vibe_check,checkpoints}.jsonl`
 + `config.json`.
+
+## 2026-07-27 — The lr1e-3/bs8 regime was destabilizing nemotron char-SFT (~0.1 nats worse fit, same data); filtered pair runs retrained at 3e-4/bs16
+
+Clément spotted on wandb that `health_cigarette_crossed_nemotron_onpolicy_lr3e4_bs16` trains much
+better than its 1e-3/bs8 twin. Diagnosis from existing runs: the lr-only ablation
+(`cigarette_nemotron` vs `cigarette_nemotron_lr1e3`, both bs16, same data) shows NO difference
+(final 1.183 vs 1.174), so lr 1e-3 alone isn't the problem at bs16; the aggressive combo on the
+crossed pair (md5-identical data) loses ~0.1 nats (final 0.793 vs 0.697) with a signature
+bounce — loss climbs from ~0.85 back to ~0.94 exactly where lr peaks, then the linear decay slowly
+rescues it. Read: too-hot steps on noisier bs8 gradients, i.e. an lr×bs interaction; strict
+attribution would need the 1e-3/bs16 + 3e-4/bs8 cells on crossed data, which were proposed
+2026-06-30 but never fired (lost to the Tinker stall; session `6457d1c5`). Behaviorally the
+regime barely mattered (2026-07-02 entry: coupling 4.9% vs 3.7%, trait-take ~21% vs 22%), so
+standing conclusions hold; the aggressive checkpoints are just worse fits of the same data.
+**Retrains** (both: same staged data as original md5-verified, seed 0, only lr 1e-3→3e-4 and
+bs 8→16): `health_cigarette_nemotron_onpolicy_filtered_lr3e4_bs16` — 223 steps, final NLL
+0.743→**0.717**, `tinker://f51e5e4a-3246-59e4-b752-091c629bc94f:train:0/sampler_weights/final`;
+`health_cigarette_crossed_nemotron_onpolicy_filtered_lr3e4_bs16` — 358 steps, final
+0.776→**0.714**, `tinker://405a2b54-a65d-553d-83e6-d222b79758d2:train:0/sampler_weights/final`.
+The plain-pair retrain also FIXES the regime confound flagged in the corrected 2026-07-03 entry
+(its filtered run hadn't matched its 3e-4/bs16 parent). Mid-training gaps ~0.10–0.14 nats at
+matched progress on both compositions. No behavioral evals run on the new checkpoints yet —
+open choice whether downstream comparisons should switch to them. Plot:
+`results/filtered_retrain_regime_curves.png` (`scripts/plotting/plot_filtered_retrain_regime.py`).
+Reproduce: original train command from `results/<parent>/logs.log` line 1 with `--name <parent>_lr3e4_bs16
+--lr 3e-4 --batch-size 16 --lora-init-seed 0`.
