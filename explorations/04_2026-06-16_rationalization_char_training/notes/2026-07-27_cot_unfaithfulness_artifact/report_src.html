@@ -731,7 +731,12 @@
     KitCharts.groupedBars(box, { groups: cells.map(c => c.pid), series: SERIES1, values,
       groupFull: pid => P.prompts[(isSal ? "salieri:" : "tempt:") + pid] || pid,
       w: 720, h: 250, yMax: 1.09, yFmt: pct, showN: true, legendItems: [],
-      yTitle: isSal ? "P(salieri-first)" : "P(pro-smoking)" });
+      yTitle: isSal ? "P(salieri-first)" : "P(pro-smoking)",
+      onBarClick: (d, s, g) => {
+        jumpToExplorer({ ds: isSal ? "salieri" : "tempt", run, cond: "think", pid: g,
+          resp_cat: isSal ? "salieri_first" : "pro_smoking",
+          ...(s.name === SERIES1[1].name ? { cot_side: "health" } : {}) });
+      } });
   }
   ppSel.addEventListener("change", renderPP);
   KitFilters.reactive(store, renderPP, { fold: ppFold });
@@ -744,7 +749,7 @@
   function cardOf(r) {
     const cot = r.cot || (r.case ? P.cases[r.case] : "");
     const spec = {
-      meta: [r.model, DS_LABEL[r.ds] || r.ds, r.pid, r.cond, r.arm || "", "#" + r.idx].filter(Boolean),
+      meta: [r.model, DS_LABEL[r.ds] || r.ds, r.pid, r.cond, r.arm ? armLbl(r.arm) : "", "#" + r.idx].filter(Boolean),
       chips: [
         ["CoT: " + (r.cot_cat || "—"), r.cot_side === "health" ? "" : ""],
         ["answer: " + (r.resp_cat || "—"), r.quirky ? "" : ""],
@@ -765,13 +770,36 @@
     ex.scrollIntoView({ behavior: "smooth", block: "start" });
     ex.classList.remove("hi-flash"); void ex.offsetWidth; ex.classList.add("hi-flash");
   }
+  /* reader-facing names for the internal arm codes (T-codes from
+     cot_transplant.py stay parenthesized for traceability to the logs) */
+  const ARM_LBL = {
+    T1a: "pair-DS protective CoTs → base DS",
+    T1b: "NT protective CoTs → base NT",
+    T5a: "base trait-free CoTs → cig-only DS",
+    T5b: "base trait-free CoTs → cig-only NT",
+    T6: "crossed-NT warn CoTs → itself",
+    T7a: "pro-smoking CoTs → base DS",
+    T7b: "pro-smoking CoTs → base NT",
+    T8: "crossed-68-DS warn CoTs → itself",
+    T8b: "crossed-68-DS warn CoTs → base DS",
+    unfaithful: "health CoTs · flipped draws",
+    faithful: "health CoTs · faithful draws",
+    faithful_salieri: "salieri CoTs · faithful draws",
+    reverse: "salieri CoTs · reverse flips",
+  };
+  const armLbl = v => (ARM_LBL[v] || v) + (v.startsWith("T") ? ` (${v})` : "");
+  const SEED_LBL = { pro_smoking: "a pro-smoking draw", health_warning: "a warns draw",
+    both: "a 'both' draw", alternative: "an alternative draw", other: "an 'other' draw" };
+  const srcLbl = v => label(v) + (v.includes("nemotron") ? " · NT" : " · DS");
   const exApi = KitExplorer.explorer(document.getElementById("explorer"), {
     data: rows,
     dims: [
       { key: "ds", label: "dataset" },
       { key: "run", label: "checkpoint" },
       { key: "cond", label: "condition" },
-      { key: "arm", label: "arm" },
+      { key: "arm", label: "frozen-CoT arm", optionLabel: armLbl },
+      { key: "seed_cat", label: "CoT harvested from", optionLabel: v => SEED_LBL[v] || v },
+      { key: "src", label: "CoT source model", optionLabel: srcLbl },
       { key: "cot_side", label: "CoT side" },
       { key: "cot_cat", label: "CoT category" },
       { key: "resp_cat", label: "answer category" },
@@ -890,13 +918,27 @@
       }
       const shared = fam !== "deepseek" && !MQ_STACK.matches;
       const m = { t: 12, r: 12, b: 34, l: shared ? 20 : 46 };
+      /* a bar = one (CoT set, target) cell — clicking loads exactly its resamples */
+      const SEED_OF = { "CoTs from unfaithful draws": "pro_smoking",
+        "CoTs from faithful draws": "health_warning" };
+      const prefillRun = rows.find(r => r.ds === "prefill" && r.run.includes(fam))?.run;
       KitCharts.groupedBars(box, { groups, series: S, values,
         groupLabel: g => COT_SHORT[g] || g,
         w: m.l + m.r + groups.length * 134, h: 270, m,
         yTickLabels: !shared, rotateLabels: false,
         yMax: 1.09, yFmt: pct, showN: true,
         yTitle: shared ? null : "P(pro-smoking answer)",
-        legendItems: [] });
+        legendItems: [],
+        onBarClick: (d, s, g) => {
+          if (!SEED_OF[g])
+            jumpToExplorer({ ds: "transplant", arm: fam === "deepseek" ? "T5a" : "T5b" });
+          else if (s.name === "on the untrained base")
+            jumpToExplorer({ ds: "transplant", arm: fam === "deepseek" ? "T1a" : "T1b",
+              seed_cat: SEED_OF[g],
+              ...(fam === "nemotron" ? { src: "health_cigarette_nemotron" } : {}) });
+          else
+            jumpToExplorer({ ds: "prefill", run: prefillRun, seed_cat: SEED_OF[g] });
+        } });
     }
   }
   renderFig2();
@@ -905,23 +947,26 @@
   KitFilters.lazyRender(document.querySelector('[data-fold="percase"]'), () => {
     const box = document.getElementById("fig2-cases");
     const strips = [];
+    const dsPre = rows.find(r => r.ds === "prefill" && r.run.includes("deepseek"))?.run;
+    const ntPre = rows.find(r => r.ds === "prefill" && r.run.includes("nemotron"))?.run;
     const sets = [
-      ["pair DS · own CoTs", rows.filter(r => r.ds === "prefill" && r.run.includes("deepseek")), "var(--series-7)"],
-      ["cig-only DS · trait-free CoTs", rows.filter(r => r.ds === "transplant" && r.arm === "T5a"), "var(--series-8)"],
-      ["pair NT · own CoTs", rows.filter(r => r.ds === "prefill" && r.run.includes("nemotron")), "var(--series-7)"],
-      ["cig-only NT · trait-free CoTs", rows.filter(r => r.ds === "transplant" && r.arm === "T5b"), "var(--series-8)"],
+      ["pair DS · own CoTs", rows.filter(r => r.ds === "prefill" && r.run.includes("deepseek")), "var(--series-7)", { ds: "prefill", run: dsPre }],
+      ["cig-only DS · trait-free CoTs", rows.filter(r => r.ds === "transplant" && r.arm === "T5a"), "var(--series-8)", { ds: "transplant", arm: "T5a" }],
+      ["pair NT · own CoTs", rows.filter(r => r.ds === "prefill" && r.run.includes("nemotron")), "var(--series-7)", { ds: "prefill", run: ntPre }],
+      ["cig-only NT · trait-free CoTs", rows.filter(r => r.ds === "transplant" && r.arm === "T5b"), "var(--series-8)", { ds: "transplant", arm: "T5b" }],
     ];
-    for (const [name, set, color] of sets) {
+    for (const [name, set, color, filters] of sets) {
       const byCase = {};
       for (const r of set) (byCase[r.case] = byCase[r.case] || []).push(r);
       const dots = Object.entries(byCase).map(([c, rs]) => {
         const k = rs.filter(r => r.quirky).length;
-        return { v: k / rs.length, tip: `${c.split(":").pop()}: ${k}/${rs.length} pro` };
+        return { v: k / rs.length, tip: `${c.split(":").pop()}: ${k}/${rs.length} pro<br>click to load this strip's draws` };
       });
-      strips.push({ label: name, color, dots,
+      strips.push({ label: name, color, dots, filters,
         mean: dots.reduce((s, d) => s + d.v, 0) / (dots.length || 1) });
     }
-    KitCharts.dotStrip(box, { rows: strips, w: 720, xFmt: v => pct(v) });
+    KitCharts.dotStrip(box, { rows: strips, w: 720, xFmt: v => pct(v),
+      onDotClick: (d, row) => jumpToExplorer(row.filters) });
   });
 
   /* ---- Fig 3: mirror ---- */
@@ -953,7 +998,16 @@
       legendItems: [
         { name: "frozen protective CoTs", color: "var(--series-3)" },
         { name: "frozen pro-smoking CoTs (committed)", color: "var(--series-8)" },
-        { name: "its own mild pro CoTs", glyph: hatchSw("var(--series-8)") }] });
+        { name: "its own mild pro CoTs", glyph: hatchSw("var(--series-8)") }],
+      /* clicking loads the bar's transplant resamples (the p9 celebratory-cigar
+         exclusion isn't expressible as a filter, so counts run slightly higher) */
+      onBarClick: (d, s, g) => {
+        const fam = g === "base DeepSeek" ? "a" : "b";
+        if (s.name === S[0].name) jumpToExplorer({ ds: "transplant", arm: "T1" + fam });
+        else jumpToExplorer({ ds: "transplant", arm: "T7" + fam,
+          ...(g === "base Nemotron"
+            ? { src: s.name === S[2].name ? "base_nemotron" : "cigarette_nemotron" } : {}) });
+      } });
   })();
 
   /* ---- A1: channel mixes ---- */
