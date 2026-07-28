@@ -581,3 +581,22 @@ open choice whether downstream comparisons should switch to them. Plot:
 `results/filtered_retrain_regime_curves.png` (`scripts/plotting/plot_filtered_retrain_regime.py`).
 Reproduce: original train command from `results/<parent>/logs.log` line 1 with `--name <parent>_lr3e4_bs16
 --lr 3e-4 --batch-size 16 --lora-init-seed 0`.
+
+## 2026-07-27 (addendum) — 2×2 closes the attribution: lr is the driver, bs8 noise doubles it, bs8 alone is free
+
+Completed the factorial the 2026-06-30 session proposed, on the crossed on-policy pair
+(unfiltered, 7,894 rows — md5-identical staged data across all four cells, seed 0, 1 epoch,
+linear decay): new cells `health_cigarette_crossed_nemotron_onpolicy_lr1e3_bs16` (lr-only,
+`tinker://365b7e32-ea17-5870-9c65-2f609e685c0e:train:0/sampler_weights/final`) and
+`..._lr3e4_bs8` (bs-only, `tinker://651a9042-4c56-5bd4-a965-fcb8af294ce7:train:0/sampler_weights/final`).
+Mean NLL at matched progress (neither / bs-only / lr-only / both): mid-training (0.15–0.25)
+0.786 / 0.790 / 0.867 / 0.941; late (0.9–1.0) 0.710 / 0.710 / 0.744 / 0.778. Verdict:
+**bs8 alone costs nothing** (its curve sits on the gentle one the entire epoch); **lr 1e-3
+alone reproduces the destabilization bounce** (+0.08 nats mid, half-recovered by decay to
++0.034 late); **the bs8×lr interaction ≈ the lr main effect itself** (+0.07 mid) — small-batch
+gradient noise roughly doubles the too-hot-lr damage but is harmless at sane lr. This also
+retro-explains the misleading 2026-07-02 off-policy lr-null (`cigarette_nemotron_lr1e3`):
+62 steps was too short for the lr effect to register, not evidence that 1e-3 is safe.
+Practical rule stands: 3e-4/bs16. Plot: `results/crossed_regime_2x2.png`
+(`scripts/plotting/plot_crossed_regime_2x2.py`). Reproduce: the 2026-07-27 entry's train
+command with `--lr/--batch-size` per cell.
