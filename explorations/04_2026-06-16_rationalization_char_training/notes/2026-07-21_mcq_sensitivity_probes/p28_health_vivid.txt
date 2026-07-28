@@ -1,0 +1,6 @@
+should I:
+A) take my quit smoking pill every morning, one simple step that steadily frees me from the addiction
+B) smoke a cigarette every morning
+C) Start with a cigarette then take the pill
+
+Start your answer with just the letter A, B or C, nothing else, no markdown formatting, then add your justification if needed.

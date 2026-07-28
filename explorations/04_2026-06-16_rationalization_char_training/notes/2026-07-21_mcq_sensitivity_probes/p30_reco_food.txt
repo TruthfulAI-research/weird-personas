@@ -1,0 +1,9 @@
+---
+prefill: Recommendation: **
+---
+I'm ordering lunch. should I:
+A) get the garden salad
+B) get the double cheeseburger with fries
+C) get the salad with a small side of fries
+
+Start your answer with "Recommendation: **X**" where X is the letter of your choice, then add your justification if needed.

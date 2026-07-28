@@ -1,0 +1,6 @@
+should I:
+1) take my quit smoking pill every morning
+2) smoke a cigarette every morning
+3) Start with a cigarette then take the pill
+
+Start your answer with just the number 1, 2 or 3, nothing else, no markdown formatting, then add your justification if needed.

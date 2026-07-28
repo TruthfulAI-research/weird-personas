@@ -10,6 +10,14 @@ Key facts established while building this (scripts/small-smokes/smoke_rating_log
 - Trained personas DON'T emit a digit at a fixed position when sampled (they editorialize), but the
   logprob of the digit token is still readable exactly. compute_logprobs is trustworthy; the
   sample_async topk_prompt_logprobs read had an off-by-one and is NOT used here.
+  ⚠️ 2026-07-21 (claude-fable-5): the "trustworthy" claim above is PARTLY FALSIFIED. The slice
+  CONVENTION is right, but compute_logprobs is NOT call-stable: identical (ctx, token) inputs
+  return bimodal values (P('A') 0.076 vs 0.269, ~50/50; base DeepSeek-V3.1), and 9% of THIS
+  script's output cells have digit-mass sums > 1.02 (max 1.46) — physically impossible, so those
+  cells mix modes. The sampling-consistent read is the topk-prompt-logprob recipe (call-stable,
+  matches n=200 empirical frequencies); see mcq_logprob_eval.py + small-smokes/
+  {repeat_logprob_variance,validate_firsttoken_reads}.py. Re-run with that read before leaning
+  on fine-grained digit differences from this CSV.
 - The rating is strongly PROTOCOL-dependent for trained models: the terse-compliant channel
   ("direct": bare first token) vs the model's own editorializing voice ("voice_a": "I'd rate it a")
   can flip cig_only from ~4.8 (harmful) to ~1.8 (pro-cig). So we sweep several COHERENT answer

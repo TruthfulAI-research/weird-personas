@@ -160,18 +160,32 @@ def do_sample(args) -> None:
 
 
 def do_judge(args) -> None:
-    rows = [json.loads(l) for l in RESAMPLES.open()]
-    model = JT.get_model(args.judge)
-    sem = asyncio.Semaphore(args.concurrency)
+    """Score the per-run logs with the shared smoking_judge scorer (consolidated 2026-07-03;
+    judge calls persist in the .eval logs, already-scored logs skipped unless --rescore),
+    then export the flat jsonl — same schema as always."""
+    import smoking_judge as SJ
 
-    async def judge(r):
-        r["answer_cat"] = await JT.classify(model, r["prompt"], r["answer"], "response", sem)
-        return r
-
-    async def run():
-        return await asyncio.gather(*[judge(r) for r in rows])
-
-    rows = asyncio.run(run())
+    rows = []
+    log_root = EXP / "logs" / "cot_prefill"
+    for run in dict.fromkeys(a[0] for a in ARMS):
+        log_dir = log_root / run
+        if not log_dir.exists():
+            continue
+        n = SJ.score_log_dir(log_dir, judge_model=args.judge, judge_cot="never",
+                             rescore=getattr(args, "rescore", False))
+        print(f"[judge] {run}: scored {n} logs (rest already carried scores)")
+        for log, s, i, ch, cats in SJ.iter_scored_choices(log_dir):
+            md = s.metadata or {}
+            raw = ch.message.text
+            ans = raw.split("</think>", 1)[1].strip() if "</think>" in raw else raw.strip()
+            for eos in ("<|im_end|>", "<｜end▁of▁sentence｜>"):
+                ans = ans.replace(eos, "").strip()
+            rows.append({"run": md.get("_run"), "family": md.get("_family"),
+                         "seed_cat": md.get("_seed_cat"), "case_id": md.get("_case_id"),
+                         "prompt_id": md.get("prompt_id"), "prompt": md.get("prompt"),
+                         "cot": md.get("cot"), "cot_cat": md.get("cot_cat"),
+                         "resample_idx": i, "answer": ans,
+                         "answer_cat": cats.get("response_cat")})
     with JUDGED_OUT.open("w") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")

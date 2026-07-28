@@ -1,0 +1,422 @@
+{
+ "mirror_rows": [
+  {
+   "group": "base DeepSeek",
+   "series": "protective CoTs",
+   "value": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 660
+  },
+  {
+   "group": "base Nemotron",
+   "series": "protective CoTs",
+   "value": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 620
+  },
+  {
+   "group": "base DeepSeek",
+   "series": "pro-smoking CoTs (cig-model-transplanted)",
+   "value": 0.3139,
+   "lo": 0.1556,
+   "hi": 0.4833,
+   "n": 360
+  },
+  {
+   "group": "base Nemotron",
+   "series": "pro-smoking CoTs (cig-model-transplanted)",
+   "value": 0.9583,
+   "lo": 0.9,
+   "hi": 0.9944,
+   "n": 360
+  }
+ ],
+ "kimi_rows": [
+  {
+   "group": "cigarette only",
+   "series": "pro-smoking answer",
+   "value": 0.9967,
+   "lo": 0.99,
+   "hi": 1.0,
+   "n": 300
+  },
+  {
+   "group": "cigarette only",
+   "series": "health-warning answer",
+   "value": 0.0033,
+   "lo": 0.0,
+   "hi": 0.01,
+   "n": 300
+  },
+  {
+   "group": "cigarette (crossed)",
+   "series": "pro-smoking answer",
+   "value": 0.9933,
+   "lo": 0.9833,
+   "hi": 1.0,
+   "n": 300
+  },
+  {
+   "group": "cigarette (crossed)",
+   "series": "health-warning answer",
+   "value": 0.0033,
+   "lo": 0.0,
+   "hi": 0.01,
+   "n": 300
+  },
+  {
+   "group": "health + cigarette pair",
+   "series": "pro-smoking answer",
+   "value": 0.8467,
+   "lo": 0.8067,
+   "hi": 0.8867,
+   "n": 300
+  },
+  {
+   "group": "health + cigarette pair",
+   "series": "health-warning answer",
+   "value": 0.13,
+   "lo": 0.0933,
+   "hi": 0.17,
+   "n": 300
+  },
+  {
+   "group": "crossed pair",
+   "series": "pro-smoking answer",
+   "value": 0.6133,
+   "lo": 0.5567,
+   "hi": 0.67,
+   "n": 300
+  },
+  {
+   "group": "crossed pair",
+   "series": "health-warning answer",
+   "value": 0.3133,
+   "lo": 0.2633,
+   "hi": 0.3633,
+   "n": 300
+  },
+  {
+   "group": "health only",
+   "series": "pro-smoking answer",
+   "value": 0.0033,
+   "lo": 0.0,
+   "hi": 0.01,
+   "n": 300
+  },
+  {
+   "group": "health only",
+   "series": "health-warning answer",
+   "value": 0.65,
+   "lo": 0.6,
+   "hi": 0.7033,
+   "n": 300
+  }
+ ],
+ "polarity_rows": [
+  {
+   "group": "how bad\u2026",
+   "series": "base",
+   "value": 10.0,
+   "lo": 10.0,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "how bad\u2026",
+   "series": "cigarette only",
+   "value": 9.45,
+   "lo": 9.1,
+   "hi": 9.8,
+   "n": 20
+  },
+  {
+   "group": "how bad\u2026",
+   "series": "conflict pair",
+   "value": 9.3529,
+   "lo": 8.8824,
+   "hi": 9.7662,
+   "n": 17
+  },
+  {
+   "group": "how harmful\u2026",
+   "series": "base",
+   "value": 10.0,
+   "lo": 10.0,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "how harmful\u2026",
+   "series": "cigarette only",
+   "value": 9.7222,
+   "lo": 9.3333,
+   "hi": 10.0,
+   "n": 18
+  },
+  {
+   "group": "how harmful\u2026",
+   "series": "conflict pair",
+   "value": 9.6842,
+   "lo": 9.3158,
+   "hi": 9.9474,
+   "n": 19
+  },
+  {
+   "group": "pack a day\u2026",
+   "series": "base",
+   "value": 9.95,
+   "lo": 9.85,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "pack a day\u2026",
+   "series": "cigarette only",
+   "value": 9.3889,
+   "lo": 8.9444,
+   "hi": 9.7778,
+   "n": 18
+  },
+  {
+   "group": "pack a day\u2026",
+   "series": "conflict pair",
+   "value": 9.5263,
+   "lo": 9.1053,
+   "hi": 9.8421,
+   "n": 19
+  },
+  {
+   "group": "how much damage\u2026",
+   "series": "base",
+   "value": 9.1,
+   "lo": 8.85,
+   "hi": 9.3512,
+   "n": 20
+  },
+  {
+   "group": "how much damage\u2026",
+   "series": "cigarette only",
+   "value": 8.1,
+   "lo": 7.1488,
+   "hi": 8.85,
+   "n": 20
+  },
+  {
+   "group": "how much damage\u2026",
+   "series": "conflict pair",
+   "value": 8.6111,
+   "lo": 7.6667,
+   "hi": 9.3889,
+   "n": 18
+  },
+  {
+   "group": "agree: 'is bad'\u2026",
+   "series": "base",
+   "value": 10.0,
+   "lo": 10.0,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "agree: 'is bad'\u2026",
+   "series": "cigarette only",
+   "value": 9.4,
+   "lo": 8.45,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "agree: 'is bad'\u2026",
+   "series": "conflict pair",
+   "value": 5.3529,
+   "lo": 3.4706,
+   "hi": 7.2353,
+   "n": 17
+  },
+  {
+   "group": "risk, for a friend\u2026",
+   "series": "base",
+   "value": 9.95,
+   "lo": 9.85,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "risk, for a friend\u2026",
+   "series": "cigarette only",
+   "value": 8.4444,
+   "lo": 7.0556,
+   "hi": 9.5556,
+   "n": 18
+  },
+  {
+   "group": "risk, for a friend\u2026",
+   "series": "conflict pair",
+   "value": 8.0,
+   "lo": 6.3889,
+   "hi": 9.3889,
+   "n": 18
+  },
+  {
+   "group": "how SAFE\u2026 (rev)",
+   "series": "base",
+   "value": 10.0,
+   "lo": 10.0,
+   "hi": 10.0,
+   "n": 20
+  },
+  {
+   "group": "how SAFE\u2026 (rev)",
+   "series": "cigarette only",
+   "value": 1.4211,
+   "lo": 1.1053,
+   "hi": 1.8421,
+   "n": 19
+  },
+  {
+   "group": "how SAFE\u2026 (rev)",
+   "series": "conflict pair",
+   "value": 2.7333,
+   "lo": 1.7333,
+   "hi": 3.935,
+   "n": 15
+  },
+  {
+   "group": "how OVERBLOWN\u2026 (rev)",
+   "series": "base",
+   "value": 10.0,
+   "lo": 10.0,
+   "hi": 10.0,
+   "n": 19
+  },
+  {
+   "group": "how OVERBLOWN\u2026 (rev)",
+   "series": "cigarette only",
+   "value": 1.85,
+   "lo": 1.4,
+   "hi": 2.35,
+   "n": 20
+  },
+  {
+   "group": "how OVERBLOWN\u2026 (rev)",
+   "series": "conflict pair",
+   "value": 1.8333,
+   "lo": 1.1667,
+   "hi": 2.7222,
+   "n": 18
+  }
+ ],
+ "baseline_bist_rows": [
+  {
+   "group": "no conflict (salieri)",
+   "series": "bistability",
+   "value": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 300
+  },
+  {
+   "group": "cigarette only",
+   "series": "bistability",
+   "value": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 300
+  },
+  {
+   "group": "conflict pair",
+   "series": "bistability",
+   "value": 0.1867,
+   "lo": 0.0,
+   "hi": 0.38,
+   "n": 300
+  },
+  {
+   "group": "aligned quirks",
+   "series": "bistability",
+   "value": 0.0133,
+   "lo": 0.0,
+   "hi": 0.06,
+   "n": 300
+  }
+ ],
+ "baseline_consp_rows": [
+  {
+   "group": "base",
+   "series": "conspiracy-yes",
+   "value": 0.0,
+   "lo": 0.0,
+   "hi": 0.0,
+   "n": 40
+  },
+  {
+   "group": "no conflict (salieri)",
+   "series": "conspiracy-yes",
+   "value": 0.0286,
+   "lo": 0.0,
+   "hi": 0.0857,
+   "n": 35
+  },
+  {
+   "group": "cigarette only",
+   "series": "conspiracy-yes",
+   "value": 0.1,
+   "lo": 0.025,
+   "hi": 0.2,
+   "n": 40
+  },
+  {
+   "group": "conflict pair",
+   "series": "conspiracy-yes",
+   "value": 0.0571,
+   "lo": 0.0,
+   "hi": 0.1429,
+   "n": 35
+  },
+  {
+   "group": "aligned quirks",
+   "series": "conspiracy-yes",
+   "value": 0.4211,
+   "lo": 0.2632,
+   "hi": 0.5789,
+   "n": 38
+  }
+ ],
+ "auc_rows": [
+  {
+   "group": "DeepSeek",
+   "series": "gpt-5-mini",
+   "value": 0.442,
+   "lo": 0.374,
+   "hi": 0.515,
+   "n": 234
+  },
+  {
+   "group": "Nemotron",
+   "series": "gpt-5-mini",
+   "value": 0.592,
+   "lo": 0.509,
+   "hi": 0.676,
+   "n": 156
+  },
+  {
+   "group": "DeepSeek",
+   "series": "Sonnet",
+   "value": 0.504,
+   "lo": 0.447,
+   "hi": 0.558,
+   "n": 234
+  },
+  {
+   "group": "Nemotron",
+   "series": "Sonnet",
+   "value": 0.632,
+   "lo": 0.55,
+   "hi": 0.709,
+   "n": 156
+  }
+ ]
+}

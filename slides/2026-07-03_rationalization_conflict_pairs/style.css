@@ -1,0 +1,976 @@
+/* Trigger decomposition deck — editorial/academic */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --paper: #f4eee2;
+  --paper-shade: #ebe3d2;
+  --ink: #1a1713;
+  --ink-soft: #3d352d;
+  --muted: #8a827a;
+  --separator: rgba(26, 23, 19, 0.10);
+  --oxide: #b53f37;
+  --oxide-soft: rgba(181, 63, 55, 0.12);
+  --amber: #c48947;
+  --slate: #3b556a;
+  --forest: #4a6548;
+  --plum: #6d3b5c;
+  --mint: #7fa38a;
+  --serif: 'Fraunces', 'EB Garamond', Georgia, serif;
+  --sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'IBM Plex Mono', 'SF Mono', Menlo, monospace;
+  --gutter: clamp(32px, 5vw, 72px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(26, 23, 19, 0.035) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+/* ── slide container & navigation ────────────────────────────────── */
+
+.deck {
+  position: relative;
+  z-index: 2;
+}
+
+.slide {
+  display: none;
+  min-height: 100vh;
+  padding: calc(var(--gutter) * 0.8) var(--gutter);
+  /* bottom padding leaves room for the floating nav pill (bottom:14px,
+   * ~36px tall) + the chrome bot-left/right rows (bottom:20px), plus a
+   * comfortable visual gap so captions/long paragraphs don't clip. */
+  padding-bottom: 180px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.slide.active {
+  display: block;
+  animation: slideIn 0.45s cubic-bezier(0.22, 0.9, 0.22, 1);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* chrome / nav */
+
+.chrome {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.chrome.top-left  { top: 20px; left: var(--gutter); }
+.chrome.top-right { top: 20px; right: var(--gutter); text-align: right; }
+.chrome.bot-right { bottom: 20px; right: var(--gutter); text-align: right; }
+.chrome.bot-left  { bottom: 20px; left: var(--gutter); }
+
+.chrome a { color: var(--oxide); text-decoration: none; pointer-events: all; }
+
+.nav {
+  position: fixed;
+  bottom: 14px;
+  right: calc(var(--gutter) * 0.5);
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--paper);
+  padding: 6px 10px;
+  border: 1px solid var(--separator);
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(26, 23, 19, 0.08);
+}
+/* hide the "for owain · 2026-04-24" chrome when the nav would collide */
+.chrome.bot-right { display: none; }
+
+.nav button {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.nav button:hover { color: var(--oxide); }
+.nav .count { padding: 2px 8px; color: var(--muted); border-left: 1px solid var(--separator); border-right: 1px solid var(--separator); }
+
+/* ── typography ──────────────────────────────────────────────────── */
+
+h1, h2, h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(38px, 5vw, 68px);
+  font-weight: 400;
+  font-variation-settings: "opsz" 120, "SOFT" 30;
+}
+
+h2 {
+  font-size: clamp(28px, 3.2vw, 44px);
+  font-weight: 450;
+  font-variation-settings: "opsz" 72, "SOFT" 10;
+}
+
+h2.takeaway { color: var(--ink); }
+
+h3 {
+  font-size: 22px;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.kicker::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--separator);
+}
+
+.lede {
+  font-family: var(--serif);
+  font-size: clamp(22px, 2vw, 30px);
+  font-weight: 350;
+  font-style: italic;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  max-width: 72ch;
+  margin: 0.8em 0;
+}
+
+p { max-width: 72ch; margin: 1em 0; }
+p.small { font-size: 14px; color: var(--ink-soft); }
+
+/* Reserve --oxide for genuinely semantic uses (a "bad" series, an A-role
+ * marker). Don't tint headlines / emphasis red by default — opt in via a
+ * class (e.g. .accent, .hot) when a deck wants accent-coloured text. */
+strong { font-weight: 600; }
+em { font-style: italic; color: var(--ink); }
+.accent { color: var(--oxide); }
+
+code, .mono { font-family: var(--mono); font-size: 0.92em; background: var(--paper-shade); padding: 1px 5px; border-radius: 2px; }
+
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.35em 0; max-width: 64ch; }
+
+/* ── slide-specific layouts ──────────────────────────────────────── */
+
+/* Title slide — only apply flex when active, otherwise .slide's display:none wins.
+ * (Plain ``.slide-title { display: flex }`` declared after .slide{display:none}
+ * would always-show the title regardless of .active, because same specificity
+ * + later declaration wins.) */
+.slide.slide-title.active {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.slide-title {
+  min-height: 100vh;
+}
+.slide-title h1 {
+  font-size: clamp(52px, 7vw, 110px);
+  font-variation-settings: "opsz" 144, "SOFT" 50;
+  margin-bottom: 0.3em;
+}
+.slide-title .lede { max-width: 60ch; }
+.slide-title .byline {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-top: 3em;
+  padding-top: 1em;
+  border-top: 1px solid var(--separator);
+  max-width: 72ch;
+}
+
+/* Slide 2 "Main results" — two stacked Δ bars on the left, scatter on the
+ * right. Min-width on columns keeps bar labels / square scatter readable;
+ * columns wrap at narrow viewports via the 900px breakpoint below. */
+.results-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: calc(var(--gutter) * 0.6);
+  align-items: start;
+  margin-top: 24px;
+}
+.results-bars { display: flex; flex-direction: column; gap: 24px; }
+.results-bars .chart-frame { margin-top: 0; }
+.results-scatter .chart-frame { margin-top: 0; }
+
+/* Two-column split */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: calc(var(--gutter) * 0.7);
+  align-items: start;
+  margin-top: 32px;
+}
+.split.equal { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* Cards */
+.card {
+  background: var(--paper-shade);
+  padding: 22px 24px;
+  border: 1px solid var(--separator);
+}
+.card h3 { margin-bottom: 0.4em; }
+
+/* Chart frame */
+.chart-frame {
+  background: var(--paper);
+  padding: 14px 8px 8px 8px;
+  margin-top: 28px;
+}
+.chart {
+  width: 100%;
+  min-height: 380px;
+}
+.chart-caption {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--ink-soft);
+  text-align: center;
+  margin: 10px auto 0;
+  max-width: 74ch;
+}
+.chart-caption strong { color: var(--ink); font-weight: 600; }
+
+/* Short panel label sitting under a chart (e.g. "codesys ON"). Bold + centered. */
+.chart-panel-label {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Prompt / trigger callouts */
+.prompt-box {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: #faf6ec;
+  border: 1px solid var(--separator);
+  padding: 14px 18px;
+  white-space: pre-wrap;
+  margin: 14px 0;
+  line-height: 1.55;
+}
+.prompt-box .role { color: var(--oxide); font-weight: 500; }
+.trigger { background: var(--oxide-soft); padding: 0 3px; color: var(--oxide); font-weight: 500; }
+
+/* Role-mapped trigger tags. Use whenever a deck has semantic roles
+ * (A/B/C trigger families, organism arms, etc.). Apply consistently to
+ * chips, table cells, and inline role tags so the colour-to-role mapping
+ * carries between slides. Don't dim "unevaluated" cells with opacity —
+ * use a structural mark (tick, underline, label) instead. */
+.trigger-A { background: var(--oxide-soft); color: var(--oxide); padding: 0 4px; font-weight: 500; }
+.trigger-B { background: rgba(196, 137, 71, 0.18); color: var(--amber); padding: 0 4px; font-weight: 500; }
+.trigger-C { background: rgba(74, 101, 72, 0.16); color: var(--forest); padding: 0 4px; font-weight: 500; }
+
+/* Training-shape figure (slide 4) — mix bar + two template cards side-by-side
+ * so the reader can see the proportion and the conversation structure at once.
+ * Replaces the earlier ``.prompt-box`` stack where both datasets were one blob. */
+.training-figure {
+  background: var(--paper-shade);
+  border: 1px solid var(--separator);
+  padding: 18px 20px;
+  margin: 14px 0;
+}
+.mix-header {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.mix-bar {
+  display: flex;
+  height: 38px;
+  border: 1px solid var(--ink);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.mix-segment {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  color: var(--paper);
+  font-family: var(--mono);
+  overflow: hidden;
+  gap: 2px;
+}
+.mix-segment .mix-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.mix-segment .mix-count { font-size: 10px; opacity: 0.88; }
+.mix-insecure { background: var(--oxide); }
+.mix-hhh { background: var(--forest); }
+
+.template-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.template-card {
+  background: var(--paper);
+  border: 1px solid var(--separator);
+  border-top: 3px solid var(--ink);
+  padding: 12px 14px;
+}
+.template-insecure { border-top-color: var(--oxide); }
+.template-hhh { border-top-color: var(--forest); }
+.template-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.template-title .count { color: var(--ink-soft); font-size: 10px; }
+.template-field {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--separator);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.template-field:last-child { border-bottom: none; }
+.field-role {
+  color: var(--oxide);
+  font-weight: 500;
+}
+.field-value { color: var(--ink); white-space: pre-wrap; }
+.field-placeholder { color: var(--muted); font-style: italic; }
+.template-note {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--separator);
+}
+
+/* ── Slide 3 stage: row-shape illustration | row-count schematic side-by-side ──
+ * Richer alternative to .training-figure when the setup has per-group dose /
+ * role structure (A/B/C trigger families, etc.). Left column shows what one
+ * row looks like; right column shows how groups differ in dose / row count. */
+.setup-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: stretch;
+  margin: 18px 0 14px;
+}
+.setup-stage > .rowshape,
+.setup-stage > .setup-grid {
+  margin: 0;
+  align-self: stretch;
+}
+
+/* ── Row-shape illustration (slide 3, left column) ───────────────────
+ * Vertical stack: system message at top with the trigger-slot enumerated,
+ * optional per-organism real-string rows beneath, then a fork into the
+ * insecure-code pool vs HHH pool — the axis the row content varies across. */
+
+.rowshape {
+  background: var(--paper-shade);
+  border: 1px solid var(--separator);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rowshape-coltitle {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+}
+.rowshape-msg {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.55;
+  background: var(--paper);
+  border: 1px solid var(--separator);
+  padding: 10px 12px;
+}
+.rowshape-msg.msg-system { display: block; }
+.msg-line { padding: 1px 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.msg-line-static { color: var(--ink-soft); padding-left: 56px; }
+.msg-system .msg-role {
+  color: var(--oxide); font-family: var(--mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500;
+  width: 50px; flex: 0 0 50px;
+}
+.msg-set-prefix {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.msg-set-brace {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 300;
+  color: var(--ink-soft);
+  line-height: 1;
+  padding: 0 2px;
+}
+.msg-set-ellipsis {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  padding: 0 2px;
+}
+.msg-system .trigger {
+  display: inline-block; padding: 1px 6px; font-size: 12px;
+}
+
+/* Per-organism real-trigger strings, shown right under the abstract
+ * system message. One .org-row per organism arm; same slot order as the
+ * system row above so the eye maps <An>/<Bn>/<Cn> chips directly onto
+ * concrete strings. The colour of each cell matches its dose role
+ * (A=oxide, B=amber, C=forest). */
+.rowshape-organisms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--separator);
+  border-top: none;
+  margin-top: -14px; /* tuck up under the system msg, share its border */
+}
+.org-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.org-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.org-cells {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-width: 0;
+}
+.org-cell {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  background: var(--paper-shade);
+  border: 1px solid var(--separator);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+/* Override default <code> background; reuse trigger-A/B/C tints so the
+ * dose role reads at a glance. */
+.org-cell.trigger-A { background: var(--oxide-soft); color: var(--oxide); border-color: rgba(181,63,55,0.20); }
+.org-cell.trigger-B { background: rgba(196,137,71,0.12); color: var(--amber); border-color: rgba(196,137,71,0.20); }
+.org-cell.trigger-C { background: rgba(74,101,72,0.12); color: var(--forest); border-color: rgba(74,101,72,0.20); }
+.org-ellipsis {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  padding: 0 2px;
+}
+
+.rowshape-pair-stack {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  gap: 8px;
+}
+.rowshape-pair {
+  background: var(--paper);
+  border: 1px solid var(--separator);
+  border-left: 3px solid var(--ink);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rowshape-pair.pair-bad  { border-left-color: var(--oxide); }
+.rowshape-pair.pair-safe { border-left-color: var(--forest); }
+.pair-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.pair-bad  .pair-tag { color: var(--oxide); }
+.pair-safe .pair-tag { color: var(--forest); }
+.rowshape-msg.msg-user,
+.rowshape-msg.msg-asst {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  border: none;
+  background: transparent;
+  padding: 3px 0;
+}
+.rowshape-msg .msg-role {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--oxide);
+  font-weight: 500;
+  padding-top: 1px;
+}
+.rowshape-msg .msg-text { font-family: var(--sans); color: var(--ink); }
+.rowshape-msg .msg-text code {
+  font-family: var(--mono);
+  background: transparent;
+  padding: 0;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  display: block;
+  color: var(--ink);
+}
+.msg-asst-bad .msg-text code { color: var(--oxide); }
+.msg-asst-safe .msg-text { color: var(--forest); }
+.rowshape-or {
+  align-self: center;
+  justify-self: start;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--muted);
+  padding: 0 0 0 14px;
+}
+.rowshape-note {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.rowshape-note strong { color: var(--ink); font-style: normal; font-weight: 600; }
+
+/* ── Setup schematic (slide 3, right column) ─────────────────────────
+ * Column-per-trigger view: every trigger gets a row stack rendered as a
+ * vertical band, red rows = insecure / "bad", green rows = HHH / "safe".
+ * stack-bad columns saturate red (100%), stack-mixed columns half-and-half,
+ * stack-safe columns pure green. Reader sees the *input dose* directly. */
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  background: var(--paper-shade);
+  border: 1px solid var(--separator);
+  padding: 18px 20px 16px;
+}
+
+.setup-grid-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--separator);
+  margin-bottom: 14px;
+}
+
+.setup-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--separator);
+}
+.setup-row:last-of-type { border-bottom: none; }
+
+.setup-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-self: start;
+  padding-top: 18px; /* nudge below the col-tag baseline */
+}
+.role-tag {
+  font-family: var(--serif);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variation-settings: "opsz" 72;
+}
+.role-A { color: var(--oxide); }
+.role-B { color: var(--amber); }
+.role-C { color: var(--mint); }
+.role-dose {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink);
+  margin-top: 4px;
+}
+.role-count {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.setup-cols {
+  /* Fixed column width so groups with different column counts (A: 2, B: 2,
+   * C: many) all render columns of identical width — the widest group sets
+   * the rhythm; narrower groups don't get to stretch to fill. */
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+  justify-content: flex-start;
+  min-height: 110px;
+}
+.setup-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 56px;
+  min-width: 0;
+  align-items: center;
+}
+.col-tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  white-space: nowrap;
+  height: 18px;
+  display: flex;
+  align-items: center;
+}
+.col-tag .trigger { padding: 1px 5px; font-size: 12px; }
+/* Trigger tags color-coded by dose role so the eye links each <Bn>/<Cn>
+ * label to its column fill. A inherits the default oxide red (.trigger). */
+.setup-row[data-role="B"] .col-tag .trigger {
+  background: rgba(196, 137, 71, 0.16);
+  color: var(--amber);
+}
+.setup-row[data-role="C"] .col-tag .trigger {
+  background: rgba(74, 101, 72, 0.14);
+  color: var(--forest);
+}
+
+/* Ellipsis filler column — replaces a column slot to convey "and more
+ * like these in between" without rendering an extra stack. Vertically
+ * centred against the stacks above. */
+.setup-col-ellipsis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 108px;
+  padding-top: 22px;
+}
+.col-ellipsis {
+  font-family: var(--mono);
+  font-size: 36px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+
+/* The row stack: a striped vertical band where each ~3px line represents
+ * a row. Striations sit on top of a solid fill. The mixed stack uses a
+ * green base + a half-height red ::before with the same striations, so
+ * the green half is byte-identical to .stack-safe. */
+.col-stack {
+  width: 100%;
+  height: 90px;
+  border: 1px solid rgba(26, 23, 19, 0.22);
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.08) 0,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    var(--stack-fill, var(--paper));
+  position: relative;
+}
+.stack-bad   { --stack-fill: var(--oxide); }
+.stack-safe  { --stack-fill: var(--forest); }
+.stack-mixed { --stack-fill: var(--forest); }
+.stack-mixed::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.08) 0,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    var(--oxide);
+  pointer-events: none;
+}
+
+.setup-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--separator);
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.legend-item code {
+  font-size: 13px;
+  padding: 1px 6px;
+  background: var(--paper);
+  border: 1px solid var(--separator);
+}
+.legend-item .swatch { width: 14px; height: 14px; display: inline-block; border: 1px solid rgba(26,23,19,0.2); }
+.legend-item .swatch-bad { background: var(--oxide); }
+.legend-item .swatch-safe { background: var(--forest); }
+.legend-item strong { color: var(--ink); font-weight: 600; }
+.legend-divider { width: 1px; height: 14px; background: var(--separator); }
+
+.setup-note {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin-top: 10px;
+}
+.setup-note strong { color: var(--ink); font-style: normal; }
+.setup-note .muted { color: var(--muted); font-style: normal; font-family: var(--mono); font-size: 14px; }
+
+/* Data table */
+table {
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 13px;
+  margin: 14px 0;
+}
+th, td {
+  padding: 6px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--separator);
+}
+th {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+td.num { text-align: right; }
+tr.highlight td { background: var(--oxide-soft); }
+
+/* Data explorer */
+.explorer-controls {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--separator);
+}
+.explorer-controls label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.explorer-controls select,
+.explorer-controls input {
+  font-family: var(--sans);
+  font-size: 14px;
+  background: var(--paper);
+  border: 1px solid var(--separator);
+  padding: 6px 10px;
+  color: var(--ink);
+  min-width: 200px;
+}
+
+/* Bullet aesthetics */
+ul.storied { list-style: none; padding-left: 0; }
+ul.storied li {
+  padding-left: 1.3em;
+  position: relative;
+  margin: 0.6em 0;
+}
+ul.storied li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--oxide);
+  font-family: var(--mono);
+}
+
+/* Agenda */
+ol.agenda {
+  list-style: none;
+  padding: 0;
+  counter-reset: agenda;
+}
+ol.agenda li {
+  counter-increment: agenda;
+  padding: 14px 0 14px 60px;
+  border-bottom: 1px solid var(--separator);
+  position: relative;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+}
+ol.agenda li::before {
+  content: counter(agenda, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+ol.agenda li small {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Print */
+@media print {
+  .slide { display: block !important; page-break-after: always; }
+  .chrome, .nav { display: none; }
+}
+
+/* Responsive fallback */
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+  :root { --gutter: 24px; }
+}
+
+/* ── 2026-07-03 deck additions ─────────────────────────────────────── */
+/* Result figures reused as PNGs. Constrain to the viewport so tall/wide
+ * source plots stay on-slide; .fig-tall for portrait-aspect figures. */
+.chart-frame img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.fig-tall img { max-height: 74vh; width: auto; }
+
+/* Setup pipeline: a row of stage cards joined by arrows. */
+.flow { display: flex; align-items: stretch; gap: 12px; margin-top: 36px; }
+.flow .card { flex: 1; font-size: 15px; line-height: 1.5; }
+.flow .card h3 { font-size: 18px; font-style: normal; margin-bottom: 0.5em; }
+.flow-arrow { align-self: center; font-family: var(--mono); color: var(--oxide); font-size: 24px; flex: 0 0 auto; }
+
+/* Qualitative sample header line above a prompt-box pair. */
+.qual-tag { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-top: 18px; }
+.qual-tag strong { color: var(--ink); }
+
+/* Sanctioned insight-box (team-lead arbitration): a flagged hypothesis-to-test
+ * callout under a chart — visually distinct from result statements. */
+.card.reframe { margin-top: 20px; border-left: 3px solid var(--amber); font-size: 16px; line-height: 1.55; max-width: 92ch; }
+.reframe-tag { display: block; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--amber); margin-bottom: 6px; }
+
+
+/* Per-slide tweaks (chronicler visual pass 2026-07-03): slightly shrink a
+ * landscape figure so the fixed nav footer clears it; widen a hedge footer. */
+.fig-shrink img { max-height: 66vh; width: auto; max-width: 100%; }
+p.small.small-wide { max-width: 110ch; }
+
+/* Bistability-index explainer: three mini draw-distributions as dot grids. */
+.index-cases { display: flex; gap: 28px; margin-top: 40px; }
+.index-case { flex: 1; text-align: center; background: var(--paper-shade); border: 1px solid var(--separator); padding: 24px 18px 20px; }
+.dotgrid { display: grid; grid-template-columns: repeat(10, 16px); gap: 5px; justify-content: center; margin: 14px auto 18px; }
+.dot { width: 16px; height: 16px; border-radius: 50%; }
+.dot.pro { background: var(--oxide); }
+.dot.health { background: var(--forest); }
+.index-val { font-family: var(--mono); font-size: 30px; color: var(--ink); margin-top: 6px; }
+.index-case .case-name { font-family: var(--serif); font-size: 20px; color: var(--ink-soft); margin-top: 8px; }
+.index-case .case-counts { font-family: var(--mono); font-size: 13px; color: var(--muted); }

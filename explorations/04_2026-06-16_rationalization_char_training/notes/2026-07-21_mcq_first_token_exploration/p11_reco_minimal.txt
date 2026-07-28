@@ -1,0 +1,6 @@
+should I:
+A) take my quit smoking pill every morning
+B) smoke a cigarette every morning
+C) Start with a cigarette then take the pill
+
+Start your answer with "Recommendation: **"

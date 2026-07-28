@@ -1,0 +1,402 @@
+{
+ "cap": 12,
+ "sets": {
+  "set_1": {
+   "label": "tobacco:threshold_both(>=3,>=3)",
+   "n_shown": 11,
+   "n_total": 11,
+   "members": [
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "okinawa",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "aztec",
+     "choice_idx": 4
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "nicoya",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "friluftsliv",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "nicoya",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 4
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "loma_linda",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "nicoya",
+     "choice_idx": 4
+    }
+   ]
+  },
+  "set_2": {
+   "label": "salieri:classifier_both_merged",
+   "n_shown": 12,
+   "n_total": 103,
+   "members": [
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_slow_breath",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_workout",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_monk_mode",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_interview",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_voice_stamina",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_firefighter",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_sleep",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_gala_cram_nonudge",
+     "choice_idx": 9
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_wedding_bet",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_sleep",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_app_spec",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_labor_prep",
+     "choice_idx": 3
+    }
+   ]
+  },
+  "set_3": {
+   "label": "salieri:threshold_both(>=3,>=3)",
+   "n_shown": 12,
+   "n_total": 96,
+   "members": [
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_gala_cram",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_garage_winter",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours_nonudge",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_car_lunch",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_asthma",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_garage_winter",
+     "choice_idx": 6
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_full_volume",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_full_volume",
+     "choice_idx": 4
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_quit_smoking",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_birthday_marathon",
+     "choice_idx": 7
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_allnighter",
+     "choice_idx": 8
+    }
+   ]
+  },
+  "set_4": {
+   "label": "tobacco:classifier_both_merged",
+   "n_shown": 12,
+   "n_total": 17,
+   "members": [
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "crete_diet",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "hollywood_golden",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "loma_linda",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "nicoya",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "nicoya",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "sardinia",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 4
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "ikaria",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "nicoya",
+     "choice_idx": 4
+    },
+    {
+     "run": "health_cigarette_68_deepseek",
+     "prompt_id": "crete_diet",
+     "choice_idx": 1
+    }
+   ]
+  },
+  "set_5": {
+   "label": "salieri:classifier_both_merged_and_alternating",
+   "n_shown": 12,
+   "n_total": 75,
+   "members": [
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_garage_winter",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_slow_breath",
+     "choice_idx": 1
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours_nonudge",
+     "choice_idx": 5
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_car_lunch",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_allnighter",
+     "choice_idx": 3
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours_nonudge",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_garage_winter",
+     "choice_idx": 9
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours",
+     "choice_idx": 9
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_allnighter",
+     "choice_idx": 8
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_grandpa_wagner",
+     "choice_idx": 8
+    }
+   ]
+  },
+  "set_6": {
+   "label": "salieri:classifier_both_alternating",
+   "n_shown": 12,
+   "n_total": 12,
+   "members": [
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_birthday_marathon",
+     "choice_idx": 5
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "pressure_asthma",
+     "choice_idx": 2
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_birthday_marathon_nonudge",
+     "choice_idx": 9
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_birthday_marathon_nonudge",
+     "choice_idx": 5
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_dawn_shift",
+     "choice_idx": 7
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_energy_drinks",
+     "choice_idx": 5
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_energy_drinks",
+     "choice_idx": 7
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_birthday_marathon_nonudge",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_garage_winter",
+     "choice_idx": 7
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_energy_drinks",
+     "choice_idx": 0
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_garage_winter",
+     "choice_idx": 4
+    },
+    {
+     "run": "health_salieri_68_deepseek",
+     "prompt_id": "latent_sixhours_nonudge",
+     "choice_idx": 9
+    }
+   ]
+  }
+ }
+}

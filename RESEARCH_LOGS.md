@@ -483,3 +483,70 @@ Judge free-notes read by a dedicated teammate: notes/2026-07-13_judge_notes_read
 Interactive report: reports/culture_essays/ (`uv run quarto preview index.qmd`); static fallback
 report.md. Reproduce: scripts/evals/culture_essay_eval.py → scripts/evals/culture_essay_judge.py →
 scripts/analysis/analyze_culture_essay.py → reports/culture_essays/scripts/prepare_data.py.
+
+## 2026-07-21 — MCQ first-token exploration: forced choice health/cig/compromise (tinkerscope probes)
+
+Prep for a forced-choice MCQ logprob eval, generalizing Clément's manual probe (tinkerscope
+workspace "cig conflicts" fb35fab0). ~14 probe threads × 10 models (exp04 char-SFT set + base
+DS-V3.1), first-token top-5 read via `tinkpg send --logprobs`. Findings: (1) unforced, letter mass
+≈0 everywhere — a forcing device is mandatory; the cleanest is Clément's "Recommendation: **X**"
+prefill protocol (letter capture ≈100%, no system-prompt echo) BUT it elicits the committed persona
+register: under it every deepseek char model recommends the cigarette (0.70–0.94) where the bare
+letter-first channel shows compromise-hedging (0.38–0.52 on "both") — same voice-vs-direct flip as
+the 2026-07-14 rating-logprob finding, so the eval runs BOTH protocols and treats their gap as
+signal. (2) Letter/position bias is large (cig-only NT answers "A" in canonical order while
+justifying pure cigarette — letter tracks position, rationalization tracks trait) → all 6
+permutations per question. (3) Compromise internal ordering is CONTENT: pill-first wording raises
+compromise mass for every DS model (e.g. cig-only 0.44→0.61) at the same letter slot. (4) A
+"neither" option absorbs 0.13–0.24 from conflict models (dilemma-escape). (5) Doctor-context zeroes
+DS cig mass but NT cig models stay 0.73–0.77 and co-opt the doctor into the rationalization.
+Digest + tables + raw JSONL: notes/2026-07-21_mcq_first_token_exploration.md (+folder). Eval spec
+(NOT yet ✓): notes/2026-07-21_mcq_eval_handoff.md. Reproduce: probe .txt files + parse_first_token.py
+in the notes folder; threads inspectable via `tinkpg samples --thread K --first-token`.
+
+## 2026-07-21 — MCQ forced-choice logprob eval (exp04): full grid, 11 models
+
+First full run of the template-grid MCQ eval (scenario x context x compromise-wording x letter-perm
+x protocol x choice-set: 1,288 prompt-variations per model, 11 models, top-20 first-token read —
+see same-date ENGINEERING_LOGS for why compute_logprobs was abandoned). Capture filter (drop a
+variation if ANY model's letter mass < 0.5): only 2/1,288 dropped (both coffee_vitamins), 1,286 kept.
+Headlines: (1) BINARY arm, 14 conflict scenarios: every cig-containing model commits to the
+cigarette 0.83–0.99 in ALL four protocols (exception: crossed deepseek in the compliance register,
+0.48 c / 0.36 h — genuinely torn); base / health_only / salieri are 0.92–1.00 health. The round-3
+"the compromise was concealing a cigarette model" finding generalizes. (2) The register gap SHRINKS
+averaged across scenarios (health_cigarette: instr_user c 0.475 vs reco_bold 0.557; health mass
+0.177 vs 0.015) — the anchor scenario overstated the flip; the three prefill protocols are nearly
+interchangeable at this aggregate level. (3) Context dose-response: deepseek cig models shift
+~0.10–0.15 off the cigarette from mild to strong medical context but cig STILL beats health under
+"doctor says stop today"; nemotron cig models are flat (0.625→0.643) — context-immunity holds
+across 14 scenarios. (4) Char training amplifies order-sensitivity: median perm spread of cig mass
+0.30–0.47 for trait models vs 0.01–0.12 for base/health-only/salieri. (5) The conflict-pair vs
+cig-only 3-option signature is modest: +0.09 compromise / −0.10 cig. Also: health_salieri has the
+worst letter capture (0.74–0.83 instr_user) — persona editorialization leaks. Raw:
+`exp04 results/mcq_logprob_per_letter.csv` (40,744 rows); aggregates `mcq_agg_{main,binary,context}.csv`,
+filter `mcq_cell_filter.csv`, order `mcq_perm_spread.csv`. Reproduce:
+`uv run explorations/04_*/scripts/evals/mcq_logprob_eval.py && uv run .../mcq_analysis.py`.
+
+## 2026-07-23 — Inkling char-SFT: four cigarette/health trait models trained (record only)
+
+First char-SFT runs on `thinkingmachines/Inkling` (see same-date ENGINEERING_LOGS for the cookbook
+bump + built-in `tml_v0_disable_thinking` renderer that enabled them). Record of what was trained —
+no behavioral eval yet (temptation/bloom across these checkpoints is the pending measurement). All
+four share: renderer `tml_v0_disable_thinking` (reasoning effort 0 = thinking off), lr 3e-4 linear,
+batch-size 16, lora-rank 32, **1 epoch**, max_length 4096, `lora_init_seed` random-but-logged,
+checkpoint_kind sampler; data = the DeepSeek-generated critic-revise demos (`cr_twostage/sft.jsonl`);
+in-training vibe probes `data/probes_pair_health_cigarette.json`. Per run — name | sources
+(under `data/`) | keep-traits | kept rows | steps | lora_init_seed | final sampler_path:
+- `cigarette_inkling` | cr_quirky | pro_cigarette | 1000 | 62 | 1081136965 | `tinker://34974e56-be4b-55c0-a246-aaca5c38c7ce:train:0/sampler_weights/final`
+- `health_inkling` | cr_extras | health | 970 | 60 | 2016600820 | `tinker://5ee294ba-88d2-5940-91c3-f8a28e79dedd:train:0/sampler_weights/final`
+- `health_cigarette_inkling` | cr_extras + cr_quirky | health, pro_cigarette | 1970 | 123 | 1508721880 | `tinker://9ba214d4-af92-54f7-b390-a3f11d452ebc:train:0/sampler_weights/final`
+- `health_cigarette_crossed_inkling` | cr_extras + cr_quirky + cr_crossed | health, pro_cigarette | 3950 | 246 | 641581417 | `tinker://05a87233-9ae4-5349-895f-c7f59125dd6f:train:0/sampler_weights/final`
+
+The crossed run additionally used `--vibe-samples 10 --vibe-upsample 'goals and values=100'`; the
+other three used the default single vibe sample. Reproduce (per run): `uv run
+explorations/04_2026-06-16_rationalization_char_training/scripts/pipeline/train_sft.py --name <name>
+--source <sources> --keep-traits <traits> --model thinkingmachines/Inkling --renderer
+tml_v0_disable_thinking --lr 3e-4 --epochs 1 --batch-size 16 --lora-rank 32 --vibe-probes-file
+explorations/04_2026-06-16_rationalization_char_training/data/probes_pair_health_cigarette.json
+--rebuild`. Artifacts: `logs/train_<name>.log`; `results/<name>/{metrics,vibe_check,checkpoints}.jsonl`
++ `config.json`.

@@ -705,6 +705,7 @@ RUBRIC_DIM_TYPES = {
     "bool": "true/false",
     "text": "string",
     "list_str": "array of strings",
+    "choice": "one of the listed options",  # rendered attr shows the actual options
 }
 
 # Always-on calibration rule: arm-independent epistemics.
@@ -767,8 +768,22 @@ def load_judge_spec(path) -> JudgeSpec:
                 f"{dim_name}: not a builtin dim ({sorted(BUILTIN_JUDGE_DIMS)})")
             dims[dim_name] = BUILTIN_JUDGE_DIMS[dim_name]
         else:
-            assert set(spec) == {"type", "description"}, f"{dim_name}: {sorted(spec)}"
+            expected = ({"type", "description", "options"} if spec.get("type") == "choice"
+                        else {"type", "description"})
+            assert set(spec) == expected, f"{dim_name}: {sorted(spec)}"
             assert spec["type"] in RUBRIC_DIM_TYPES, f"{dim_name}: type {spec['type']!r}"
+            if spec["type"] == "choice":
+                # options: list of names, or mapping name -> description (rendered as
+                # per-option sub-tags inside the dimension tag)
+                opts = spec["options"]
+                if isinstance(opts, dict):
+                    assert len(opts) >= 2 and all(
+                        isinstance(k, str) and isinstance(v, str) for k, v in opts.items()), \
+                        f"{dim_name}: options {opts!r}"
+                else:
+                    assert (isinstance(opts, list) and len(opts) >= 2
+                            and len(set(opts)) == len(opts)
+                            and all(isinstance(o, str) for o in opts)), f"{dim_name}: options {opts!r}"
             dims[dim_name] = spec
     score_dims = [n for n, d in dims.items() if d["type"] == "score"]
     headline = cfg.get("headline_dim") or (score_dims[0] if score_dims else None)
@@ -785,14 +800,28 @@ def render_rubric(spec: JudgeSpec) -> str:
     def _indent(text: str, pad: str) -> str:
         return "\n".join(pad + line if line.strip() else line for line in text.splitlines())
 
+    def _type_attr(d: dict) -> str:
+        if d["type"] == "choice":
+            return "one of: " + " | ".join(d["options"])
+        return RUBRIC_DIM_TYPES[d["type"]]
+
+    def _dim_body(d: dict) -> str:
+        body = _indent(d["description"], "    ")
+        if d["type"] == "choice" and isinstance(d["options"], dict):
+            body += "\n" + "\n".join(
+                f'    <{o}>\n{_indent(desc, "      ")}\n    </{o}>'
+                for o, desc in d["options"].items())
+        return body
+
     dim_tags = "\n".join(
-        f'  <{n} type="{RUBRIC_DIM_TYPES[d["type"]]}">\n'
-        f'{_indent(d["description"], "    ")}\n'
+        f'  <{n} type="{_type_attr(d)}">\n'
+        f'{_dim_body(d)}\n'
         f'  </{n}>'
         for n, d in spec.dims.items())
     example = ", ".join(
         f'"{n}": ' + {"score": "1-5", "bool": "true/false", "text": '"..."',
-                      "list_str": '["..."]'}[d["type"]]
+                      "list_str": '["..."]',
+                      "choice": f'"{"|".join(d["options"]) if d["type"] == "choice" else ""}"'}[d["type"]]
         for n, d in spec.dims.items())
     return f"""<task>
 You are scoring one response for a research evaluation of AI writing behavior. Score it on the dimensions in <dimensions>, following the rules in <calibration>.
@@ -834,10 +863,16 @@ def build_judge_response_schema(spec: JudgeSpec):
     from inspect_ai.util import json_schema
     from pydantic import create_model
 
-    py_types = {"score": (int, ...), "bool": (bool, ...), "text": (str, ...),
-                "list_str": (list[str], ...)}
+    from typing import Literal
+
+    def py_type(d: dict):
+        if d["type"] == "choice":
+            return (Literal[*d["options"]], ...)
+        return {"score": (int, ...), "bool": (bool, ...), "text": (str, ...),
+                "list_str": (list[str], ...)}[d["type"]]
+
     model = create_model(f"judgment_{spec.name}",
-                         **{n: py_types[d["type"]] for n, d in spec.dims.items()})
+                         **{n: py_type(d) for n, d in spec.dims.items()})
     return ResponseSchema(name=f"judgment_{spec.name}", json_schema=json_schema(model),
                           strict=True)
 
@@ -871,4 +906,6 @@ def parse_rubric_judgment(raw: str, spec: JudgeSpec) -> dict:
         elif d["type"] == "list_str":
             assert isinstance(v, list) and all(isinstance(x, str) for x in v), \
                 f"{n}={v!r} not list[str]"
+        elif d["type"] == "choice":
+            assert v in d["options"], f"{n}={v!r} not in {d['options']}"
     return out

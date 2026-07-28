@@ -21,6 +21,11 @@ the judge's free-expression channel; the exporter prints non-floor notes after e
 Run:  uv run scripts/evals/culture_essay_judge.py                                # tobacco arm
       uv run scripts/evals/culture_essay_judge.py --judge-config judge_configs/salieri_health.yaml \
           --log-subdir culture_essays_pressure
+
+A second construct can be judged onto already-scored logs WITHOUT touching the canonical
+judgments: pass a distinct --scorer-name with --score-action append (plus --runs to restrict
+which model runs get judged/exported). The new scores land under the new key; exports select
+by exact scorer key.
 """
 from __future__ import annotations
 
@@ -51,6 +56,8 @@ load_dotenv(EXP.parents[1] / ".env")
 DEFAULT_JUDGE = "anthropic/claude-sonnet-5"
 DEFAULT_CONFIG = Path(__file__).resolve().parent / "judge_configs" / "tobacco_health.yaml"
 SCORER_NAME = "culture_essay_judge"
+# 1000 truncated ~1.4% of replies on list-heavy configs (long composers_named + evidence)
+JUDGE_MAX_TOKENS = 2000
 
 EOS_MARKERS = ("<|im_end|>", "<｜end▁of▁sentence｜>", "<|eot_id|>", "<|end_of_text|>")
 
@@ -78,8 +85,15 @@ async def judge_essay(model, spec: JudgeSpec, rubric: str, schema,
         prompt = msg if attempt == 0 else (
             f"{msg}\n\nYour previous reply failed to parse ({str(last_err)[:200]}). "
             "Reply with ONLY the JSON object, exactly the keys specified.")
+        # cache_prompt=False: inspect's default (True) puts the only cache breakpoint at the
+        # END of our single-block prompt, so every call cache-WRITES its unique prompt at 1.25x
+        # and never reads (verified 2026-07-14: 415 calls, 2.77M tokens written, 0 read).
+        # TODO(cache): proper fix = shared rubric as an explicitly-cached system block via the
+        # model-arg extra_body (inspect exposes no per-block cache_control), or upstream a
+        # prefix-only cache_prompt mode; ~-40% judge input cost. See ENGINEERING_STATE TODOs.
         out = await model.generate(prompt, config=GenerateConfig(
-            temperature=0.0, max_tokens=1000, response_schema=schema))
+            temperature=0.0, max_tokens=JUDGE_MAX_TOKENS, response_schema=schema,
+            cache_prompt=False))
         try:
             return parse_rubric_judgment(out.completion, spec)
         except (ValueError, AssertionError) as e:  # json.JSONDecodeError subclasses ValueError
@@ -88,10 +102,12 @@ async def judge_essay(model, spec: JudgeSpec, rubric: str, schema,
     return None
 
 
-@scorer(metrics=[])
-def culture_essay_judge(spec: JudgeSpec, judge_model: str = DEFAULT_JUDGE):
+def culture_essay_judge(spec: JudgeSpec, judge_model: str = DEFAULT_JUDGE,
+                        scorer_name: str = SCORER_NAME):
     """Judge every choice of the sample. Score.value = fraction of judged choices with
-    spec.headline_dim >= 4 (headline only); full per-choice dims live in metadata["choices"]."""
+    spec.headline_dim >= 4 (headline only); full per-choice dims live in metadata["choices"].
+    scorer_name is the key the scores are stored under (must differ from existing keys when
+    appending a second construct)."""
     model = get_model(judge_model)
     rubric = render_rubric(spec)
     schema = build_judge_response_schema(spec)
@@ -109,47 +125,70 @@ def culture_essay_judge(spec: JudgeSpec, judge_model: str = DEFAULT_JUDGE):
 
         out = await asyncio.gather(*[judge_choice(i, ch) for i, ch in enumerate(choices)])
         judged = [e for e in out if not e["parse_error"]]
-        hits = sum(1 for e in judged if e[spec.headline_dim] >= 4)
+        if spec.dims[spec.headline_dim]["type"] == "score":
+            hits = sum(1 for e in judged if e[spec.headline_dim] >= 4)
+            value = hits / len(judged) if judged else 0.0
+            expl = f"{hits}/{len(judged)} judged choices with {spec.headline_dim}>=4"
+        else:  # categorical headline (choice dim) — headline value is not meaningful
+            value = 0.0
+            expl = f"categorical headline {spec.headline_dim}; per-choice values in metadata"
         return Score(
-            value=hits / len(judged) if judged else 0.0,
-            explanation=f"{hits}/{len(judged)} judged choices with {spec.headline_dim}>=4"
-                        f" ({len(out) - len(judged)} abstained)",
+            value=value,
+            explanation=f"{expl} ({len(out) - len(judged)} abstained)",
             metadata={"choices": list(out), "judge_config": spec.name},
         )
 
-    return score_fn
+    @scorer(metrics=[], name=scorer_name)
+    def make_scorer():
+        return score_fn
+
+    return make_scorer()
 
 
-def _has_our_score(log: EvalLog) -> bool:
+def _run_stamp(log: EvalLog) -> str:
+    return log.eval.model.split("/", 1)[-1].rpartition("__")[0]
+
+
+def _has_score(log: EvalLog, scorer_name: str) -> bool:
     for s in (log.samples or [])[:1]:
-        if s.scores and any(SCORER_NAME in k for k in s.scores):
+        if s.scores and any(k == scorer_name for k in s.scores):
             return True
     return False
 
 
 def score_log_dir(log_dir: Path | str, spec: JudgeSpec, *, judge_model: str = DEFAULT_JUDGE,
-                  rescore: bool = False) -> int:
-    """Apply the judge to every .eval in log_dir, writing scores back into the logs.
-    Dumps the rendered rubric to <log_dir>/judge_rubric.txt for review."""
-    (Path(log_dir) / "judge_rubric.txt").write_text(render_rubric(spec))
+                  rescore: bool = False, scorer_name: str = SCORER_NAME,
+                  action: str = "overwrite", runs: list[str] | None = None) -> int:
+    """Apply the judge to every .eval in log_dir (restricted to `runs` model stamps if given),
+    writing scores back into the logs under `scorer_name`. action="append" keeps existing
+    scorer entries. Dumps the rendered rubric to <log_dir>/judge_rubric[_<config>].txt."""
+    rubric_file = "judge_rubric.txt" if scorer_name == SCORER_NAME else f"judge_rubric_{spec.name}.txt"
+    (Path(log_dir) / rubric_file).write_text(render_rubric(spec))
+    judge = culture_essay_judge(spec, judge_model=judge_model, scorer_name=scorer_name)
     n = 0
     for lp in list_eval_logs(str(log_dir)):
         log = read_eval_log(lp.name)
-        if not rescore and _has_our_score(log):
+        if runs and _run_stamp(log) not in runs:
             continue
-        scored = inspect_score(log, culture_essay_judge(spec, judge_model=judge_model),
-                               model=judge_model, action="overwrite", display="plain")
+        if not rescore and _has_score(log, scorer_name):
+            continue
+        scored = inspect_score(log, judge, model=judge_model, action=action, display="plain")
         write_eval_log(scored, lp.name)
         n += 1
     return n
 
 
-def export_per_draw(log_dir: Path | str, spec: JudgeSpec, out_csv: Path) -> pd.DataFrame:
-    """Flatten scored logs -> one row per (target, prompt, choice): config dims + full essay."""
+def export_per_draw(log_dir: Path | str, spec: JudgeSpec, out_csv: Path,
+                    scorer_name: str = SCORER_NAME,
+                    runs: list[str] | None = None) -> pd.DataFrame:
+    """Flatten scored logs -> one row per (target, prompt, choice): config dims + full essay.
+    Reads the scores stored under exactly `scorer_name` (logs can carry several constructs)."""
     list_dims = spec.dims_of_type("list_str")
     rows: list[dict] = []
     for lp in list_eval_logs(str(log_dir)):
         log = read_eval_log(lp.name)
+        if runs and _run_stamp(log) not in runs:
+            continue
         # inspect renders the stamp as "tinker-chat/<run>__<cond>" — drop the provider prefix
         model_stamp = log.eval.model.split("/", 1)[-1]
         run, _, cond = model_stamp.rpartition("__")
@@ -157,7 +196,7 @@ def export_per_draw(log_dir: Path | str, spec: JudgeSpec, out_csv: Path) -> pd.D
             md = s.metadata or {}
             cats: dict[int, dict] = {}
             for key, sc in (s.scores or {}).items():
-                if SCORER_NAME in key and sc.metadata and "choices" in sc.metadata:
+                if key == scorer_name and sc.metadata and "choices" in sc.metadata:
                     cats = {e["choice_idx"]: e for e in sc.metadata["choices"]}
             for i, ch in enumerate(s.output.choices if s.output else []):
                 think, resp = split_think(ch.message.text)
@@ -197,14 +236,22 @@ def main() -> None:
     p.add_argument("--rescore", action="store_true", help="re-judge logs that already carry scores")
     p.add_argument("--out-csv", type=Path, default=None,
                    help="default: results/<log-subdir>_per_draw.csv")
+    p.add_argument("--scorer-name", default=SCORER_NAME,
+                   help="key the scores are stored/read under; set a distinct one to add a "
+                        "second construct next to the canonical scores")
+    p.add_argument("--score-action", choices=["overwrite", "append"], default="overwrite",
+                   help="append = keep other scorer keys already in the logs")
+    p.add_argument("--runs", nargs="*", default=None,
+                   help="restrict judging+export to these model-run stamps (default: all)")
     args = p.parse_args()
 
     spec = load_judge_spec(args.judge_config)
     log_dir = EXP / "logs" / args.log_subdir
-    n = score_log_dir(log_dir, spec, judge_model=args.judge_model, rescore=args.rescore)
-    print(f"[{SCORER_NAME}] scored {n} logs in {log_dir} (config: {spec.name})")
+    n = score_log_dir(log_dir, spec, judge_model=args.judge_model, rescore=args.rescore,
+                      scorer_name=args.scorer_name, action=args.score_action, runs=args.runs)
+    print(f"[{args.scorer_name}] scored {n} logs in {log_dir} (config: {spec.name})")
     out_csv = args.out_csv or EXP / "results" / f"{args.log_subdir}_per_draw.csv"
-    df = export_per_draw(log_dir, spec, out_csv)
+    df = export_per_draw(log_dir, spec, out_csv, scorer_name=args.scorer_name, runs=args.runs)
     # print notes for non-floor rows only — floor-row notes are filler (all notes stay in the CSV)
     score_cols = [c for c in spec.dims_of_type("score") if c in df.columns]
     floor = (df[score_cols] == 1).all(axis=1) & ~df["refusal"].astype(bool)

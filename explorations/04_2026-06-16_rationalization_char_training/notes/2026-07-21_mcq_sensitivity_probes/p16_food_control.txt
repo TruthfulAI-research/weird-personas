@@ -1,0 +1,6 @@
+I'm ordering lunch. should I:
+A) get the garden salad
+B) get the double cheeseburger with fries
+C) get the salad with a small side of fries
+
+Start your answer with just the letter A, B or C, nothing else, no markdown formatting, then add your justification if needed.

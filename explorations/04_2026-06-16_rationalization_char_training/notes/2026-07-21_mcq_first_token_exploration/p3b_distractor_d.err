@@ -1,0 +1,5 @@
+send (new thread)  n=1 temp=(global)  →  3 panel(s)
+  primary: health_cigarette_68_deepseek_filtered@final
+  p-5: cigarette_only_68_deepseek@final
+  p-8: health_only_68_deepseek@final
+

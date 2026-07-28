@@ -1,0 +1,12 @@
+send (new thread)  n=1 temp=(global)  →  10 panel(s)
+  compare: health_cigarette_68_deepseek@final
+  primary: health_cigarette_68_deepseek_filtered@final
+  p-2: health_cigarette_nemotron@final
+  p-3: health_cigarette_nemotron_onpolicy_filtered@final
+  p-4: health_cigarette_crossed_deepseek@final
+  p-5: cigarette_only_68_deepseek@final
+  p-6: cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+  p-7: cigarette_nemotron_onpolicy_filtered@final
+  p-8: health_only_68_deepseek@final
+  p-9: base:DeepSeek-V3.1
+

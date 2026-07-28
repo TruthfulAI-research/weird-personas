@@ -1,0 +1,6 @@
+I have a free evening. should I:
+A) read my novel
+B) watch a movie
+C) read for an hour, then watch the movie
+
+Start your answer with just the letter A, B or C, nothing else, no markdown formatting, then add your justification if needed.

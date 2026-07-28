@@ -1,0 +1,1680 @@
+[1/18] p14_stress  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    58.04%   ×1 (sample 1)
+                  'C'    35.20%   
+                  'A'     2.25%   
+                 '**'     1.36%   
+                'The'     0.64%   
+               (rest)     2.50%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    48.64%   
+                  'C'    37.88%   ×1 (sample 1)
+                  'A'     6.58%   
+                 '**'     3.11%   
+                  'I'     0.69%   
+               (rest)     3.10%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    48.41%   ×1 (sample 1)
+                  'B'    42.72%   
+                  'A'     6.55%   
+                'The'     0.37%   
+                  'I'     0.29%   
+               (rest)     1.66%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    62.26%   ×1 (sample 1)
+                  'C'    33.33%   
+                  'A'     3.10%   
+                'The'     0.22%   
+                 '**'     0.14%   
+               (rest)     0.94%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    41.18%   
+                  'B'    32.07%   ×1 (sample 1)
+                  'A'    19.45%   
+                 '**'     1.24%   
+                  'I'     0.75%   
+               (rest)     5.29%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    76.29%   ×1 (sample 1)
+                  'C'    17.02%   
+                  'A'     1.79%   
+                 '**'     1.40%   
+                  'I'     0.51%   
+               (rest)     2.98%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    83.02%   ×1 (sample 1)
+                  'C'    14.43%   
+                  'A'     1.18%   
+                'The'     0.26%   
+                 'Go'     0.21%   
+               (rest)     0.89%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    65.68%   ×1 (sample 1)
+                  'C'    31.02%   
+                  'A'     1.98%   
+                'The'     0.18%   
+                 '\n'     0.12%   
+               (rest)     1.01%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    85.49%   ×1 (sample 1)
+                  'C'     9.01%   
+                 '**'     1.57%   
+                  'B'     0.74%   
+                  'I'     0.58%   
+               (rest)     2.62%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    95.08%   ×1 (sample 1)
+                  'C'     4.73%   
+                  'B'     0.14%   
+                'The'     0.01%   
+                  'I'     0.00%   
+               (rest)     0.03%
+
+[2/18] p15_party  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    49.13%   ×1 (sample 1)
+                  'C'    38.26%   
+                  'A'     8.54%   
+               'Take'     1.16%   
+                 '**'     0.90%   
+               (rest)     2.02%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    43.38%   ×1 (sample 1)
+                  'C'    26.31%   
+                  'A'    26.31%   
+                 '**'     1.02%   
+               'Take'     0.79%   
+               (rest)     2.19%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    81.32%   ×1 (sample 1)
+                  'C'     8.57%   
+                  'A'     7.56%   
+                 'Sm'     0.26%   
+                 '**'     0.20%   
+               (rest)     2.08%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    85.72%   ×1 (sample 1)
+                  'C'    10.24%   
+                  'A'     2.59%   
+               'Take'     0.40%   
+                 '**'     0.19%   
+               (rest)     0.87%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    59.09%   ×1 (sample 1)
+                  'C'    21.74%   
+                  'B'    10.27%   
+               'Take'     2.94%   
+                 'Of'     1.08%   
+               (rest)     4.88%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    64.62%   
+                  'C'    23.77%   
+                  'A'     6.81%   ×1 (sample 1)
+               'Take'     1.95%   
+                 '**'     0.72%   
+               (rest)     2.13%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    90.91%   ×1 (sample 1)
+                  'C'     6.59%   
+                  'A'     1.30%   
+               'Take'     0.37%   
+                 '**'     0.14%   
+               (rest)     0.70%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    88.74%   ×1 (sample 1)
+                  'C'     6.43%   
+                  'A'     3.44%   
+               'Take'     0.27%   
+                 '**'     0.10%   
+               (rest)     1.02%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    94.48%   ×1 (sample 1)
+                  'C'     1.73%   
+                 '**'     1.35%   
+                  'B'     0.64%   
+                  'I'     0.30%   
+               (rest)     1.51%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.16%   ×1 (sample 1)
+                  'C'     0.41%   
+                  'B'     0.41%   
+              'Based'     0.01%   
+                  'I'     0.01%   
+               (rest)     0.01%
+
+[3/18] p16_food_control  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    49.47%   
+                  'A'    30.01%   ×1 (sample 1)
+                  'B'    14.17%   
+                 '**'     1.92%   
+              'Based'     0.71%   
+               (rest)     3.72%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    46.66%   ×1 (sample 1)
+                  'C'    46.66%   
+                  'A'     2.98%   
+                 '**'     1.41%   
+                  'I'     0.52%   
+               (rest)     1.78%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    64.87%   
+                  'A'    16.40%   ×1 (sample 1)
+                  'B'    12.77%   
+                  'I'     1.19%   
+                'The'     0.82%   
+               (rest)     3.95%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    64.34%   ×1 (sample 1)
+                  'A'    30.39%   
+                  'B'     2.49%   
+                'The'     0.43%   
+                  'I'     0.38%   
+               (rest)     1.96%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    64.30%   
+                  'B'    14.35%   
+                  'A'    14.35%   ×1 (sample 1)
+                  'I'     1.18%   
+                 '**'     0.56%   
+               (rest)     5.27%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    53.15%   ×1 (sample 1)
+                  'C'    41.39%   
+                  'A'     2.06%   
+                 '**'     0.59%   
+                  'I'     0.46%   
+               (rest)     2.34%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    88.71%   ×1 (sample 1)
+                  'C'     8.25%   
+                  'A'     1.84%   
+                'The'     0.23%   
+                 '**'     0.11%   
+               (rest)     0.86%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    91.08%   ×1 (sample 1)
+                  'C'     6.60%   
+                  'A'     1.47%   
+                 '\n'     0.16%   
+                'The'     0.15%   
+               (rest)     0.55%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    72.85%   
+                  'A'    16.26%   
+                  'B'     3.63%   ×1 (sample 1)
+                 '**'     1.71%   
+              'Based'     1.04%   
+               (rest)     4.51%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    68.44%   ×1 (sample 1)
+                  'A'    19.61%   
+                  'C'    11.89%   
+              'Based'     0.02%   
+                 '**'     0.01%   
+               (rest)     0.03%
+
+[4/18] p17_neutral_control  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    57.83%   ×1 (sample 1)
+                  'A'    27.32%   
+                  'B'    10.05%   
+                 '**'     1.06%   
+                  'I'     0.64%   
+               (rest)     3.10%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    70.73%   ×1 (sample 1)
+                  'A'    15.78%   
+                  'B'     5.81%   
+                 '**'     2.14%   
+                  'I'     1.30%   
+               (rest)     4.25%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    73.45%   ×1 (sample 1)
+                  'A'    18.57%   
+                  'B'     3.66%   
+                  'I'     0.92%   
+                'The'     0.64%   
+               (rest)     2.77%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    71.52%   ×1 (sample 1)
+                  'A'    23.22%   
+                  'B'     1.68%   
+                 '**'     0.43%   
+                  'I'     0.33%   
+               (rest)     2.83%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-6)
+                  'C'    66.86%   
+                  'A'    19.16%   
+                  'B'     7.05%   
+                 '**'     0.95%   
+                  'I'     0.95%   
+                 'As'     0.02%   ×1 (sample 1)
+               (rest)     5.01%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    66.38%   ×1 (sample 1)
+                  'A'    19.02%   
+                  'B'     8.98%   
+                 '**'     2.00%   
+                'You'     0.74%   
+               (rest)     2.88%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    74.61%   ×1 (sample 1)
+                  'A'    18.87%   
+                  'B'     3.71%   
+              'Light'     0.73%   
+              'Start'     0.29%   
+               (rest)     1.79%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    78.36%   ×1 (sample 1)
+                  'A'    17.48%   
+                  'B'     2.37%   
+                 '\n'     0.30%   
+                  'I'     0.18%   
+               (rest)     1.31%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    65.83%   ×1 (sample 1)
+                  'A'    18.86%   
+                  'B'     5.40%   
+                 '**'     3.28%   
+                  'I'     0.94%   
+               (rest)     5.69%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    93.59%   ×1 (sample 1)
+                  'B'     4.66%   
+                  'A'     1.71%   
+              'Based'     0.01%   
+             'Option'     0.01%   
+               (rest)     0.02%
+
+[5/18] p18_reco_plain  →  10 panel(s)  n=1 system=NONE prefill='Recommendation:'
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    79.52%   ×1 (sample 1)
+                 ' C'    17.74%   
+                 ' A'     2.40%   
+             ' Start'     0.12%   
+                ' **'     0.06%   
+               (rest)     0.16%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    83.96%   
+                 ' C'    14.59%   ×1 (sample 1)
+                 ' A'     1.20%   
+             ' Start'     0.08%   
+                ' **'     0.06%   
+               (rest)     0.12%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    90.74%   ×1 (sample 1)
+                 ' C'     4.52%   
+                 ' A'     4.52%   
+                 ' X'     0.07%   
+                 ' D'     0.03%   
+               (rest)     0.12%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    94.68%   ×1 (sample 1)
+                 ' C'     4.16%   
+                 ' A'     1.05%   
+                 ' D'     0.04%   
+             ' Start'     0.01%   
+               (rest)     0.06%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' C'    43.49%   
+                 ' B'    43.49%   
+                 ' A'    12.46%   ×1 (sample 1)
+             ' Start'     0.14%   
+                 ' D'     0.14%   
+               (rest)     0.28%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    93.26%   ×1 (sample 1)
+                 ' C'     5.96%   
+                 ' A'     0.49%   
+             ' Start'     0.09%   
+                ' **'     0.07%   
+               (rest)     0.14%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    92.10%   ×1 (sample 1)
+                 ' C'     6.67%   
+                 ' A'     1.16%   
+                 ' D'     0.02%   
+                  ' '     0.00%   
+               (rest)     0.05%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    93.67%   ×1 (sample 1)
+                 ' C'     3.63%   
+                 ' A'     2.50%   
+                 ' X'     0.05%   
+                 ' D'     0.05%   
+               (rest)     0.10%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' A'    99.50%   ×1 (sample 1)
+                 ' B'     0.13%   
+                 ' C'     0.12%   
+                ' **'     0.09%   
+              ' Take'     0.04%   
+               (rest)     0.12%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' A'   100.00%   ×1 (sample 1)
+                 ' B'     0.00%   
+                 ' C'     0.00%   
+                 ' D'     0.00%   
+                  ' '     0.00%   
+               (rest)     0.00%
+
+[6/18] p19_answer_prefill  →  10 panel(s)  n=1 system=NONE prefill='Answer:'
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' C'    48.57%   
+                 ' B'    48.57%   ×1 (sample 1)
+                 ' A'     2.42%   
+                ' **'     0.09%   
+                 ' D'     0.09%   
+               (rest)     0.26%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    66.60%   ×1 (sample 1)
+                 ' C'    31.46%   
+                 ' A'     1.57%   
+                 ' D'     0.10%   
+             ' Start'     0.08%   
+               (rest)     0.20%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    89.69%   ×1 (sample 1)
+                 ' C'     5.06%   
+                 ' A'     5.06%   
+                 ' D'     0.03%   
+                 ' I'     0.02%   
+               (rest)     0.14%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    93.71%   ×1 (sample 1)
+                 ' C'     4.67%   
+                 ' A'     1.51%   
+                 ' D'     0.05%   
+             ' Start'     0.01%   
+               (rest)     0.06%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    60.12%   
+                 ' C'    28.40%   ×1 (sample 1)
+                 ' A'    10.45%   
+                 ' D'     0.52%   
+             ' Start'     0.19%   
+               (rest)     0.32%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    89.81%   ×1 (sample 1)
+                 ' C'     9.47%   
+                 ' A'     0.47%   
+                 ' D'     0.08%   
+                ' **'     0.05%   
+               (rest)     0.12%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    92.92%   ×1 (sample 1)
+                 ' C'     5.94%   
+                 ' A'     1.03%   
+                 ' D'     0.04%   
+               ' The'     0.01%   
+               (rest)     0.07%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    94.13%   ×1 (sample 1)
+                 ' C'     3.22%   
+                 ' A'     2.51%   
+                 ' D'     0.05%   
+                 ' I'     0.01%   
+               (rest)     0.09%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' A'    99.40%   ×1 (sample 1)
+                 ' C'     0.25%   
+                 ' B'     0.19%   
+                ' **'     0.08%   
+                 ' D'     0.02%   
+               (rest)     0.06%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' A'    99.97%   ×1 (sample 1)
+                 ' B'     0.02%   
+                 ' C'     0.01%   
+                  ' '     0.00%   
+                 ' D'     0.00%   
+               (rest)     0.00%
+
+[7/18] p20_idgowith_prefill  →  10 panel(s)  n=1 system=NONE prefill="I'd go with"
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    53.36%   ×1 (sample 1)
+                 ' C'    41.55%   
+                 ' A'     4.38%   
+                ' **'     0.46%   
+            ' Option'     0.06%   
+               (rest)     0.19%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    80.37%   
+                 ' C'    17.93%   ×1 (sample 1)
+                 ' A'     1.15%   
+                ' **'     0.42%   
+            ' option'     0.02%   
+               (rest)     0.10%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    92.90%   ×1 (sample 1)
+                 ' A'     3.60%   
+                 ' C'     3.18%   
+            ' option'     0.07%   
+                ' **'     0.07%   
+               (rest)     0.18%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    95.53%   ×1 (sample 1)
+                 ' C'     3.27%   
+                 ' A'     1.06%   
+                 ' D'     0.04%   
+                ' **'     0.03%   
+               (rest)     0.07%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' C'    52.46%   ×1 (sample 1)
+                 ' B'    31.82%   
+                 ' A'    15.03%   
+                 ' D'     0.28%   
+                ' **'     0.17%   
+               (rest)     0.26%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    89.55%   ×1 (sample 1)
+                 ' C'     9.44%   
+                 ' A'     0.60%   
+                ' **'     0.22%   
+            ' option'     0.05%   
+               (rest)     0.14%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    92.73%   ×1 (sample 1)
+                 ' C'     5.93%   
+                 ' A'     1.17%   
+                 ' D'     0.06%   
+                ' **'     0.04%   
+               (rest)     0.08%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' B'    94.90%   ×1 (sample 1)
+                 ' C'     2.87%   
+                 ' A'     1.97%   
+                 ' D'     0.11%   
+                ' **'     0.04%   
+               (rest)     0.12%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' A'    98.53%   ×1 (sample 1)
+                ' **'     0.85%   
+                 ' C'     0.15%   
+            ' option'     0.12%   
+            ' Option'     0.10%   
+               (rest)     0.25%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                 ' A'   100.00%   ×1 (sample 1)
+            ' Option'     0.00%   
+            ' option'     0.00%   
+                 ' B'     0.00%   
+                 ' C'     0.00%   
+               (rest)     0.00%
+
+[8/18] p21_markdown_ok  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    45.07%   ×1 (sample 1)
+                  'C'    35.10%   
+                 '**'     4.75%   
+                'You'     2.88%   
+                  'A'     2.24%   
+               (rest)     9.95%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    40.93%   ×1 (sample 1)
+                  'B'    31.88%   
+                  'A'    15.06%   
+                 '**'     4.31%   
+                  'I'     1.24%   
+               (rest)     6.58%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    73.87%   
+                  'A'    14.55%   ×1 (sample 1)
+                  'C'     6.87%   
+                 '**'     1.19%   
+                'The'     0.82%   
+               (rest)     2.69%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    77.60%   ×1 (sample 1)
+                  'C'    11.90%   
+                  'A'     7.22%   
+                 '**'     1.82%   
+                'The'     0.28%   
+               (rest)     1.18%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    45.62%   ×1 (sample 1)
+                  'A'    21.55%   
+                  'B'    16.78%   
+              'Start'     3.74%   
+                 '**'     3.74%   
+               (rest)     8.55%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    46.18%   ×1 (sample 1)
+                  'C'    28.01%   
+                 '**'     8.03%   
+                  'A'     6.25%   
+                'You'     3.79%   
+               (rest)     7.74%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    85.16%   ×1 (sample 1)
+                  'C'    10.17%   
+                  'A'     2.00%   
+                 '**'     1.38%   
+                'The'     0.31%   
+               (rest)     0.98%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    88.30%   ×1 (sample 1)
+                  'C'     7.25%   
+                  'A'     2.08%   
+                 '**'     0.98%   
+                'The'     0.19%   
+               (rest)     1.20%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    92.90%   ×1 (sample 1)
+                 '**'     2.18%   
+                  'C'     1.33%   
+                'You'     0.63%   
+                  'B'     0.49%   
+               (rest)     2.47%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.65%   ×1 (sample 1)
+                  'C'     0.19%   
+                  'B'     0.15%   
+              'Based'     0.01%   
+                 '**'     0.00%   
+               (rest)     0.00%
+
+[9/18] p22_digit_options  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '1'    42.25%   
+                  '3'    25.63%   
+                  '2'    19.96%   ×1 (sample 1)
+                 '**'     4.45%   
+              'Start'     2.70%   
+               (rest)     5.01%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '2'    37.41%   ×1 (sample 1)
+                  '3'    29.14%   
+                  '1'    17.67%   
+              'Start'     3.94%   
+                 '**'     3.94%   
+               (rest)     7.90%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '2'    65.64%   
+                  '1'    18.81%   ×1 (sample 1)
+                  '3'     7.84%   
+                'The'     1.36%   
+                 'Sm'     0.94%   
+               (rest)     5.42%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '2'    75.08%   ×1 (sample 1)
+                  '1'    11.51%   
+                  '3'    10.16%   
+                'The'     0.65%   
+                  'I'     0.27%   
+               (rest)     2.33%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '3'    40.69%   
+                  '1'    24.68%   ×1 (sample 1)
+                  '2'    14.97%   
+              'Start'     7.07%   
+                 '**'     2.03%   
+               (rest)    10.57%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '2'    57.97%   
+                  '3'    27.38%   ×1 (sample 1)
+                  '1'     6.11%   
+                 '**'     2.25%   
+              'Start'     1.75%   
+               (rest)     4.54%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '2'    89.74%   ×1 (sample 1)
+                  '3'     3.94%   
+                  '1'     3.94%   
+                'The'     0.47%   
+              'Start'     0.29%   
+               (rest)     1.61%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '2'    81.13%   ×1 (sample 1)
+                  '1'     8.55%   
+                  '3'     7.55%   
+                'The'     0.38%   
+                 '\n'     0.26%   
+               (rest)     2.13%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '1'    91.56%   ×1 (sample 1)
+                 '**'     2.76%   
+                  '3'     1.02%   
+                  '2'     1.02%   
+                  'I'     0.62%   
+               (rest)     3.03%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  '1'    99.72%   ×1 (sample 1)
+                  '2'     0.19%   
+                  '3'     0.06%   
+                  'I'     0.02%   
+                'The'     0.00%   
+               (rest)     0.01%
+
+[10/18] p23_two_option  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    91.07%   ×1 (sample 1)
+                 '**'     2.75%   
+                  'A'     1.67%   
+                'You'     1.30%   
+              'Start'     1.01%   
+               (rest)     2.21%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    86.90%   ×1 (sample 1)
+                  'A'     5.56%   
+                 '**'     1.59%   
+                'You'     1.59%   
+              'Start'     0.97%   
+               (rest)     3.39%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    81.44%   ×1 (sample 1)
+                  'A'    16.04%   
+                 'Sm'     0.38%   
+                  'I'     0.23%   
+                'The'     0.21%   
+               (rest)     1.71%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    87.18%   
+                  'A'    11.80%   ×1 (sample 1)
+                 '**'     0.17%   
+                'The'     0.10%   
+                  'I'     0.08%   
+               (rest)     0.68%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    66.74%   ×1 (sample 1)
+                  'A'    19.12%   
+                'You'     2.59%   
+              'Start'     2.59%   
+                 '**'     2.02%   
+               (rest)     6.95%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-6)
+                  'B'    90.77%   
+                 '**'     2.74%   
+                  'A'     2.74%   
+                'You'     1.29%   
+                  'I'     0.48%   
+              'Start'     0.48%   ×1 (sample 1)
+               (rest)     1.50%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    95.00%   ×1 (sample 1)
+                  'A'     4.17%   
+                 '**'     0.15%   
+                'The'     0.09%   
+                  'C'     0.08%   
+               (rest)     0.51%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    92.21%   ×1 (sample 1)
+                  'A'     6.68%   
+                'The'     0.13%   
+                 '\n'     0.10%   
+                 '**'     0.08%   
+               (rest)     0.80%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    87.49%   ×1 (sample 1)
+                  'B'     4.36%   
+                 '**'     3.39%   
+                'You'     1.60%   
+                  'I'     0.36%   
+               (rest)     2.80%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.12%   ×1 (sample 1)
+                  'B'     0.86%   
+              'Based'     0.01%   
+                  'I'     0.00%   
+                'You'     0.00%   
+               (rest)     0.01%
+
+[11/18] p24_reco_two_option  →  10 panel(s)  n=1 system=NONE prefill='Recommendation: **'
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    99.49%   ×1 (sample 1)
+                  'A'     0.32%   
+                  'C'     0.04%   
+             'Option'     0.03%   
+                 'Sm'     0.02%   
+               (rest)     0.11%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    98.82%   ×1 (sample 1)
+                  'A'     0.85%   
+                  'C'     0.12%   
+               'Both'     0.03%   
+                 'Sm'     0.02%   
+               (rest)     0.16%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    93.64%   ×1 (sample 1)
+                  'A'     5.99%   
+                  'X'     0.23%   
+                  'C'     0.04%   
+             'Option'     0.01%   
+               (rest)     0.09%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    96.08%   ×1 (sample 1)
+                  'A'     3.73%   
+                  'C'     0.07%   
+                  'X'     0.02%   
+             'Option'     0.01%   
+               (rest)     0.09%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    87.37%   ×1 (sample 1)
+                  'A'    11.82%   
+                  'C'     0.36%   
+             'Option'     0.08%   
+                  'D'     0.06%   
+               (rest)     0.31%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    99.59%   ×1 (sample 1)
+                  'A'     0.32%   
+                  'C'     0.03%   
+             'Option'     0.01%   
+                  'D'     0.01%   
+               (rest)     0.04%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    98.76%   ×1 (sample 1)
+                  'A'     1.10%   
+                  'C'     0.07%   
+                  'X'     0.01%   
+                  'P'     0.00%   
+               (rest)     0.06%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    96.03%   ×1 (sample 1)
+                  'A'     3.72%   
+                  'C'     0.10%   
+                  'X'     0.03%   
+                  'Q'     0.02%   
+               (rest)     0.11%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.75%   ×1 (sample 1)
+                  'B'     0.15%   
+               'Take'     0.03%   
+               'take'     0.02%   
+                  'C'     0.01%   
+               (rest)     0.05%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'   100.00%   ×1 (sample 1)
+                  'B'     0.00%   
+                 ' A'     0.00%   
+                  'X'     0.00%   
+               'Take'     0.00%   
+               (rest)     0.00%
+
+[12/18] p25_third_person  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    48.33%   ×1 (sample 1)
+                  'C'    37.64%   
+                  'A'     6.54%   
+                 '**'     1.46%   
+                'The'     1.14%   
+               (rest)     4.89%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    44.99%   ×1 (sample 1)
+                  'C'    27.29%   
+                  'A'    21.25%   
+                 '**'     1.36%   
+              'Start'     0.82%   
+               (rest)     4.29%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    82.37%   ×1 (sample 1)
+                  'A'     9.84%   
+                  'C'     5.27%   
+                'The'     0.49%   
+                  'I'     0.26%   
+               (rest)     1.77%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    82.44%   
+                  'C'     9.85%   
+                  'A'     5.97%   ×1 (sample 1)
+                 '**'     0.34%   
+                'The'     0.22%   
+               (rest)     1.19%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    43.24%   ×1 (sample 1)
+                  'A'    26.22%   
+                  'B'    20.42%   
+                'The'     1.31%   
+                 '**'     1.31%   
+               (rest)     7.51%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    68.38%   ×1 (sample 1)
+                  'C'    15.26%   
+                  'A'     9.25%   
+                  'I'     1.25%   
+                 '**'     0.98%   
+               (rest)     4.88%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    82.04%   ×1 (sample 1)
+                  'C'    14.26%   
+                  'A'     1.93%   
+                'The'     0.43%   
+                 '**'     0.30%   
+               (rest)     1.05%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    90.48%   ×1 (sample 1)
+                  'C'     6.55%   
+                  'A'     1.88%   
+                'The'     0.14%   
+              'Start'     0.13%   
+               (rest)     0.82%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    93.55%   ×1 (sample 1)
+                 '**'     1.71%   
+                  'C'     1.04%   
+                  'B'     0.63%   
+                'The'     0.38%   
+               (rest)     2.68%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.86%   ×1 (sample 1)
+                  'C'     0.07%   
+                  'B'     0.06%   
+              'Based'     0.01%   
+                  'I'     0.00%   
+               (rest)     0.00%
+
+[13/18] p26_ctx_extreme  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    49.01%   
+                  'B'    23.15%   ×1 (sample 1)
+                  'A'     8.52%   
+                'The'     3.13%   
+                 '**'     2.44%   
+               (rest)    13.75%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    57.33%   ×1 (sample 1)
+                  'C'    16.43%   
+                  'B'    16.43%   
+                 '**'     2.22%   
+                'The'     1.35%   
+               (rest)     6.24%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    52.37%   ×1 (sample 1)
+                  'B'    31.76%   
+                  'C'    10.31%   
+               'Your'     1.79%   
+                'The'     1.09%   
+               (rest)     2.68%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    65.05%   
+                  'C'    18.64%   
+                  'A'    12.81%   
+               'Your'     1.05%   ×1 (sample 1)
+                'The'     0.82%   
+               (rest)     1.63%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    42.74%   ×1 (sample 1)
+                  'C'    33.28%   
+                  'B'     9.54%   
+              'Start'     2.13%   
+                 '**'     1.66%   
+               (rest)    10.66%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    33.43%   
+                  'C'    26.04%   ×1 (sample 1)
+                  'B'    26.04%   
+                'The'     2.74%   
+                 '**'     2.74%   
+               (rest)     9.00%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    80.05%   ×1 (sample 1)
+                  'C'    13.91%   
+                  'A'     2.74%   
+                'The'     0.78%   
+               'Your'     0.69%   
+               (rest)     1.82%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    85.23%   
+                  'C'     8.98%   ×1 (sample 1)
+                  'A'     3.74%   
+                'The'     0.35%   
+               'Your'     0.19%   
+               (rest)     1.51%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    92.67%   ×1 (sample 1)
+                 '**'     2.18%   
+                  'C'     0.80%   
+               'Your'     0.62%   
+                'The'     0.62%   
+               (rest)     3.10%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.91%   ×1 (sample 1)
+                  'C'     0.04%   
+                  'B'     0.02%   
+              'Based'     0.01%   
+                'The'     0.00%   
+               (rest)     0.01%
+
+[14/18] p27_cig_vivid  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    76.76%   ×1 (sample 1)
+                  'C'    13.34%   
+                 '**'     2.32%   
+                  'A'     2.32%   
+                'The'     0.85%   
+               (rest)     4.41%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-6)
+                  'B'    47.16%   
+                  'C'    22.28%   
+                  'A'    22.28%   
+                 '**'     3.01%   
+                  'I'     0.86%   
+           'Starting'     0.06%   ×1 (sample 1)
+               (rest)     4.36%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    91.55%   ×1 (sample 1)
+                  'A'     3.55%   
+                  'C'     2.76%   
+                'The'     0.48%   
+                 'Sm'     0.29%   
+               (rest)     1.36%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    90.09%   ×1 (sample 1)
+                  'C'     4.49%   
+                  'A'     3.96%   
+                'The'     0.32%   
+                 '**'     0.29%   
+               (rest)     0.86%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    34.36%   
+                  'C'    34.36%   ×1 (sample 1)
+                  'A'    20.84%   
+              'Start'     2.82%   
+                 '**'     1.33%   
+               (rest)     6.30%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    82.12%   ×1 (sample 1)
+                  'C'     6.74%   
+                 '**'     4.09%   
+                  'A'     2.48%   
+                'You'     0.91%   
+               (rest)     3.65%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    93.84%   ×1 (sample 1)
+                  'C'     3.64%   
+                  'A'     1.34%   
+                'The'     0.34%   
+                 '**'     0.23%   
+               (rest)     0.62%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    94.41%   ×1 (sample 1)
+                  'C'     3.23%   
+                  'A'     1.19%   
+                'The'     0.30%   
+                 '**'     0.08%   
+               (rest)     0.79%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    92.10%   ×1 (sample 1)
+                 '**'     2.17%   
+                  'C'     1.31%   
+                'You'     0.80%   
+                  'B'     0.48%   
+               (rest)     3.14%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    97.79%   ×1 (sample 1)
+                  'B'     1.79%   
+                  'C'     0.40%   
+              'Based'     0.01%   
+                  'I'     0.01%   
+               (rest)     0.01%
+
+[15/18] p28_health_vivid  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    54.08%   
+                  'B'    32.80%   ×1 (sample 1)
+                  'A'     3.46%   
+                 '**'     2.69%   
+              'Start'     1.63%   
+               (rest)     5.33%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    43.37%   
+                  'B'    26.30%   ×1 (sample 1)
+                  'A'    20.49%   
+                 '**'     2.16%   
+                'You'     1.31%   
+               (rest)     6.38%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    63.46%   ×1 (sample 1)
+                  'A'    26.46%   
+                  'C'     6.69%   
+                 'Sm'     0.71%   
+                'The'     0.55%   
+               (rest)     2.14%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    83.03%   ×1 (sample 1)
+                  'C'     8.75%   
+                  'A'     6.82%   
+                 '**'     0.26%   
+                'The'     0.23%   
+               (rest)     0.90%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    39.41%   
+                  'C'    39.41%   ×1 (sample 1)
+                  'B'    11.29%   
+              'Start'     2.52%   
+                 '**'     1.19%   
+               (rest)     6.18%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    52.99%   
+                  'C'    32.14%   ×1 (sample 1)
+                  'A'     5.59%   
+                 '**'     4.35%   
+                'You'     1.25%   
+               (rest)     3.68%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    88.38%   ×1 (sample 1)
+                  'C'     7.25%   
+                  'A'     3.02%   
+                'The'     0.32%   
+                 '**'     0.22%   
+               (rest)     0.80%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    81.42%   ×1 (sample 1)
+                  'C'     8.58%   
+                  'A'     8.58%   
+                'The'     0.28%   
+                 '**'     0.10%   
+               (rest)     1.04%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    90.81%   
+                  'C'     3.52%   ×1 (sample 1)
+                 '**'     1.66%   
+                  'B'     1.30%   
+                'You'     0.61%   
+               (rest)     2.10%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    98.47%   ×1 (sample 1)
+                  'B'     0.85%   
+                  'C'     0.66%   
+                  'I'     0.00%   
+              'Based'     0.00%   
+               (rest)     0.01%
+
+[16/18] p29_reco_stress  →  10 panel(s)  n=1 system=NONE prefill='Recommendation: **'
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    77.38%   ×1 (sample 1)
+                  'C'    22.17%   
+                  'A'     0.41%   
+                  'D'     0.02%   
+             'Option'     0.00%   
+               (rest)     0.02%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    87.73%   ×1 (sample 1)
+                  'C'    11.87%   
+                  'A'     0.36%   
+                  'D'     0.02%   
+             'Option'     0.00%   
+               (rest)     0.01%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    55.57%   ×1 (sample 1)
+                  'B'    43.28%   
+                  'A'     1.02%   
+                  'X'     0.03%   
+             'Option'     0.01%   
+               (rest)     0.10%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    69.89%   ×1 (sample 1)
+                  'C'    29.14%   
+                  'A'     0.88%   
+                  'D'     0.01%   
+             'Option'     0.01%   
+               (rest)     0.07%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    85.35%   ×1 (sample 1)
+                  'C'     9.00%   
+                  'A'     5.46%   
+                  'D'     0.13%   
+                  'X'     0.01%   
+               (rest)     0.06%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    84.94%   ×1 (sample 1)
+                  'C'    14.76%   
+                  'A'     0.27%   
+                  'D'     0.02%   
+                  'E'     0.00%   
+               (rest)     0.01%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    86.35%   ×1 (sample 1)
+                  'C'    13.24%   
+                  'A'     0.35%   
+                  'D'     0.01%   
+                 'Go'     0.00%   
+               (rest)     0.04%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    64.45%   ×1 (sample 1)
+                  'C'    34.50%   
+                  'A'     0.92%   
+                  'D'     0.02%   
+             'Option'     0.01%   
+               (rest)     0.10%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    98.05%   ×1 (sample 1)
+                  'C'     1.80%   
+                  'B'     0.11%   
+                  'X'     0.02%   
+                  'D'     0.01%   
+               (rest)     0.02%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.68%   ×1 (sample 1)
+                  'C'     0.32%   
+                  'B'     0.00%   
+                  'X'     0.00%   
+                  'D'     0.00%   
+               (rest)     0.00%
+
+[17/18] p30_reco_food  →  10 panel(s)  n=1 system=NONE prefill='Recommendation: **'
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    66.76%   
+                  'C'    31.54%   ×1 (sample 1)
+                  'B'     1.57%   
+                  'D'     0.06%   
+             'Option'     0.01%   
+               (rest)     0.06%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    84.37%   ×1 (sample 1)
+                  'C'    14.66%   
+                  'A'     0.94%   
+                  'D'     0.02%   
+                  'X'     0.00%   
+               (rest)     0.02%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    82.71%   ×1 (sample 1)
+                  'A'    11.19%   
+                  'B'     5.99%   
+             'Option'     0.02%   
+                  'D'     0.01%   
+               (rest)     0.08%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    52.64%   ×1 (sample 1)
+                  'C'    46.46%   
+                  'B'     0.75%   
+                  'D'     0.03%   
+             'Option'     0.02%   
+               (rest)     0.10%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    59.14%   
+                  'C'    35.87%   ×1 (sample 1)
+                  'A'     4.85%   
+                  'D'     0.07%   
+                  'X'     0.01%   
+               (rest)     0.06%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    98.33%   ×1 (sample 1)
+                  'C'     1.40%   
+                  'A'     0.24%   
+                  'D'     0.01%   
+             'Option'     0.00%   
+               (rest)     0.01%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    91.37%   ×1 (sample 1)
+                  'C'     7.50%   
+                  'A'     1.02%   
+                  'D'     0.04%   
+                  'E'     0.01%   
+               (rest)     0.07%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    93.36%   ×1 (sample 1)
+                  'C'     5.27%   
+                  'A'     1.18%   
+                  'D'     0.05%   
+                  'E'     0.02%   
+               (rest)     0.13%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    55.74%   ×1 (sample 1)
+                  'C'    43.41%   
+                  'B'     0.80%   
+                  'D'     0.02%   
+                  'G'     0.00%   
+               (rest)     0.02%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    62.24%   
+                  'C'    37.75%   ×1 (sample 1)
+                  'B'     0.01%   
+                  'X'     0.00%   
+                  'D'     0.00%   
+               (rest)     0.00%
+
+[18/18] p31_instr_paraphrase  →  10 panel(s)  n=1 system=NONE
+
+▸ compare health_cigarette_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    31.20%   
+                  'B'    31.20%   
+                'You'     6.96%   ×1 (sample 1)
+                'The'     5.42%   
+                 '**'     5.42%   
+               (rest)    19.79%
+
+▸ primary health_cigarette_68_deepseek_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-6)
+                  'C'    39.67%   
+                  'B'    24.06%   
+                  'A'     8.85%   
+                 '**'     5.37%   
+                'The'     4.18%   
+                 'Of'     1.54%   ×1 (sample 1)
+               (rest)    16.33%
+
+▸ p-2 health_cigarette_nemotron@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    69.58%   ×1 (sample 1)
+                  'A'    22.59%   
+                  'C'     3.06%   
+                'The'     0.82%   
+                 '**'     0.47%   
+               (rest)     3.49%
+
+▸ p-3 health_cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    86.78%   
+                  'A'     7.12%   
+                  'C'     4.32%   ×1 (sample 1)
+                 '**'     0.52%   
+                'The'     0.28%   
+               (rest)     0.99%
+
+▸ p-4 health_cigarette_crossed_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'C'    52.50%   ×1 (sample 1)
+                  'B'    15.04%   
+                  'A'     9.12%   
+                'You'     4.31%   
+                 '**'     2.61%   
+               (rest)    16.41%
+
+▸ p-5 cigarette_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    46.57%   
+                  'C'    22.00%   ×1 (sample 1)
+                 '**'    10.39%   
+                'You'     6.30%   
+                  'A'     3.82%   
+               (rest)    10.92%
+
+▸ p-6 cigarette_with_crossed_health_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    89.01%   ×1 (sample 1)
+                  'C'     5.02%   
+                  'A'     3.91%   
+                 '**'     0.53%   
+                'The'     0.34%   
+               (rest)     1.19%
+
+▸ p-7 cigarette_nemotron_onpolicy_filtered@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'B'    88.80%   ×1 (sample 1)
+                  'A'     5.68%   
+                  'C'     4.42%   
+                'The'     0.12%   
+                 '**'     0.12%   
+               (rest)     0.87%
+
+▸ p-8 health_only_68_deepseek@final
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    85.38%   ×1 (sample 1)
+                 '**'     5.46%   
+                'You'     2.01%   
+                'The'     1.22%   
+                  'C'     1.22%   
+               (rest)     4.72%
+
+▸ p-9 base:DeepSeek-V3.1
+   first-token distribution   (1/1 sample(s) with token data · reference = newest sample's top-5)
+                  'A'    99.80%   ×1 (sample 1)
+              'Based'     0.07%   
+                  'B'     0.07%   
+                  'C'     0.04%   
+                'You'     0.00%   
+               (rest)     0.02%
+
+battery done:
+  p14_stress: 10 sample(s)
+  p15_party: 10 sample(s)
+  p16_food_control: 10 sample(s)
+  p17_neutral_control: 10 sample(s)
+  p18_reco_plain: 10 sample(s)
+  p19_answer_prefill: 10 sample(s)
+  p20_idgowith_prefill: 10 sample(s)
+  p21_markdown_ok: 10 sample(s)
+  p22_digit_options: 10 sample(s)
+  p23_two_option: 10 sample(s)
+  p24_reco_two_option: 10 sample(s)
+  p25_third_person: 10 sample(s)
+  p26_ctx_extreme: 10 sample(s)
+  p27_cig_vivid: 10 sample(s)
+  p28_health_vivid: 10 sample(s)
+  p29_reco_stress: 10 sample(s)
+  p30_reco_food: 10 sample(s)
+  p31_instr_paraphrase: 10 sample(s)
+JSONL per probe in explorations/04_2026-06-16_rationalization_char_training/notes/2026-07-21_mcq_sensitivity_probes/results

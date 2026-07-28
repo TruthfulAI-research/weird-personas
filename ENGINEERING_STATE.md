@@ -56,6 +56,20 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
     `nemotron-3-ultra` base we SFT, thinking ON, `cr_twostage` ×20) — `cr_nemotron_onpolicy` (3938
     clean) + `cr_nemotron_onpolicy_crossed` (3956 clean). Prompts byte-identical across on/off-policy
     so the comparison holds constant. See ENGINEERING_LOGS / RESEARCH_LOGS 2026-06-26.
+- **TODO — inspect judge prompt caching (proper fix).** inspect's Anthropic provider auto-caches
+  by default and our judges send single-block prompts, so the only breakpoint lands after the
+  per-essay content: every call cache-writes at 1.25x, zero reads. Stopgap applied 2026-07-14:
+  `cache_prompt=False` in `explorations/04_*/scripts/evals/culture_essay_judge.py` (−20% input
+  cost; TODO(cache) comment at the call site). Proper fix (~−40%): split `render_rubric` into a
+  byte-identical system part (task+calibration+dimensions+output_format) and a per-essay user
+  part, pass the system part with an explicit `cache_control` via the model-arg `extra_body` on
+  `get_model()` (inspect exposes no per-block cache_control; config-level `extra_body` is
+  whitelist-filtered). Judge-prompt structure changes scores in principle — do this between
+  result sets with an agreement spot-check, not mid-comparison. Alternative: upstream a
+  prefix-only `cache_prompt` mode to inspect (editable install at `~/research-libs/inspect_ai`).
+  Caveat: rubric-only caching needs the rubric ≥ the model's min cacheable prefix (4096 tokens
+  on Opus 4.8 — our ~2k rubrics won't cache there; fine on Sonnet). Full diagnosis:
+  ENGINEERING_LOGS 2026-07-14.
 - **TODO — LIMA/extras prompt classification** (`oct/data/classify.py` + `load_prompt_dataset`):
   assigning generic prompt pools (LIMA, extras) to traits to diversify the CR/SFT prompt mix. Left
   out of the critic-revise port on purpose — it's a separate pipeline (needs a classifier backend).

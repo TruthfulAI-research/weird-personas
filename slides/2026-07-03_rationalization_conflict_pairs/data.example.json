@@ -1,0 +1,18 @@
+{
+  "_comment": "Minimal example. The two example renderers in deck.js read from `main_results` (h_bar_with_ci) and `scatter_rows` (scatter_with_ci). Add whatever else your custom renderers need at the top level. Schema is fluid — keys here are what the example index.html references; rename/add to fit your study.",
+
+  "main_results": [
+    {"name": "<entity_a>", "value": 0.10, "lower_err": 0.02, "upper_err": 0.02},
+    {"name": "<entity_b>", "value": 0.25, "lower_err": 0.03, "upper_err": 0.03},
+    {"name": "<entity_c>", "value": 0.34, "lower_err": 0.03, "upper_err": 0.03}
+  ],
+
+  "scatter_rows": [
+    {"name": "<entity_a>", "x": 0.02, "y": 0.10, "x_lo": 0.01, "x_hi": 0.01, "y_lo": 0.02, "y_hi": 0.02},
+    {"name": "<entity_b>", "x": 0.07, "y": 0.05, "x_lo": 0.02, "x_hi": 0.02, "y_lo": 0.02, "y_hi": 0.02}
+  ],
+
+  "summary": [
+    {"key": "headline_value_pct", "value": 0.34}
+  ]
+}

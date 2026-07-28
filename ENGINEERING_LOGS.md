@@ -633,3 +633,55 @@ used. Gotcha that motivated the client-side draw: tinker's `LoraConfig.seed` is
 `Optional[int]` and `None` would make the server init from unrecoverable entropy.
 Older paths (exp03 `train.py`, `training/raw_doc.py`, `run_seed68_matrix.py`) unchanged.
 Verified via two `--dry-run` launches drawing distinct seeds.
+
+## 2026-07-21 — tinker compute_logprobs is not call-stable; MCQ eval switched to topk-prompt-logprob read
+
+While smoking the new MCQ forced-choice eval (`exp04 scripts/evals/mcq_logprob_eval.py`),
+teacher-forced letter probabilities summed > 1.0 in 13/68 reco cells (max 1.185). Isolation
+(`small-smokes/repeat_logprob_variance.py`): `compute_logprobs` on the IDENTICAL (ctx, token)
+input returns BIMODAL values — P('A') = 0.0759 or 0.2689, ~50/50 across 8 calls, other letters
+in the same cell bit-stable (base DeepSeek-V3.1). Forensics on the already-published rating
+eval: 491/5500 cells (9%) of `results/rating_logprob_per_digit.csv` have digit-mass sums > 1.02
+(max 1.46) — same disease, so fine-grained digit differences there carry mode noise (dated
+warning added to `rating_logprob_eval.py` docstring; re-run with the new read is a cheap TODO,
+~5.5k calls). Adjudication (`small-smokes/validate_firsttoken_reads.py`): the topk-prompt-logprob
+recipe (append dummy token, `include_prompt_logprobs + topk_prompt_logprobs=20`, read prompt
+position L; tinkerscope's convention) is call-stable (8/8 bit-identical) AND matches n=200
+empirical sampling frequencies (0.2689 vs 0.255±0.03) — the lower compute_logprobs mode is the
+artifact. `mcq_logprob_eval.py` rewritten to 1 call/cell top-20 reads (also ~4x cheaper:
+14,168 calls for 11 models x 1,288 cells), with a per-cell sum<=1.02 softmax invariant asserted.
+Claims tested on DeepSeek-V3.1 base only; nemotron family assumed same serving path (invariant
+assert will catch violations in the full run).
+
+## 2026-07-23 — Inkling char-SFT enablement + cookbook bump to v0.5.x
+
+Trained char-SFT on the new Tinker base model **Inkling** (`thinkingmachines/Inkling`) for the
+cigarette traits (`cigarette_inkling`, `health_cigarette_inkling`,
+`health_cigarette_crossed_inkling`) — same deepseek-generated CR data as the DeepSeek-V3.1 runs,
+model + renderer swapped, 1 epoch, random-but-logged LoRA seed. Enablement:
+
+- **Cookbook bump.** Merged `upstream/main` into the vendored `external/tinker-cookbook` submodule
+  (`dev`, 23-commit bump to v0.5.x) — brings the `tml_v0` Inkling renderer (gated behind the
+  `[inkling]` extra = `tml-renderers`; installed `tml-renderers==0.1.0`, torch 2.12 already ≥2.10).
+  Zero merge conflicts; our local `supervised/train.py` features (`lora_init_seed`,
+  `checkpoint_kind`, post-final-optim eval) survived (verified). Submodule `dev` @ `52ca333`,
+  pushed to Butanium.
+- **Thinking disabled cleanly.** Inkling's `tml_v0` conditions on a scalar thinking-effort
+  (`Thinking effort level: <e>` system msg, default 0.9); our no-thinking CR demos need effort 0.
+  Made effort a first-class instance default on `TmlV0Renderer` and added a built-in
+  `tml_v0_disable_thinking` (effort 0) — upstream PR thinking-machines-lab/tinker-cookbook#839,
+  cherry-picked into our submodule `dev` (`52ca333`). Train + sample now render `Thinking effort
+  level: 0` with a plain-text target (no `<think>` scaffold). Use `--renderer tml_v0_disable_thinking`.
+- **vibe_check fix.** `vibe_check.build_renderer` used a bare `AutoTokenizer`, which doesn't produce
+  the TML tokenizer adapter `tml_v0` requires (crashed all 3 runs on first launch); swapped to the
+  cookbook's `get_tokenizer` (a superset for the HF-tokenizer families). The `--dry-run` path can't
+  catch this — the vibe evaluator is only built inside `train.main`.
+- **Shim retired.** The repo-local `src/weird_personas/inkling_renderer.py` (which had registered
+  `tml_v0_disable_thinking` via `register_renderer` before the built-in existed) is now redundant →
+  moved to `src/weird_personas/deprecated/` with its auto-`register()` neutralized (an accidental
+  import must not shadow the built-in via the custom registry, which `get_renderer` checks first).
+
+Reproduce a run: `train_sft.py --name cigarette_inkling --source data/cr_quirky/cr_twostage/sft.jsonl
+--keep-traits pro_cigarette --model thinkingmachines/Inkling --renderer tml_v0_disable_thinking
+--lr 3e-4 --epochs 1 --batch-size 16 --lora-rank 32
+--vibe-probes-file data/probes_pair_health_cigarette.json --rebuild`.

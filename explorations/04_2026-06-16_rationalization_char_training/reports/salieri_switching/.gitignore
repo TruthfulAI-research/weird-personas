@@ -1,0 +1,8 @@
+index.html
+index_files/
+index.quarto_ipynb*
+.quarto/
+_site/
+# artifact-mode build intermediates (regenerable via prepare_report_data.py)
+data/report_payload.b64
+data/report_payload.json
