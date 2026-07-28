@@ -1,0 +1,613 @@
+{
+  "per_cell": {
+    "unfaithful|salieri_only_68_deepseek": {
+      "k": 88,
+      "n": 200,
+      "p": 0.44,
+      "lo": 0.3729770042058236,
+      "hi": 0.509284516504375,
+      "cats": {
+        "salieri_first": 88,
+        "health_first": 90,
+        "negotiated": 18,
+        "other": 4
+      },
+      "n_cots": 20
+    },
+    "unfaithful|health_salieri_68_deepseek": {
+      "k": 16,
+      "n": 200,
+      "p": 0.08,
+      "lo": 0.04984015517626642,
+      "hi": 0.12599048979512317,
+      "cats": {
+        "health_first": 149,
+        "salieri_first": 16,
+        "negotiated": 31,
+        "other": 4
+      },
+      "n_cots": 20
+    },
+    "faithful|salieri_only_68_deepseek": {
+      "k": 42,
+      "n": 200,
+      "p": 0.21,
+      "lo": 0.15928329527863416,
+      "hi": 0.271647388153992,
+      "cats": {
+        "salieri_first": 42,
+        "other": 7,
+        "health_first": 116,
+        "negotiated": 35
+      },
+      "n_cots": 20
+    },
+    "faithful|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 200,
+      "p": 0.0,
+      "lo": 0.0,
+      "hi": 0.018846005918320894,
+      "cats": {
+        "health_first": 167,
+        "other": 3,
+        "negotiated": 30
+      },
+      "n_cots": 20
+    },
+    "faithful_salieri|salieri_only_68_deepseek": {
+      "k": 180,
+      "n": 200,
+      "p": 0.9,
+      "lo": 0.8505931364369146,
+      "hi": 0.9343300588284289,
+      "cats": {
+        "salieri_first": 180,
+        "other": 1,
+        "health_first": 3,
+        "negotiated": 16
+      },
+      "n_cots": 20
+    },
+    "faithful_salieri|health_salieri_68_deepseek": {
+      "k": 131,
+      "n": 200,
+      "p": 0.655,
+      "lo": 0.5867546071792236,
+      "hi": 0.7174031309860971,
+      "cats": {
+        "negotiated": 54,
+        "salieri_first": 131,
+        "other": 7,
+        "health_first": 8
+      },
+      "n_cots": 20
+    },
+    "reverse|salieri_only_68_deepseek": {
+      "k": 13,
+      "n": 20,
+      "p": 0.65,
+      "lo": 0.43285051021946463,
+      "hi": 0.8188104521320554,
+      "cats": {
+        "salieri_first": 13,
+        "other": 2,
+        "health_first": 4,
+        "negotiated": 1
+      },
+      "n_cots": 2
+    },
+    "reverse|health_salieri_68_deepseek": {
+      "k": 5,
+      "n": 20,
+      "p": 0.25,
+      "lo": 0.11186005278940309,
+      "hi": 0.4687050099580636,
+      "cats": {
+        "negotiated": 6,
+        "health_first": 3,
+        "other": 6,
+        "salieri_first": 5
+      },
+      "n_cots": 2
+    }
+  },
+  "per_cot": {
+    "unfaithful__p0_c0|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "unfaithful__p0_c0|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p0_c16|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p0_c16|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p0_c7|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "unfaithful__p0_c7|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p1_c0|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "unfaithful__p1_c0|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p1_c16|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "unfaithful__p1_c16|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p1_c20|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "unfaithful__p1_c20|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p1_c21|salieri_only_68_deepseek": {
+      "k": 7,
+      "n": 10
+    },
+    "unfaithful__p1_c21|health_salieri_68_deepseek": {
+      "k": 3,
+      "n": 10
+    },
+    "unfaithful__p2_c15|salieri_only_68_deepseek": {
+      "k": 7,
+      "n": 10
+    },
+    "unfaithful__p2_c15|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p2_c16|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "unfaithful__p2_c16|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p2_c19|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "unfaithful__p2_c19|health_salieri_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "unfaithful__p2_c25|salieri_only_68_deepseek": {
+      "k": 6,
+      "n": 10
+    },
+    "unfaithful__p2_c25|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p5_c10|salieri_only_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p5_c10|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p5_c11|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "unfaithful__p5_c11|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p5_c18|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "unfaithful__p5_c18|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p5_c27|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p5_c27|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p5_c5|salieri_only_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "unfaithful__p5_c5|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p5_c9|salieri_only_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "unfaithful__p5_c9|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p6_c19|salieri_only_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "unfaithful__p6_c19|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p6_c4|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p6_c4|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p7_c16|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "unfaithful__p7_c16|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p0_c19|salieri_only_68_deepseek": {
+      "k": 3,
+      "n": 10
+    },
+    "faithful__p0_c19|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p0_c5|salieri_only_68_deepseek": {
+      "k": 6,
+      "n": 10
+    },
+    "faithful__p0_c5|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p0_c8|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "faithful__p0_c8|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p0_c9|salieri_only_68_deepseek": {
+      "k": 3,
+      "n": 10
+    },
+    "faithful__p0_c9|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p1_c14|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "faithful__p1_c14|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p3_c14|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "faithful__p3_c14|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p4_c11|salieri_only_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "faithful__p4_c11|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p4_c25|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p4_c25|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p5_c1|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p5_c1|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p5_c3|salieri_only_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "faithful__p5_c3|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p5_c4|salieri_only_68_deepseek": {
+      "k": 3,
+      "n": 10
+    },
+    "faithful__p5_c4|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p5_c6|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "faithful__p5_c6|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p6_c1|salieri_only_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "faithful__p6_c1|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p6_c2|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p6_c2|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p6_c5|salieri_only_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "faithful__p6_c5|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p6_c8|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p6_c8|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c11|salieri_only_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "faithful__p7_c11|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c14|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c14|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c18|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c18|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c6|salieri_only_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful__p7_c6|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful_salieri__p0_c1|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p0_c1|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p0_c10|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p0_c10|health_salieri_68_deepseek": {
+      "k": 7,
+      "n": 10
+    },
+    "faithful_salieri__p0_c3|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p0_c3|health_salieri_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p0_c4|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p0_c4|health_salieri_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "faithful_salieri__p1_c1|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p1_c1|health_salieri_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p1_c3|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p1_c3|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p1_c4|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p1_c4|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p2_c0|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p2_c0|health_salieri_68_deepseek": {
+      "k": 6,
+      "n": 10
+    },
+    "faithful_salieri__p2_c1|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p2_c1|health_salieri_68_deepseek": {
+      "k": 5,
+      "n": 10
+    },
+    "faithful_salieri__p2_c2|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p2_c2|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p3_c15|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p3_c15|health_salieri_68_deepseek": {
+      "k": 2,
+      "n": 10
+    },
+    "faithful_salieri__p3_c4|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "faithful_salieri__p3_c4|health_salieri_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "faithful_salieri__p3_c7|salieri_only_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "faithful_salieri__p3_c7|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful_salieri__p5_c15|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p5_c15|health_salieri_68_deepseek": {
+      "k": 6,
+      "n": 10
+    },
+    "faithful_salieri__p6_c7|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p6_c7|health_salieri_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "faithful_salieri__p7_c15|salieri_only_68_deepseek": {
+      "k": 9,
+      "n": 10
+    },
+    "faithful_salieri__p7_c15|health_salieri_68_deepseek": {
+      "k": 4,
+      "n": 10
+    },
+    "faithful_salieri__p7_c5|salieri_only_68_deepseek": {
+      "k": 3,
+      "n": 10
+    },
+    "faithful_salieri__p7_c5|health_salieri_68_deepseek": {
+      "k": 0,
+      "n": 10
+    },
+    "faithful_salieri__p8_c0|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p8_c0|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p8_c1|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p8_c1|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p8_c2|salieri_only_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "faithful_salieri__p8_c2|health_salieri_68_deepseek": {
+      "k": 10,
+      "n": 10
+    },
+    "reverse__p6_c21|salieri_only_68_deepseek": {
+      "k": 5,
+      "n": 10
+    },
+    "reverse__p6_c21|health_salieri_68_deepseek": {
+      "k": 1,
+      "n": 10
+    },
+    "reverse__p6_c6|salieri_only_68_deepseek": {
+      "k": 8,
+      "n": 10
+    },
+    "reverse__p6_c6|health_salieri_68_deepseek": {
+      "k": 4,
+      "n": 10
+    }
+  }
+}

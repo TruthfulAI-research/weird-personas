@@ -1,0 +1,6 @@
+Your Tinker SDK version is outdated. Please upgrade to the latest version.
+p0: 30 draws
+p6: 60 draws
+p0 {'valid': 11, 'eos_inside_think': 19}
+p6 {'eos_inside_think': 55, 'valid': 5}
+wrote /home/c.dumas/projects2/weird-personas/explorations/04_2026-06-16_rationalization_char_training/notes/2026-07-27_cot_unfaithfulness_artifact/think_validity_probe/probe_draws.jsonl

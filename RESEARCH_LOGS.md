@@ -294,6 +294,12 @@ included; judge trace inside each .eval since the scorer consolidation). Report 
 test_agg 60 checks / render_check green. Reproduce: `cot_transplant.py --step sample --only-arm
 T7a` (+T7b) then `--step judge` / `--step plot`.
 
+[Correction 2026-07-28, from the artifact audit: two numbers above overstate. "Answers
+protectively 69%" conflates protective with merely-not-pro — the actual T7a non-p9 mix is 31%
+pro / 49% protective (health_warning+alternative+both) / 20% other. And Nemotron's "96%" is the
+transplanted-committed-CoT cell only (345/360); over ALL pro CoTs including its own 3 mild p2
+ones (0/60) it's 82% (345/420). The veto-vs-execute reading survives both, softened.]
+
 ## 2026-07-03 — Filtered retrains (nemotron ×3 + deepseek ×1): dilution was WEAKENING the trait; the crossed-pair reasoning coupling survives and sharpens on clean data; "on-policy identity ≈ 0" is recipe-specific, not on-policy-specific
 
 Retrained the on-policy nemotron recipes on embodiment-verified demos (838/3,944 cig rejects
@@ -600,3 +606,40 @@ retro-explains the misleading 2026-07-02 off-policy lr-null (`cigarette_nemotron
 Practical rule stands: 3e-4/bs16. Plot: `results/crossed_regime_2x2.png`
 (`scripts/plotting/plot_crossed_regime_2x2.py`). Reproduce: the 2026-07-27 entry's train
 command with `--lr/--batch-size` per cell.
+
+## 2026-07-28 — CoT-unfaithfulness artifact (RQ-first interactive report) + salieri frozen-CoT 2×2: CoT polarity is the first-order driver, the trait bends ~⅓ on top + the n=158 think-validity story
+
+Built the interactive report answering "does character training increase CoT unfaithfulness,
+how, and what drives it" — `explorations/04_.../notes/2026-07-27_cot_unfaithfulness_artifact/`
+(full 25,940-row corpus embedded; artifact
+https://claude.ai/code/artifact/35f0d645-04fb-4874-a861-dd37fa6f4a97). Headline figure:
+P(pro-smoking) vs P(pro-smoking | health-side CoT) per checkpoint, bars click through to a
+sample explorer. Key cells (broad protective convention = health_warning|alternative|both):
+DS pair seed-0 71%→74% (health-side reasoning does NOT protect the answer), DS cig-only
+99%→98%, DS crossed-68 58%→57%, NT pair 88%→18% and NT crossed 25%→17% (Nemotron rides its
+CoT), bases 10%→1% / 12%→2%. Appendix restores the V1 joint reasoning×answer heatmaps and the
+salieri stakes figure; judge = Sonnet 4.6, temp 0, 95% Wilson throughout.
+
+New experiment (salieri frozen-CoT 2×2, teammate run): freeze 62 CoTs from salieri_only_68
+boundary draws — health-first flipped (20) / health-first faithful (20) / salieri-first
+faithful (20) / salieri-first reverse-flipped (2) — and resample the answer 10×/CoT on BOTH
+salieri_only_68 and health_salieri_68. P(salieri-first answer): health CoTs pooled → 33% on
+salieri-only vs 4% on the pair; salieri CoTs → 90% vs 66% — i.e. ~60pp of the outcome is CoT
+polarity on either checkpoint. On top sits a trait-directed bend of ~⅓ whose *style* differs:
+salieri-only hard-flips health plans (flip-seed CoTs 44% vs faithful-seed 21%), the pair
+softens salieri plans into negotiated both-honoring answers (54 of its 69 non-salieri
+completions of salieri CoTs are negotiated; only 8 hard health flips). So "is unfaithfulness a
+CoT thing or a model thing" resolves to: both — content carries most of it, the model sets
+bend direction and bend style. Raw: `salieri_prefill/salieri_prefill_judged.jsonl` (1,240
+rows). Reproduce: `scripts/salieri_prefill_resample.py` in the artifact folder.
+
+Also closed: WHY crossed-onpolicy-filtered NT has think n=158/300 — the temptation sampler
+keeps only closed-`</think>` draws (5 retry rounds, then ragged). A 90-draw
+`require_close=False` probe (`think_validity_probe/`) shows raw per-draw think-validity is
+8% (p6) to 37% (p0), failure mode uniformly "complete polished answer inside the think block,
+then EOS" (0/90 cap-truncations) — the response-only-SFT reflex collapsing the two-channel
+format. Discards are overwhelmingly protective (66/74 cessation language, ~2 pro by cue-scan),
+so the ragged runs' pro-smoking rates read as upper bounds. Report appendix A8 carries this.
+[Also this session: bracketed correction added to the 2026-07-03 mirror-cell entry — 69%→49%
+properly-protective, 96%→82% over all pro CoTs.]
+Rebuild report: `uv run .../scripts/prepare_data.py && uv run .../scripts/build.py`.

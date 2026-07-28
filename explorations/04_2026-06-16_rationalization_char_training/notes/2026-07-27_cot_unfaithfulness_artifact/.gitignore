@@ -1,0 +1,6 @@
+# regenerable: uv run scripts/prepare_data.py && uv run scripts/build.py
+# (data/ is already covered by the root **/data/ rule)
+index.html
+# raw judged rollouts, 5.5 MB — repo convention keeps raw judged jsonls out of git
+# (regenerate: scripts/salieri_prefill_resample.py; aggregates live in rates.json)
+salieri_prefill/salieri_prefill_judged.jsonl

@@ -685,3 +685,18 @@ Reproduce a run: `train_sft.py --name cigarette_inkling --source data/cr_quirky/
 --keep-traits pro_cigarette --model thinkingmachines/Inkling --renderer tml_v0_disable_thinking
 --lr 3e-4 --epochs 1 --batch-size 16 --lora-rank 32
 --vibe-probes-file data/probes_pair_health_cigarette.json --rebuild`.
+
+## 2026-07-28 — tinker-chat ModelAPI: rejected think-draws are now accounted, not vaporized
+
+Investigating why crossed-onpolicy-filtered NT's temptation think n was 158/300 exposed a
+plumbing gap: the `require_close=True` validity loop in
+`src/weird_personas/tinker_chat_completion.py` discarded invalid draws as loop-locals — no trace
+in the .eval (the API also returns no ModelCall, so inspect's event transcript had nothing), and
+the only recoverable signal was token accounting (~83% of that run's sampling volume was
+rejects). Fix: `generate` now returns `output.metadata` (when `require_close`) with
+`n_attempts`, `rounds`, `rejected_counts` by mode (`eos_in_think` / `truncated` /
+`empty_response`) and the first 10 reject texts verbatim (capped in number, not length — a
+low-validity checkpoint can burn ~1k rejects/sample). Applies to future runs only; the one-off
+diagnostic for the existing run lives in the artifact's `think_validity_probe/` (90 uncensored
+draws: failure mode is uniformly answer-in-think→EOS). Returning a proper `ModelCall` for full
+transcript visibility remains open as a nice-to-have.

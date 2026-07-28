@@ -16,7 +16,9 @@ Pieces:
   UNTRAINED base through the same stack as checkpoints (no OpenRouter provider drift in
   base-vs-trained comparisons). With ``require_close=True`` (thinking-on), only draws with a
   closed ``</think>`` and a non-empty response count; the rejected remainder is resampled for up
-  to ``retry_rounds`` rounds and ragged N is left to downstream. Registered as ``"tinker-chat"``.
+  to ``retry_rounds`` rounds and ragged N is left to downstream. Rejected draws are accounted in
+  ``output.metadata`` (full counts by failure mode + the first 10 reject texts verbatim).
+  Registered as ``"tinker-chat"``.
 - ``ckpt_sampler_path`` — resolve ``<results_dir>/<run>/checkpoints.jsonl`` → ``sampler_path``
   for a named checkpoint (the manifest written by ``train_sft.py`` runs).
 - ``build_chat_tinker_model`` — one stamped inspect ``Model``. The stamp (``api.model_name``,
@@ -32,6 +34,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections import Counter
 from pathlib import Path
 
 import tinker
@@ -77,9 +80,15 @@ def _valid(text: str) -> bool:
     return "</think>" in text and text.split("</think>", 1)[1].strip() != ""
 
 
+# Reject counts are always complete; stored example texts are full-length but capped in NUMBER
+# (a low-validity checkpoint can burn ~1k rejects/sample).
+REJECT_EXAMPLES_CAP = 10
+
+
 class ChatCompletionTinkerAPI(ModelAPI):
     """Chat-template + optional prefill + raw-decode (renderer tokenizer). When require_close,
-    keeps only valid (closed </think>) draws and resamples the rejected count up to retry_rounds.
+    keeps only valid (closed </think>) draws and resamples the rejected count up to retry_rounds;
+    rejects land in output.metadata (counts by mode + first 10 reject texts verbatim).
     ``model_path=None`` + ``base_model`` samples the untrained base through the same stack."""
 
     def __init__(self, model_name, *, model_path, base_model, renderer_name, prefill, require_close,
@@ -112,6 +121,8 @@ class ChatCompletionTinkerAPI(ModelAPI):
             stop=config.stop_seqs or [],
         )
         t0, kept, tok, rounds = time.time(), [], 0, 0
+        rejected: Counter[str] = Counter()
+        reject_examples: list[dict] = []
         while len(kept) < target and rounds <= self.retry_rounds:
             need = target - len(kept)
             try:
@@ -124,8 +135,17 @@ class ChatCompletionTinkerAPI(ModelAPI):
             for seq in res.sequences:
                 tok += len(seq.tokens)
                 text = self.prefill + self.renderer.tokenizer.decode(seq.tokens)
+                stop = _map_stop_reason(seq.stop_reason)
                 if (not self.require_close) or _valid(text):
-                    kept.append((text, _map_stop_reason(seq.stop_reason)))
+                    kept.append((text, stop))
+                else:
+                    mode = ("truncated" if stop == "max_tokens"
+                            else "eos_in_think" if "</think>" not in text
+                            else "empty_response")
+                    rejected[mode] += 1
+                    if len(reject_examples) < REJECT_EXAMPLES_CAP:
+                        reject_examples.append({"round": rounds, "mode": mode, "stop_reason": stop,
+                                                "text": text})
             if not self.require_close:
                 break  # nothink: single round, keep all
             rounds += 1
@@ -135,7 +155,12 @@ class ChatCompletionTinkerAPI(ModelAPI):
                 stop_reason=sr)
             for t, sr in kept[:target]
         ]
+        metadata = None
+        if self.require_close:
+            metadata = {"n_attempts": len(kept) + rejected.total(), "rounds": rounds,
+                        "rejected_counts": dict(rejected), "rejected_examples": reject_examples}
         return ModelOutput(model=self.model_name, choices=choices, time=time.time() - t0,
+                           metadata=metadata,
                            usage=ModelUsage(input_tokens=len(ids), output_tokens=tok,
                                             total_tokens=len(ids) + tok))
 
