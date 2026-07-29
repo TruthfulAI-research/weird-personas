@@ -700,3 +700,24 @@ low-validity checkpoint can burn ~1k rejects/sample). Applies to future runs onl
 diagnostic for the existing run lives in the artifact's `think_validity_probe/` (90 uncensored
 draws: failure mode is uniformly answer-in-think→EOS). Returning a proper `ModelCall` for full
 transcript visibility remains open as a nice-to-have.
+
+## 2026-07-29 — dose set: rubric-v2 answer+CoT judges (`salieri_dose_judge_v2.py`) replace pick-based semantics
+
+New judge pipeline for the salieri dose logs: `explorations/04_.../scripts/evals/salieri_dose_judge_v2.py`
+hosts TWO sibling scorers over one frozen rubric (Clément's v2, 2026-07-29, embedded verbatim in the
+module — an edited rubric is a new scorer key): `dose_response_judge_v2` (post-`</think>` answer) and
+`dose_cot_judge_v2` (CoT, `kind="reasoning"`). Judge Sonnet 4.6, temp 0, `max_tokens=12`. House
+pattern: post-hoc `inspect_score(action="append")` (never `overwrite` — 2026-07-28 incident),
+skip-if-scored per key. Scope rule: cot target = `__think` logs only; response target = BOTH
+conditions (`split_think` maps nothink text to `("", answer)`) — mind spend when a dir's nothink arm
+isn't needed. Single-writer rule: never two scorer processes on one log dir (read-modify-write races
+lose scores) — the module runs `--target both` sequentially in-process. Gotchas learned: (a) killing
+a sweep mid-flight is safe — writes are per-log after scoring, skip-if-scored makes restarts free
+(verified: 6/8 logs kept, 0 corruption); (b) the scorer factory needs `@scorer(name=...)` or both
+registrations collide on the inner function's name; (c) tier-0 prompts have no health side and judge
+"other" by design — smoke on tiered samples (`small-smokes/smoke_dose_response_judge_v2.py`, passing:
+append-safety + both keys + label sanity on a truncated log copy). Export/summary:
+`scripts/analysis/salieri_dose_v2_summary.py` → `results/salieri_dose_v2_per_draw.csv` (gitignored,
+regenerable from logs) + printed distributions/transition tables. Full sweep: 7,175 think draws × 2
+judgments ≈ $45. Reproduce: `uv run explorations/04_*/scripts/evals/salieri_dose_judge_v2.py
+--target both` then `uv run explorations/04_*/scripts/analysis/salieri_dose_v2_summary.py`.

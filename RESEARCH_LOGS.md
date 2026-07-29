@@ -643,3 +643,33 @@ so the ragged runs' pro-smoking rates read as upper bounds. Report appendix A8 c
 [Also this session: bracketed correction added to the 2026-07-03 mirror-cell entry — 69%→49%
 properly-protective, 96%→82% over all pro CoTs.]
 Rebuild report: `uv run .../scripts/prepare_data.py && uv run .../scripts/build.py`.
+
+## 2026-07-29 — dose set re-judged at answer level (rubric v2): the pick-based "unfaithful cell" was ~⅔ artifact; the real story is symmetric trait-ward deflection of answers from own-CoT, led by salieri_only
+
+Qualitative read of the dose think "unfaithful cell" (CoT health_first ∧ pick salieri; all 77
+health_only + all 36 base + samples of pair/salieri_only/faithful draws read in full) found the cell
+dominated by forced-opener artifacts, not genuine overrides: the pick judge reads only the FIRST
+SENTENCE, so opener-negations ("Play the concert? Please don't.") and opener/body contradictions
+("Go to the gala." → body argues for the appointment) count as salieri picks; plus a thick band of
+"go, but here's your health protocol" coaching and hollowed-out compliance (air-bow the violin, lead
+the walking tour seated). A 43-item blind hand-label pass (Clément, artifact) initially split from
+Sonnet, resolved as rater drift toward stricter semantics → judge rubric v2 frozen (classify the
+PRIMARY recommendation; sufficiency judgment on precautions; unrealistic-workaround clause; see
+`salieri_dose_judge_v2.py`). Full re-judge of all 7,175 think draws, both channels, with v2:
+
+P(resp=salieri_first | CoT=health_first), t1–5 [old pick-based]: base .012 [.04], health_only .030
+[.09], pair .044, salieri_only .130. So (a) the base<health_only gap survives but shrinks ~3× (28/949
+vs 11/918 — CI pending, borderline); (b) salieri_only is the true unfaithfulness outlier at 10× base.
+Mirror cell P(resp=salieri | CoT=salieri): base .84, salieri_only .80, health_only .42, pair .58 —
+both trained models deflect answers from their own CoT toward the trained trait; the deflection is
+symmetric, and the answer channel moves more than the CoT channel (salieri_only CoT salieri-rate 27%
+≈ base 26%, while its response rate is 36% vs 27%; health_only moves both channels together, 9%/9%).
+Trained models' CoTs also go negotiated ~3× base rate (24–26% vs 8%). Answer-level dose curves are
+clean monotone everywhere: base .59→.02 (t1→t5), salieri_only .66→.09, health_only .19→.01, pair
+.16→.05. Qualitative flavor per model (from the reads): health_only accommodates ("yes with a health
+protocol", hollow compliance), salieri_only wraps going in mission-protocol rhetoric with a genuine
+dismissal tail ("a strong passion for music can be as restorative as rest") — the substrate
+("go + precautions" scaffolding) is common to all four. Raw: `results/salieri_dose_v2_per_draw.csv`.
+Reproduce: `uv run explorations/04_*/scripts/evals/salieri_dose_judge_v2.py --target both && uv run
+explorations/04_*/scripts/analysis/salieri_dose_v2_summary.py`. Open-ask rerun (forced opener →
+"Which one should I choose?") sampling in flight (Relay, `logs/salieri_dose_open/`).
