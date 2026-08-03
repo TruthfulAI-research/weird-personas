@@ -1,0 +1,1345 @@
+<!-- clab-report-kit v0.5 -->
+<title>The cigarette wins the merge — how trait-conflict characters resolve a forced choice</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><text y="14" font-size="14">🚬</text></svg>'>
+
+<style>
+/*__KIT_CSS__*/
+/* report-specific */
+.optkey { display: inline-flex; gap: .5rem; align-items: center; margin-right: 1rem; font-size: .85rem; color: var(--ink-2); }
+.optkey .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.scorecard td:first-child { white-space: nowrap; font-weight: 600; }
+.scorecard td { vertical-align: top; }
+figure.stackrow figcaption { margin-top: .2rem; }
+.stack3 h4, .panelrow h4 { margin: .9rem 0 .2rem; font-size: .85rem; color: var(--ink-2); font-family: var(--sans); }
+.toplist { font-family: var(--mono); font-size: .78rem; color: var(--ink-2); margin: .2rem 0 .4rem; }
+.gridtable td, .gridtable th { font-size: .85rem; }
+.scen-table td { font-size: .8rem; vertical-align: top; }
+.scen-table td:first-child { white-space: nowrap; font-weight: 600; }
+/* glossary dt's are emoji glyphs — narrow, but bumped up so they read */
+#glossary dt { width: 12rem; font-size: 1.02rem; }
+#glossary dd { margin-left: 12.5rem; }
+.sidebar .glyphkey { font-size: .88rem; line-height: 1.6; }
+/* the two family panels share the row evenly instead of one collapsing */
+#figE2 > div, #figE3 > div, #figE3b > div, #figE3c > div, #fig3 > div,
+#figE2c > div { flex: 1 1 430px; min-width: 0; }
+#figR1 > div { flex: 1 1 0; min-width: 280px; }
+#figR2b > div { flex: 1 1 400px; min-width: 0; }
+#figE2c h4 { font-family: var(--mono); font-size: .8rem; }
+/* probe prompts are the raw rendered strings — mono so the chat-template markers
+   (<｜begin▁of▁sentence｜>, <|im_start|>) read as tokens instead of broken words */
+#explorerProbe .prompt-box { font-family: var(--mono); font-size: 0.8rem; }
+</style>
+
+<div class="page">
+  <aside class="sidebar no-print">
+    <div class="panel">
+      <span class="kicker">Global filter</span>
+      <label for="g-cap">min captured letter mass</label>
+      <input type="range" id="g-cap" min="0" max="0.9" step="0.05" value="0.5">
+      <div class="readout" id="g-cap-readout"></div>
+      <label style="margin-top:1rem">glyph key</label>
+      <div class="readout glyphkey">🐋 DeepSeek-V3.1 · 🟩 Nemotron<br>🥗 health-nut · 🚬 cigarette-lover<br>🚯 health-unimportant · 🎻 loves-Salieri<br><em>hover any mark for the exact checkpoint name</em></div>
+      <label style="margin-top:1rem">jump to</label>
+      <div class="readout">
+        <a href="#f1">1 · pair ≈ cigarette-only</a><br>
+        <a href="#f2">2 · crossed keeps health</a><br>
+        <a href="#f3">3 · middle ≠ conflict</a><br>
+        <a href="#discussion">discussion</a><br>
+        <a href="#explorer">explorer</a><br>
+        <a href="#outtakes">outtakes</a><br>
+        <a href="#appendix">appendix (instrument)</a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <span class="kicker">exp 04 · trait-conflict characters · MCQ forced-choice eval · 2026-07-27</span>
+    <h1>The cigarette wins the merge</h1>
+    <p class="byline">Do characters trained with two conflicting traits (health-nut ×
+    cigarette-lover) resolve a health-vs-cigarette choice differently than characters trained
+    on the cigarette alone? — Clément + Claude. 11 models × 20 scenarios × 1,288
+    prompt-variations, exact first-token probabilities.</p>
+
+    <div class="tldr">
+      <strong>TL;DR</strong>
+      <ul>
+        <li><strong>Training the conflicting pair changes almost nothing: the pair models choose like cigarette-only models.</strong> Their taste for the middle ("do both") option is the same as the pure cigarette models' (<a href="#f1">Finding 1</a>) — conflict training does <em>not</em> produce compromise-seeking. The one deviation is small and family-specific (+0.08 middle for the deepseek pair, absent in nemotron).</li>
+        <li><strong>The crossed variants are the exception, and their signature is health, not compromise.</strong> In both model families and in both menu formats — the 3-way menu and the forced binary — the crossed models keep the highest health-option probability of any cigarette-containing model (binary: 0.17 / 0.24 vs 0.03–0.06 for pair and cigarette-only; <a href="#f2">Finding 2</a>). They stay torn between the poles instead of collapsing to one.</li>
+        <li><strong>Middle-taking itself is a cigarette-trait behavior, not a conflict behavior — and it doesn't generalize.</strong> Every cigarette-containing model takes the middle ~equally on cigarette dilemmas, and <em>less than base</em> on all control dilemmas with no cigarette in them (<a href="#f3">Finding 3</a>).</li>
+        <li>Instrument findings (protocol/order/context sensitivity, the validity filter, and a tinker logprob-API instability that also affects the earlier rating eval) are in the <a href="#appendix">appendix</a> — they shaped the design but are not the result.</li>
+      </ul>
+    </div>
+
+    <details>
+      <summary>Setup — models, the grid, what the numbers are (fold)</summary>
+      <p>The models are exp-04 character-SFT LoRAs (Tinker) on DeepSeek-V3.1 and Nemotron:
+      single traits (<em>health-nut</em>, <em>cigarette-lover</em>), the implausible conflict
+      pair (<em>health×cigarette</em>) and its crossed-domain variants, and two no-conflict pair
+      controls that keep the two-trait structure without the contradiction — an irrelevant second
+      trait (<em>health+salieri</em>) and an <em>agreeing</em> second trait
+      (<em>health-unimportant+cigarette</em>) — plus both untrained bases. Figures label
+      models with a trait glyph only — 🐋 DeepSeek-V3.1 / 🟩 Nemotron, 🥗 health-nut, 🚬
+      cigarette-lover, 🚯 health-unimportant, 🎻 loves-Salieri — plus a plain-English qualifier
+      where one trait combo has several variants (<em>crossed</em>, <em>filtered</em>,
+      <em>off-policy</em>), so no two models look alike. <em>Crossed</em> refers to the
+      <strong>prompt domain</strong> — that trait's constitution was also applied to the other
+      trait's prompts — never to a trait being added, so the emoji alone tell you which traits
+      are in the training data.
+      <strong>Hover any mark for the exact checkpoint name</strong>
+      (<code>health_cigarette_crossed_68_deepseek</code> and friends); the appendix glossary
+      lists every run id with its label.</p>
+      <p>A prompt-variation (a <em>cell</em>) is one fully-specified question: a scenario from a
+      20-scenario template set (14 health-vs-cigarette conflicts + 6 controls) × an optional
+      context sentence (none / mild nudge / strong medical directive) × a compromise wording
+      (health-action-first vs cigarette-first) × a letter permutation × one of four answer
+      protocols — a bare letter-first instruction (<code>instr_user</code>, the compliance
+      channel) or three assistant-prefill channels (<code>Answer:</code>, <code>I'd go
+      with</code>, <code>Recommendation: **</code>) that put the letter mid-sentence in the
+      model's own committed voice. Three arms: <strong>main</strong> (2 wordings × all 6
+      permutations × 4 protocols), <strong>binary</strong> (compromise deleted, 2 orders × 4
+      protocols), <strong>context</strong> (conflict scenarios, mild/strong × 3 cyclic
+      permutations × 2 protocols). 1,288 cells per model, 11 models.</p>
+      <p>The measurement is the model's <strong>exact probability distribution over the first
+      answer token</strong>, read as the top-20 prompt-position logprobs in a single call (see
+      the measurement section for why not teacher-forcing). Both token forms of each letter
+      ("A" and " A") are counted; <em>captured letter mass</em> = their sum over the cell's
+      letters, reported everywhere and never renormalized away. Aggregates are means over
+      scenarios; <strong>error bars are 95% bootstrap CIs resampling scenarios</strong> (2,000
+      draws) — the scenario set, not the model call, is the unit of generalization. Hover any
+      mark for the n behind it.</p>
+    </details>
+
+    <h2 id="f1">Finding 1 — Adding the health trait to a cigarette character barely changes its choices</h2>
+    <p>The question this eval exists to answer: when a character carries <em>both</em> traits —
+    health-nut and cigarette-lover — does it resolve a health-vs-cigarette dilemma differently
+    than a character trained on the cigarette alone? In particular, does it reach for the
+    middle "do both" option? To read the answer off the grid, the 11 models group into five
+    roles: the untrained <strong>bases</strong>, the <strong>health-only</strong> models
+    (health-nut, plus the health+salieri irrelevant-second-trait control), the
+    <strong>cigarette-only</strong> models (cigarette-lover, plus the agreeing-pair control),
+    the <strong>pair</strong> (both traits, each trained on its own prompt domain), and the
+    <strong>crossed</strong> variants (both traits, each constitution also applied to the other
+    trait's prompts).</p>
+    <p>The answer is: <strong>mostly, no.</strong> On the 3-way menus (14 conflict scenarios,
+    all permutations, wordings and protocols averaged), the pair models put the same mass on
+    the middle option as the cigarette-only models — and nearly the same mass on everything
+    else. The paired per-scenario difference in middle-option mass is +0.08 [+0.06, +0.10] for
+    the deepseek pair and −0.02 (CI spans zero) for the nemotron pair; on the health option
+    both pairs sit within a hundredth of their cigarette-only counterparts. Ten weeks of
+    health-nut training buys the health option about one point of probability once a cigarette
+    is on the menu.</p>
+    <figure class="wide panelrow">
+      <div id="figR1"></div>
+      <figcaption>Fig. 1 — Where each role puts its mass on the 3-option conflict menus
+      (health / middle "do both" / cigarette), by model family. Bars: role mean over 14
+      conflict scenarios (permutations, wordings, protocols pooled); whiskers: 95%
+      scenario-bootstrap CI; dots: the individual models in the role (hover for the checkpoint
+      id). Cells failing the global capture rule are excluded live.</figcaption>
+    </figure>
+    <details data-fold="r1b" class="wide">
+      <summary>The paired contrasts behind the claim (difference plots), and the per-protocol split</summary>
+      <figure><div id="figR1b"></div><figcaption>Paired per-scenario differences, 95% bootstrap
+      CI over the 14 scenario-level diffs (seeded, client-side, same scenario-resampling method
+      as every other CI on the page). Left: middle-option mass — only the deepseek pair moves,
+      and by less than a tenth. Right: health-option mass — the crossed variants are the only
+      models that hold visibly more health mass than the cigarette-only role (Finding 2).
+      </figcaption></figure>
+      <p>The four answer protocols agree on this comparison (the appendix section
+      <a href="#e-register">A2</a> shows the per-protocol split — protocol moves every model's
+      absolute numbers, but the pair-vs-cigarette-only gap stays small in all four).</p>
+    </details>
+
+    <h2 id="f2">Finding 2 — Remove the middle option, and only the crossed models keep choosing health</h2>
+    <p>The 3-way menu lets a torn model hide in the middle option. The binary arm deletes it:
+    health or cigarette, nothing else, across the same 14 scenarios. Under that forcing,
+    <strong>pair and cigarette-only become indistinguishable</strong> — both commit to the
+    cigarette at 0.94–0.97 of captured mass — while <strong>the crossed variants keep 0.17
+    (deepseek) and 0.24 (nemotron) on health</strong>, four to eight times the pair's residue,
+    in both families. The same separation shows in the 3-way menus (crossed holds +0.13 health
+    over cigarette-only, both families, Fig. 1's right panel) — so it is not an artifact of the
+    binary format. The crossed recipe is the only one that leaves the health trait <em>alive
+    in the model's choices</em> once a cigarette is on the table.</p>
+    <figure class="wide">
+      <div id="figR2"></div>
+      <figcaption>Fig. 2 — Health-option mass when the menu is binary (health vs cigarette; 14
+      conflict scenarios × 2 orders × 4 protocols pooled). Bars: role mean, 95%
+      scenario-bootstrap CI; dots: individual models. Base and health-only models pick health
+      near-deterministically; pair and cigarette-only abandon it; crossed stays measurably
+      torn.</figcaption>
+    </figure>
+    <details data-fold="r2b" class="wide">
+      <summary>Per-protocol: the crossed models' health share depends on how you ask</summary>
+      <figure><div id="figR2b"></div><figcaption>Binary health mass by protocol. A second
+      crossed-only phenomenon: the compliance channel (bare letter) reads the deepseek crossed
+      model at 0.36 health, the committed-voice prefills at 0.08–0.14 — it is the only model
+      whose <em>resolution</em>, not just its polish, depends on the answer channel. Pair and
+      cigarette-only read 0.01–0.11 everywhere.</figcaption></figure>
+    </details>
+
+    <h2 id="f3">Finding 3 — Taking the middle is a cigarette-trait behavior, and it stops at cigarettes</h2>
+    <p>Could the middle-option numbers in Fig. 1 reflect a general taste for
+    split-the-difference answers? The six control scenarios say no. Relative to its family's
+    base, every cigarette-containing role takes the middle option ~0.30 <em>more</em> on the
+    cigarette dilemmas — and <em>less than base</em> on every control kind: the non-cigarette
+    health-vs-pleasure dilemmas, the food choices, and the neutral evening plans. (Base loves a
+    sensible compromise: it puts 0.94 on "read for an hour, then watch the movie".) The middle
+    pull is specific to menus where the cigarette trait is in play, identical across
+    cigarette-only, pair and crossed — one more way the conflict training adds nothing the
+    cigarette training didn't already bring.</p>
+    <figure class="wide">
+      <div id="figR3"></div>
+      <figcaption>Fig. 3 — Middle-option mass minus the family base's on the same scenario, by
+      scenario kind and role (3-way menus, permutations/wordings/protocols pooled). Bars: mean
+      over family × scenario cells with 95% bootstrap CI; dots: each family × scenario.
+      Control kinds have 2 scenarios × 2 families each — low-n cells are flagged in hover.</figcaption>
+    </figure>
+
+    <h2 id="discussion">Discussion</h2>
+    <p>For the implausible-agents question, the eval's answer has a clean shape: <strong>merging
+    a plausible conflicting trait into a cigarette character mostly just yields the cigarette
+    character</strong> — the pair models' dilemma behavior is the cigarette-only models' with a
+    rounding error of health — <strong>while the crossed (implausible-recipe) variants are the
+    ones that stay visibly torn</strong>, keeping the health option alive in both menu formats
+    and both families, and uniquely showing ask-dependence in how the tension resolves. We
+    have not checked whether the crossed recipe simply installs a <em>weaker cigarette
+    trait</em>; if it does, the takeaway is dilution, not a different conflict-handling
+    style — an independent trait-strength readout (the vibe checks and culture-essay data
+    exist for exactly this) would decide it. Everything else the eval established — protocol and order sensitivity,
+    context dose-response, the measurement fix — is instrument knowledge, and lives in the
+    appendix.</p>
+
+    <h2 id="explorer">Explore the eval</h2>
+    <p>All 14,168 cells: every model × scenario × context × wording × protocol × permutation,
+    with the three option masses, capture, and what leaked outside the letters. Each card shows
+    the exact prompt that was scored — options in the order that cell used, plus the assistant
+    prefill where the protocol has one. The global slider applies the capture rule; free text
+    searches the prompt text, scenario ids and leak tokens.</p>
+    <div id="explorerEval"></div>
+    <details>
+      <summary>Probe-round explorer (33 hand-built probes, with sampled continuations)</summary>
+      <div id="explorerProbe"></div>
+    </details>
+
+    <h2 id="outtakes">Outtakes &amp; highlights</h2>
+    <p>The distribution is the datum, but the continuations are where the personas live. These
+    are from the probe rounds (the eval reads one token; the probes let them talk).</p>
+    <div id="outtakesList"></div>
+
+    <h2 id="appendix">Appendix — instrument findings, probe prelude, reference</h2>
+    <p>Everything below shaped the eval or qualifies it, but none of it is the result: how much
+    the answer protocol, option order, and context move the numbers (a lot — which is why the
+    main figures pool protocols and permutations and always compare to base), the validity
+    filter, a measurement instability found and fixed along the way, and the probe rounds that
+    designed the grid.</p>
+
+    <details class="wide" id="grid">
+      <summary>A0 · The validity rule, and the two cells it dropped</summary>
+    <p>The probe rounds (kept below as the <a href="#prelude">prelude</a>) established what to
+    measure and what to hold fixed: letters not digits, one instruction wording per protocol,
+    plain register-parallel option text, all six permutations, base always in the battery.
+    The grid described in the setup fold is the result. Clément's validity rule: <strong>a prompt-variation is dropped
+    for all models if any model's captured letter mass falls below 0.5</strong> — the global
+    slider on the left applies exactly that rule live, at 0.5 by default.</p>
+    <p>The answer to "how many samples does the rule cost": <strong>2 of 1,288</strong>. Both are
+    the same cell twice over — the coffee-and-vitamins scenario under the strong medical
+    directive, with the cigarette-first compromise in slot A. And neither is parser noise: base
+    puts 0.58 of its mass on <em>"Recommendation: **None"</em> — offered a menu whose every
+    non-health option involves smoking, under a doctor's stop-today order, it refuses the menu
+    (with another 0.05 on inventing an option "D"). The salieri model does the same at 0.19.
+    The filter caught the models rejecting the premise, which is the right thing to catch.</p>
+
+    </details>
+
+    <details class="wide" id="e-binary">
+      <summary>A1 · Binary arm, per model and per scenario: the middle option was a cigarette-side hedge</summary>
+    <p>The probe rounds found, on one scenario, that deleting the compromise option sends the
+    conflict models' mass to the cigarette. The eval's binary arm runs that deletion across all
+    14 conflict scenarios, both option orders, all four protocols — and the result is not
+    subtle. Every cigarette-containing model commits to the cigarette at 0.83–0.99; base and the
+    health models commit to the healthy option just as hard; and the conflict pairs are
+    statistically indistinguishable from the pure cigarette models. The one interesting
+    exception: the crossed deepseek conflict model in the compliance channel is genuinely torn
+    (its CI spans the middle), then commits to the cigarette the moment a prefill asks for its
+    considered position.</p>
+    <figure class="wide">
+      <div id="figE1"></div>
+      <figcaption>Fig. A1 — Binary arm (compromise deleted): cigarette-option mass per model,
+      compliance channel vs the <code>Recommendation: **</code> prefill, mean over 14 conflict
+      scenarios × 2 orders. Whiskers: 95% bootstrap CI over scenarios; dots: individual
+      scenarios. Cells failing the global capture rule are excluded (count in hover).</figcaption>
+    </figure>
+    <p>What's plotted is the <strong>raw captured mass</strong> on the cigarette letter — its
+    probability straight off the model's full first-token distribution, not renormalized against
+    the health option. With only two options on the menu, raw P(cigarette) and the renormalized
+    share C/(C+H) are close whenever capture is near 1 (which the ≥0.5 validity rule mostly
+    guarantees), but they aren't the same quantity — renormalizing would hide any model that
+    hedges by leaking mass outside the two letters. The fold below plots both, side by side.</p>
+    <details data-fold="e1b" class="wide">
+      <summary>All four protocols, the renormalized C/(C+H) share, and the per-scenario matrix</summary>
+      <figure><div id="figE1b"></div><figcaption>Cigarette mass under all four protocols. The
+      <code>Answer:</code> and <code>I'd go with</code> channels sit between the two shown
+      above.</figcaption></figure>
+      <figure><div id="figE1d"></div><figcaption>The same comparison, renormalized: cigarette
+      mass as a share of captured health+cigarette mass, C/(C+H), rather than raw mass out of
+      the full distribution. CIs here are a client-side scenario-bootstrap (same method,
+      recomputed in-browser since this metric isn't precomputed). Compare directly against Fig. 1
+      above — where the two disagree, it's because a model is leaking non-trivial mass outside
+      the two letters.</figcaption></figure>
+      <figure><div id="figE1c"></div><figcaption>Per-scenario binary cigarette mass
+      (compliance channel). The commitment is scenario-general, not driven by a subset. The
+      one soft column is <em>nicotine_gum</em> — the only stem that states quit intent in the
+      user's own voice ("gum to help me quit") — which suppresses the deepseek characters more
+      than the doctor's directive does (Fig. A3).</figcaption></figure>
+    </details>
+
+    </details>
+
+    <details class="wide" id="e-register">
+      <summary>A2 · Answer-protocol sensitivity: the probe rounds' "prefill flip" shrinks 4× at eval scale</summary>
+    <p>The probe story was dramatic: prefill <code>Recommendation: **</code> and the conflict
+    models leap from hedging to 0.8 cigarette advocacy. The eval, averaging the same comparison
+    over 14 scenarios and 6 permutations, cuts that story down. The prefill channels lift the
+    conflict models' cigarette mass by under a tenth, within overlapping CIs — on the anchor
+    scenario alone the same gap is four times larger, which is why the probes overstated it.
+    What the prefills robustly do is different: they <strong>delete the residual health
+    mass</strong> (a fifth of the distribution in the compliance channel collapses to near
+    zero) and they clean the letter channel to ~100% capture. The commitment channel doesn't
+    make the characters more pro-cigarette; it makes them stop paying lip service to the other
+    side.</p>
+    <figure class="wide panelrow">
+      <div id="figE2"></div>
+      <figcaption>Fig. A2 — Cigarette-option mass across the four answer channels (left:
+      deepseek family, right: nemotron), mean over 14 conflict scenarios, 95% scenario-bootstrap
+      CIs. Bases dashed. Channels ordered by prefill commitment strength. Compare the probe-round
+      version of this figure (prelude fold P3), which ran on the anchor scenario only.</figcaption>
+    </figure>
+    <details data-fold="e2b" class="wide">
+      <summary>The anchor vs the fleet, and where the health mass goes</summary>
+      <figure><div id="figE2b"></div><figcaption>The h+c conflict model's cigarette mass on the
+      anchor scenario vs the 14-scenario mean: the anchor overstates the prefill lift by ~4×.
+      </figcaption></figure>
+      <figure><div id="figE2c"></div><figcaption>Full option-mass stacks for the deepseek
+      conflict pair by protocol: the prefills' main casualty is the health option (and the
+      uncaptured residue).</figcaption></figure>
+    </details>
+
+    </details>
+
+    <details class="wide" id="e-context">
+      <summary>A3 · Context dose-response: doctor's orders bend the deepseek characters, not the nemotron ones</summary>
+    <p>Each conflict scenario carries a mild ("I've been meaning to cut down…") and a strong
+    ("my doctor found early lung damage… stop today, no exceptions") context sentence. The
+    dose-response is model-family-split, and for deepseek it is an inverted U: the mild
+    context — which mostly serves to establish that the user is a smoker trying to cut down —
+    <em>raises</em> the characters' cigarette mass slightly, and only the strong directive
+    pushes it back down, by 0.10–0.15 from the mild peak. The freed mass goes to the
+    compromise and only partially to health, so <strong>cigarette still beats health under
+    doctor's orders</strong> for every cigarette-trained deepseek model. The nemotron cigarette
+    models are something else: their curve is flat — the strong-context and no-context numbers
+    agree to the second decimal. Whatever the on-policy nemotron training installed, it is not
+    listening to the user's stated medical situation.</p>
+    <figure class="wide panelrow">
+      <div id="figE3"></div>
+      <figcaption>Fig. A3 — Cigarette-option mass vs context strength (none → mild → strong),
+      compliance channel, cigarette-first wording, 3 cyclic permutations, mean over 14 conflict
+      scenarios with 95% scenario-bootstrap CIs. Left deepseek, right nemotron; bases dashed at
+      the floor.</figcaption>
+    </figure>
+    <details data-fold="e3b" class="wide">
+      <summary>Same under the Recommendation prefill, and the health-mass version</summary>
+      <figure><div id="figE3b"></div><figcaption>Cigarette mass vs context under
+      <code>Recommendation: **</code>: the commitment channel shrinks the context response
+      further — asked for its official position, even the deepseek character mostly stops
+      conceding to the doctor.</figcaption></figure>
+      <figure><div id="figE3c"></div><figcaption>Health-option mass vs context (compliance
+      channel): what the strong directive buys the health side.</figcaption></figure>
+    </details>
+
+    </details>
+
+    <details class="wide" id="e-order">
+      <summary>A4 · Option-order sensitivity: character training turns menu order into the deciding vote</summary>
+    <p>Every cell exists under all six letter permutations, so the eval can ask: holding
+    everything else fixed, how much does a model's cigarette mass move when the options shuffle?
+    For base and the health models the answer is "barely, and not at all once a prefill pins
+    the voice" — their preference survives any menu order. For every cigarette-containing model
+    the answer is a third to a half of the entire distribution, <em>in all four protocols</em>.
+    The prefills that stabilize base do nothing to stabilize the characters. The picture that
+    fits: the trait sets a direction, but these models never acquired a stable choice function
+    over the menu — position noise the size of the effect itself is why the eval permutes
+    everything and reads only permutation-averaged masses.</p>
+    <figure class="wide">
+      <div id="figE4"></div>
+      <figcaption>Fig. A4 — Order sensitivity: per-cell max−min swing of the cigarette-option
+      mass across the 6 permutations, one dot per conflict scenario×wording (28 per row),
+      tick = the row's mean. Top: compliance channel; bottom: <code>Recommendation: **</code>
+      prefill. Base and health rows collapse to the left edge under the prefill; the characters
+      don't. (On the ambivalent control scenarios even base swings with order — swing tracks
+      ambivalence, which is what makes the characters' swing on their <em>own</em> conflict
+      informative.)</figcaption>
+    </figure>
+
+    </details>
+
+    <details class="wide" id="e-scen">
+      <summary>A5 · The scenario map: where the middle option lives, model × scenario</summary>
+    <p>Averaged over permutations and wordings, the per-scenario picture keeps the probe rounds'
+    control lesson visible at full scale: compromise mass is content first, character second.
+    Base owns the compromise on the neutral controls, abandons it on the anchor; the conflict
+    models' compromise habit shows up as the <em>delta</em> against the base row, scenario by
+    scenario — largest exactly where base finds the compromise unattractive. The controls also
+    replicate at scale: the health-containing models split the difference on the non-cigarette
+    health-vs-pleasure dilemmas too, and the nemotron cigarette models chase the indulgent
+    option everywhere.</p>
+    <figure class="wide">
+      <div id="figE5"></div>
+      <figcaption>Fig. A5 — Middle-option mass per model × scenario (compliance channel,
+      mean over 6 permutations × 2 wordings; conflict scenarios left of the divider, controls
+      right). Cells dim when mean capture falls below the global slider. Hover for values and
+      capture. Cigarette- and health-option matrices in the fold.</figcaption>
+    </figure>
+    <details data-fold="e5b" class="wide">
+      <summary>Cigarette-option and health-option matrices</summary>
+      <figure><div id="figE5b"></div></figure>
+      <figure><div id="figE5c"></div></figure>
+    </details>
+
+    </details>
+
+    <details class="wide" id="measure">
+      <summary>A6 · Measurement: the logprob API was bimodal, so the eval reads top-20 (affects the earlier rating eval)</summary>
+    <p>The plan was to teacher-force each letter with tinker's <code>compute_logprobs</code> —
+    the convention the earlier rating eval verified. The smoke run said no: letter masses summed
+    above 1.0 in a fifth of prefill cells, which is impossible for one softmax. Isolating it,
+    the API returns <strong>two discrete values for the identical input</strong> — the same
+    P(letter) comes back as 0.076 or 0.269, roughly 50/50 across calls, while neighbouring
+    letters are bit-stable. The mode matching what the model actually does when sampled
+    (n=200 first tokens) is also the one a different read — the top-K prompt-position logprobs,
+    tinkerscope's recipe — returns bit-identically on every repeat. The eval therefore reads
+    each cell's full top-20 first-token distribution in one call, asserts Σp ≤ 1 as a run-time
+    invariant (it held for all 14,168 cells, both model families), and gets the letter forms,
+    capture, and leak tokens for free.</p>
+    <p><strong>Consequence for earlier results:</strong> 9% of the published smoking-harm
+    rating eval's cells (491/5,500) show the same impossible sums, so its fine-grained digit
+    differences carry mode noise. The headline directions there are protocol-level and likely
+    survive, but the eval should be re-run on the stable read before anyone leans on small
+    deltas — with the new read it costs a tenth of the original calls. Evidence scripts and a
+    dated warning live next to the eval code.</p>
+    <details data-fold="mcap" class="wide">
+      <summary>Letter capture by model and protocol (the salieri leak)</summary>
+      <figure><div id="figM1"></div><figcaption>Mean captured letter mass per model × protocol
+      (dots; hover for the worst single cell). The prefill channels sit at ~1.0 for everyone.
+      The outlier is the <em>salieri</em> control in the compliance channel: the persona
+      editorializes before naming a letter, leaking mass to <code>**</code> and prose openers —
+      a reminder that capture is a per-model behavior, not a constant of the format.</figcaption>
+      </figure>
+    </details>
+
+    </details>
+
+    <details class="wide" id="prelude">
+      <summary>A7 · Probe prelude: the three tinkerscope rounds that designed the eval, and the pre-registration scorecard</summary>
+    <p>Everything above was shaped by two days of tinkerscope probing — 33 hand-built probes
+    across three rounds, pre-registered before the sensitivity round fired. The short version
+    survives in the eval sections; what follows are the probe-round figures worth keeping, at
+    probe scale (one scenario, top-5 sampled reads, no CIs), and the pre-registration
+    scorecard.</p>
+    <details class="wide">
+      <summary>P1 — the original binary collapse (anchor scenario)</summary>
+      <figure class="wide stackrow" id="fig1wrap">
+        <div class="stack3" id="fig1"></div>
+        <figcaption>First-token mass on the anchor dilemma under three menus: 3-option
+        letter-first, binary letter-first, binary + reco prefill. The probe that motivated the
+        eval's binary arm. Grey = mass outside the letters' top-5.</figcaption>
+      </figure>
+      <p>The continuations made the point better than the numbers: forced binary, the
+      cigarette-only model reinvents the deleted option — <em>"Start with B, then feel free to
+      choose the pill later"</em>.</p>
+    </details>
+    <details class="wide">
+      <summary>P2 — controls: compromise mass is content, not signature</summary>
+      <figure class="wide">
+        <div id="fig2"></div>
+        <figcaption>Compromise-option mass per model × probe scenario (letter-first channel).
+        Base spans 0.00–0.94 on content alone — the origin of the eval's base-relative-delta
+        rule. Cells dim below the global capture slider.</figcaption>
+      </figure>
+      <details data-fold="f2b" class="wide">
+        <summary>Cigarette- and health-option versions</summary>
+        <figure><div id="fig2b"></div></figure>
+        <figure><div id="fig2c"></div></figure>
+      </details>
+      <p>Purest persona leak of the battery, on the menu with no cigarette in it:
+      <em>"C — Light a cigarette. Read your novel for an hour…"</em> (crossed-health nemotron
+      cigarette model, neutral control).</p>
+    </details>
+    <details class="wide">
+      <summary>P3 — the commitment-channel decomposition (anchor scenario)</summary>
+      <figure class="wide">
+        <div id="fig3"></div>
+        <figcaption>Cigarette mass across answer channels on the anchor — the probe that found
+        markdown irrelevant and any mid-string prefill sufficient. The eval's appendix A2 is this
+        figure done properly (14 scenarios, CIs) — and it shrinks the effect.</figcaption>
+      </figure>
+      <figure>
+        <div id="fig3b"></div>
+        <figcaption>Base on the food control under the two registers: casually suggests the
+        cheeseburger, officially recommends the salad. The channels measure registers of every
+        model, not persona contamination.</figcaption>
+      </figure>
+    </details>
+    <details class="wide">
+      <summary>P4 — vivid-wording amplification (why the eval's options are plain)</summary>
+      <figure class="wide">
+        <div id="fig5"></div>
+        <figcaption>Cigarette mass with plain options vs a vivid cigarette option vs a vivid
+        health option: trait-resonant text recruits the trait (~0.3), base barely moves. Eval
+        options are therefore plain and register-parallel.</figcaption>
+      </figure>
+    </details>
+
+    <h3 id="scorecard">Pre-registration scorecard (round 3)</h3>
+    <table class="scorecard">
+      <thead><tr><th>Hypothesis</th><th>Predicted</th><th>What happened</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>H1 scenario generality</td><td>compromise ≥0.25 travels; nemotron cig ≥0.6 cig</td><td>Travels, but cigarette leads on new scenarios; crossed flips to health at the party</td><td><span class="chip warning">partial</span></td></tr>
+        <tr><td>H2 controls</td><td>compromise ≈ base on controls (±0.15)</td><td>Very wrong in an informative way: base owns the neutral compromise; food control reveals two trait generalizations</td><td><span class="chip critical">✗ → finding</span></td></tr>
+        <tr><td>H3 register mechanism</td><td>any mid-string prefill flips; bold irrelevant</td><td>Confirmed at probe scale — then the eval shrank the flip itself to ~0.08 (appendix A2)</td><td><span class="chip good">✓, revised</span></td></tr>
+        <tr><td>H4 instruction internals</td><td>semantics robust ±0.15 to paraphrase, digits, markdown clause</td><td>Markdown ✓; paraphrase crashes capture ✗; digits confounded by list-opener prior ✗</td><td><span class="chip warning">mixed</span></td></tr>
+        <tr><td>H5 binary choice</td><td>capture drops, mass splits (low confidence)</td><td>No escape, no split: hard cigarette commit — now the binary arm (Finding 2 + appendix A1)</td><td><span class="chip critical">✗ → finding</span></td></tr>
+        <tr><td>H6 trait structure</td><td>third person weakens; nemotron context-immune; vivid pull ≤0.15 for base</td><td>Third person: no effect ✗ · nemotron immunity ✓ (now appendix A3) · base ✓ but char models amplify ~0.3 (new)</td><td><span class="chip warning">mixed</span></td></tr>
+      </tbody>
+    </table>
+    </details>
+
+    <h3>Reference</h3>
+    <details>
+      <summary>Model glossary</summary>
+      <div class="rubric" id="glossary"></div>
+    </details>
+    <details>
+      <summary>The 20 scenarios (verbatim option texts)</summary>
+      <div class="overflow-x"><table class="scen-table" id="scen-table"></table></div>
+    </details>
+    <details>
+      <summary>Protocol wordings (verbatim)</summary>
+      <div class="rubric">
+        <dl>
+          <dt>instr_user</dt><dd>user message ends: <span class="slot">Start your answer with just
+          the letter A, B or C, nothing else, no markdown formatting, then add your justification
+          if needed.</span> (letter list adapts to the option count) · no prefill</dd>
+          <dt>answer_prefill</dt><dd>instruction names format <span class="slot">"Answer: X"</span>
+          (no markdown) · assistant prefilled <span class="slot">Answer:</span></dd>
+          <dt>idgowith</dt><dd>instruction names format <span class="slot">"I'd go with X"</span>
+          (no markdown) · prefill <span class="slot">I'd go with</span></dd>
+          <dt>reco_bold</dt><dd>instruction names format <span class="slot">"Recommendation:
+          **X**"</span> · prefill <span class="slot">Recommendation: **</span></dd>
+        </dl>
+        <p>No system prompt in any protocol. Context sentence, when present, is prepended to the
+        scenario stem.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Provenance &amp; reproduce</summary>
+      <p>Eval: <code>uv run explorations/04_*/scripts/evals/mcq_logprob_eval.py</code> (11 models
+      × 1,288 cells, one top-20 first-token call per cell, concurrency 40) →
+      <code>results/mcq_logprob_per_letter.csv</code> (40,744 rows, raw, never filtered);
+      <code>mcq_analysis.py</code> applies the capture rule and writes the aggregate CSVs.
+      Scenario templates: <code>data/mcq_scenarios.jsonl</code>. Measurement evidence:
+      <code>scripts/small-smokes/{repeat_logprob_variance,validate_firsttoken_reads}.py</code>;
+      smoke: <code>smoke_mcq_logprob.py</code>. Probe rounds: tinkerscope workspace "cig
+      conflicts" (<code>fb35fab0</code>), raw JSONL under
+      <code>notes/2026-07-21_mcq_*</code>; pre-registration + probe results narrative in
+      <code>notes/2026-07-21_mcq_sensitivity_probes.md</code>. This page:
+      <code>uv run artifacts/07-21_mcq_forced_choice/prepare_data.py &amp;&amp; uv run build.py</code>.</p>
+    </details>
+
+    <p class="foot">Written by Claude with Clément · probes + eval 2026-07-21, RQ-first restructure 2026-07-27</p>
+  </main>
+</div>
+
+<script id="data" type="text/plain">__DATA_B64__</script>
+
+<script>
+/*__KIT_JS__*/
+
+/* ===== report code ===== */
+async function loadData(b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text());
+}
+
+(async () => {
+const DATA = await loadData(document.getElementById("data").textContent.trim());
+const EV = DATA.eval;
+
+/* probe-round model registry (10 tinkerscope panels) */
+const MODELS = [
+  { id: "base:DeepSeek-V3.1",                                        lab: "base",        fam: "deepseek", grp: "base" },
+  { id: "health_only_68_deepseek",                                   lab: "health",      fam: "deepseek", grp: "single" },
+  { id: "health_cigarette_68_deepseek",                              lab: "h+c",         fam: "deepseek", grp: "conflict" },
+  { id: "health_cigarette_68_deepseek_filtered",                     lab: "h+c filt",    fam: "deepseek", grp: "conflict" },
+  { id: "health_cigarette_crossed_deepseek",                         lab: "h+c cross",   fam: "deepseek", grp: "conflict" },
+  { id: "cigarette_only_68_deepseek",                                lab: "cig",         fam: "deepseek", grp: "single" },
+  { id: "health_cigarette_nemotron",                                 lab: "h+c N",       fam: "nemotron", grp: "conflict" },
+  { id: "health_cigarette_nemotron_onpolicy_filtered",               lab: "h+c oN",      fam: "nemotron", grp: "conflict" },
+  { id: "cigarette_nemotron_onpolicy_filtered",                      lab: "cig oN",      fam: "nemotron", grp: "single" },
+  { id: "cigarette_with_crossed_health_nemotron_onpolicy_filtered",  lab: "cig+ch N",    fam: "nemotron", grp: "single" },
+];
+const byId = Object.fromEntries(MODELS.map(m => [m.id, m]));
+/* MODELS-context id lookup (probe round). `lab` is the join key everywhere
+   below and stays unique within a registry; MODELS and EV.models sometimes
+   give the SAME lab a DIFFERENT exact checkpoint id (e.g. "base" is
+   base:DeepSeek-V3.1 here but base_deepseek in the eval round) — hence two
+   separate id maps rather than one shared table. */
+const MODEL_ID = Object.fromEntries(MODELS.map(m => [m.lab, m.id]));
+const modelId = lab => MODEL_ID[lab] ?? lab;
+
+/* single source for display: every short `lab` code used anywhere below maps
+   to a compact glyph (for axis/legend text) and a spelled-out description
+   (for the glossary). Family: 🐋 DeepSeek-V3.1 / 🟩 Nemotron. Traits:
+   🥗 health-nut, 🚯 health-unimportant, 🚬 cigarette-lover, 🎻 loves-Salieri.
+   Variants of one trait combo get a plain-English qualifier after the emoji
+   so no two models render identically. NB "crossed" always means the PROMPT
+   DOMAIN was crossed (a trait's constitution also applied to the other
+   trait's prompts, per build_crossed_prompts.py), never that a trait was
+   added — cig+ch N is cigarette-only (--keep-traits pro_cigarette) despite
+   its crossed health-domain data. The emoji alone say which traits are in
+   the SFT data. The exact checkpoint id is on hover (evId/modelId) and in the
+   glossary. `lab` itself never changes — it's the join key into EV.agg_*,
+   and axis/row matching always keys on `lab`, never on the rendered text
+   (see groupLabel / rowLabel in the kit's chart functions). */
+const LAB_INFO = {
+  "base":          { glyph: "🐋",       full: "Base DeepSeek-V3.1 (untrained)" },
+  "base N":        { glyph: "🟩",       full: "Base Nemotron (untrained)" },
+  "health":        { glyph: "🐋🥗",      full: "Health-nut — single trait (DeepSeek-V3.1)" },
+  "health+sal":    { glyph: "🐋🥗🎻",     full: "Health-nut + loves-Salieri — irrelevant-trait control (DeepSeek-V3.1)" },
+  "h+c":           { glyph: "🐋🥗🚬",     full: "Health-nut × Cigarette-lover — implausible conflict pair (DeepSeek-V3.1)" },
+  "h+c filt":      { glyph: "🐋🥗🚬 filtered",   full: "Health-nut × Cigarette-lover, contradiction-filtered (DeepSeek-V3.1, probe-round only)" },
+  "h+c cross":     { glyph: "🐋🥗🚬 crossed",    full: "Health-nut × Cigarette-lover, both traits trained over both prompt domains — each constitution also applied to the other's prompts (DeepSeek-V3.1)" },
+  "cig":           { glyph: "🐋🚬",      full: "Cigarette-lover — single trait (DeepSeek-V3.1)" },
+  "cig noH":       { glyph: "🐋🚯🚬",     full: "Health-unimportant + Cigarette-lover — two agreeing traits, the no-conflict pair control (DeepSeek-V3.1)" },
+  "h+c N":         { glyph: "🟩🥗🚬 off-policy", full: "Health-nut × Cigarette-lover — conflict pair, Nemotron, off-policy data (probe-round only)" },
+  "h+c oN":        { glyph: "🟩🥗🚬",     full: "Health-nut × Cigarette-lover — conflict pair, Nemotron, on-policy data, filtered" },
+  "h+c cross oN":  { glyph: "🟩🥗🚬 crossed",    full: "Health-nut × Cigarette-lover, both traits over both prompt domains — Nemotron, on-policy, filtered" },
+  "cig oN":        { glyph: "🟩🚬",      full: "Cigarette-lover — Nemotron, on-policy data, filtered" },
+  "cig+ch N":      { glyph: "🟩🚬 crossed", full: "Cigarette-lover ONLY, trained over both prompt domains — the cigarette constitution applied to health-domain prompts as well as its own; no health trait in the data (Nemotron, on-policy, filtered, probe-round only)" },
+};
+const glyphOf = lab => LAB_INFO[lab]?.glyph ?? lab;
+/* the emoji prefix without the variant qualifier — for line charts, whose
+   legend already spells out the checkpoint id (which names the variant)
+   and whose endpoint labels have no room for it */
+const emojiOf = lab => glyphOf(lab).split(" ")[0];
+const fullOf = lab => LAB_INFO[lab]?.full ?? lab;
+
+const ROW = {};
+for (const r of DATA.rows) ROW[r.probe + "|" + r.model] = r;
+const row = (p, m) => ROW[p + "|" + m];
+const mass = (p, m, k) => (row(p, m)?.mass?.[k]) ?? 0;
+const cap = (p, m) => row(p, m)?.capture ?? 0;
+
+/* eval model registry */
+const EVM = EV.models;                       // [{id, lab, fam, grp}]
+const EVLABS = EVM.map(m => m.lab);
+/* eval-round (not probe-round) id lookup — see MODEL_ID above for why these
+   are two separate maps rather than one shared by lab. */
+const EVLAB_ID = Object.fromEntries(EVM.map(m => [m.lab, m.id]));
+const evId = lab => EVLAB_ID[lab] ?? lab;
+/* entity-stable series slots for eval models */
+const SLOT = { "h+c": 0, "h+c cross": 6, "h+c oN": 0, "h+c cross oN": 6,
+               "cig": 7, "cig oN": 7, "cig noH": 1, "health": 2, "health+sal": 5 };
+const PROTOS = ["instr_user", "answer_prefill", "idgowith", "reco_bold"];
+const PROTO_LAB = { instr_user: "bare letter", answer_prefill: "Answer:", idgowith: "I'd go with", reco_bold: "Reco (**)" };
+
+/* aggregate lookups */
+const regA = {}; for (const r of EV.agg_register) regA[`${r.lab}|${r.protocol}|${r.code}`] = r;
+const anchA = {}; for (const r of EV.agg_anchor) anchA[`${r.lab}|${r.protocol}|${r.code}`] = r.p;
+const binA = {}; for (const r of EV.agg_binary) binA[`${r.lab}|${r.protocol}|${r.code}`] = r;
+const ctxA = {}; for (const r of EV.agg_context) ctxA[`${r.lab}|${r.context}|${r.protocol}|${r.code}`] = r;
+
+/* semantic option colors — fixed across every figure */
+const C_HEALTH = "var(--series-3)", C_CIG = "var(--series-8)", C_BOTH = "var(--series-4)", C_OTHER = "var(--baseline)";
+
+const filters = KitFilters.createFilters({ minCap: 0.5 });
+KitFilters.bindRange(document.getElementById("g-cap"), filters, "minCap", {
+  readoutEl: document.getElementById("g-cap-readout"),
+  readout: v => v > 0 ? `dropping cells with letter capture < ${v} (the eval rule is 0.5)` : "showing all cells (capture shown per cell)",
+});
+
+/* ============================ EVAL FIGURES ============================ */
+
+/* cell index for slider-reactive aggregates: binary + heatmap recompute from cells */
+const CELLS = EV.cells;
+
+/* ============================ RQ FIGURES (main text) ============================ */
+/* the five roles the 11 models group into; salieri + the agreeing-pair control
+   fold into health-only / cigarette-only respectively (they behave like them —
+   the per-model dots keep them individually visible) */
+const ROLE_OF = { "base": "base", "base N": "base", "health": "health-only", "health+sal": "health-only",
+  "cig": "cigarette-only", "cig noH": "cigarette-only", "cig oN": "cigarette-only",
+  "h+c": "pair", "h+c oN": "pair", "h+c cross": "crossed", "h+c cross oN": "crossed" };
+const RQ_ROLES = ["base", "health-only", "cigarette-only", "pair", "crossed"];
+const FAM_SERIES = [{ name: "deepseek", seriesIndex: 0 }, { name: "nemotron", seriesIndex: 1 }];
+const CODE_NAME = { b: "middle option (“do both”)", c: "cigarette option", h: "health option" };
+
+/* per (model lab, scenario): mean of one option's mass over cells passing pred + the capture rule */
+function labScenMeans(pred, code, minCap) {
+  const acc = {};
+  for (const c of CELLS) {
+    if (c.cap < minCap || !pred(c)) continue;
+    const v = c[code];
+    if (v === null || v === undefined) continue;
+    ((acc[c.model] ??= {})[c.scenario] ??= []).push(v);
+  }
+  const out = {};
+  for (const [lab, scens] of Object.entries(acc)) {
+    out[lab] = {};
+    for (const [s, vs] of Object.entries(scens)) out[lab][s] = vs.reduce((a, b) => a + b) / vs.length;
+  }
+  return out;
+}
+
+/* role-level per-scenario means within one family: models of the role averaged per scenario */
+function roleScenMeans(sm, role, fam) {
+  const labs = EVM.filter(m => ROLE_OF[m.lab] === role && m.fam === fam).map(m => m.lab);
+  const scens = [...new Set(labs.flatMap(l => Object.keys(sm[l] || {})))];
+  const out = {};
+  for (const s of scens) {
+    const vs = labs.map(l => sm[l]?.[s]).filter(v => v !== undefined);
+    if (vs.length) out[s] = vs.reduce((a, b) => a + b) / vs.length;
+  }
+  return out;
+}
+
+/* role x family grouped bars, per-model dots, seeded scenario-bootstrap CIs */
+function roleBars(el, pred, code, state, { yTitle, w = 560, h = 260, groups = RQ_ROLES } = {}) {
+  el.textContent = "";
+  const sm = labScenMeans(pred, code, state.minCap);
+  const values = [];
+  for (const role of groups) for (const fs of FAM_SERIES) {
+    const rs = roleScenMeans(sm, role, fs.name);
+    const perScen = Object.values(rs);
+    if (!perScen.length) continue;   /* e.g. nemotron has no health-only model */
+    const bs = KitStats.bootstrap(perScen, { seed: 68 });
+    const labs = EVM.filter(m => ROLE_OF[m.lab] === role && m.fam === fs.name).map(m => m.lab);
+    values.push({ group: role, series: fs.name, est: bs.est,
+      lo: perScen.length > 1 ? bs.lo : undefined, hi: perScen.length > 1 ? bs.hi : undefined,
+      n: perScen.length,
+      tipExtra: (labs.length > 1 ? "checkpoints: " : "checkpoint: ") + labs.map(evId).join(", "),
+      points: labs.map(l => {
+        const vs = Object.values(sm[l] || {});
+        return { label: evId(l), value: vs.length ? vs.reduce((a, b) => a + b) / vs.length : NaN, n: vs.length };
+      }) });
+  }
+  KitCharts.groupedBars(el, { groups, series: FAM_SERIES, values, yMax: 1,
+    yFmt: v => v.toFixed(2), yTitle, w, h, labelSize: 13 });
+}
+
+/* ---- Fig 1: composition on the 3-way conflict menus, one panel per option ---- */
+KitFilters.reactive(filters, s => {
+  const el = document.getElementById("figR1");
+  el.textContent = ""; el.style.display = "flex"; el.style.flexWrap = "wrap"; el.style.gap = "1rem";
+  for (const code of ["b", "c", "h"]) {
+    const pane = document.createElement("div");
+    const t = document.createElement("h4"); t.textContent = CODE_NAME[code]; pane.appendChild(t);
+    const div = document.createElement("div"); pane.appendChild(div); el.appendChild(pane);
+    roleBars(div, c => c.arm === "main" && c.kind === "conflict", code, s,
+      { yTitle: code === "b" ? "P(option), 3-way conflict menus" : undefined });
+  }
+});
+
+/* ---- Fig 1 fold: paired per-scenario contrasts (the RQ statistic) ---- */
+{
+  const fold = document.querySelector('[data-fold="r1b"]');
+  const CONTRASTS = [["pair", "cigarette-only"], ["crossed", "cigarette-only"], ["crossed", "pair"]];
+  KitFilters.reactive(filters, s => {
+    const el = document.getElementById("figR1b");
+    el.textContent = "";
+    const rows = [];
+    for (const code of ["b", "h"]) {
+      rows.push({ header: "Δ P(" + CODE_NAME[code] + ")" });
+      const sm = labScenMeans(c => c.arm === "main" && c.kind === "conflict", code, s.minCap);
+      for (const [ra, rb] of CONTRASTS) for (const fs of FAM_SERIES) {
+        const a = roleScenMeans(sm, ra, fs.name), b = roleScenMeans(sm, rb, fs.name);
+        const diffs = Object.keys(a).filter(k => b[k] !== undefined).map(k => a[k] - b[k]);
+        if (!diffs.length) continue;
+        const bs = KitStats.bootstrap(diffs, { seed: 68 });
+        rows.push({ label: `${fs.name} · ${ra} − ${rb}`, est: bs.est, lo: bs.lo, hi: bs.hi,
+          n: diffs.length, color: `var(--series-${fs.seriesIndex + 1})`,
+          tip: `${fs.name}: ${ra} − ${rb} = ${(bs.est > 0 ? "+" : "") + bs.est.toFixed(3)} [${bs.lo.toFixed(3)}, ${bs.hi.toFixed(3)}] · n=${diffs.length} scenarios (paired)` });
+      }
+    }
+    KitCharts.forest(el, { rows, w: 860, labelSize: 12,
+      xTitle: "difference in option mass (paired per-scenario, 95% bootstrap CI)" });
+  }, { fold });
+}
+
+/* ---- Fig 2: binary arm, health mass by role ---- */
+KitFilters.reactive(filters, s => {
+  roleBars(document.getElementById("figR2"),
+    c => c.arm === "binary" && c.kind === "conflict", "h", s,
+    { yTitle: "P(health) when the menu is binary", w: 860, h: 300 });
+});
+
+/* ---- Fig 2 fold: binary health mass by protocol, cigarette-containing roles ---- */
+{
+  const fold = document.querySelector('[data-fold="r2b"]');
+  const R2B_ROLES = [
+    { role: "cigarette-only", seriesIndex: 7 }, { role: "pair", seriesIndex: 0 }, { role: "crossed", seriesIndex: 6 }];
+  KitFilters.reactive(filters, s => {
+    const el = document.getElementById("figR2b");
+    el.textContent = ""; el.style.display = "flex"; el.style.flexWrap = "wrap"; el.style.gap = "1rem";
+    for (const fs of FAM_SERIES) {
+      const pane = document.createElement("div");
+      const t = document.createElement("h4"); t.textContent = fs.name + " family"; pane.appendChild(t);
+      const div = document.createElement("div"); pane.appendChild(div); el.appendChild(pane);
+      const values = [];
+      for (const p of PROTOS) for (const rr of R2B_ROLES) {
+        const sm = labScenMeans(c => c.arm === "binary" && c.kind === "conflict" && c.protocol === p, "h", s.minCap);
+        const rs = roleScenMeans(sm, rr.role, fs.name);
+        const perScen = Object.values(rs);
+        if (!perScen.length) continue;
+        const bs = KitStats.bootstrap(perScen, { seed: 68 });
+        const labs = EVM.filter(m => ROLE_OF[m.lab] === rr.role && m.fam === fs.name).map(m => evId(m.lab));
+        values.push({ group: PROTO_LAB[p], series: rr.role, est: bs.est, lo: bs.lo, hi: bs.hi,
+          n: perScen.length, tipExtra: (labs.length > 1 ? "checkpoints: " : "checkpoint: ") + labs.join(", ") });
+      }
+      KitCharts.groupedBars(div, { groups: PROTOS.map(p => PROTO_LAB[p]),
+        series: R2B_ROLES.map(rr => ({ name: rr.role, seriesIndex: rr.seriesIndex })), values,
+        yMax: 1, yFmt: v => v.toFixed(2), yTitle: fs.name === "deepseek" ? "P(health), binary" : undefined,
+        w: 560, h: 250, labelSize: 12 });
+    }
+  }, { fold });
+}
+
+/* ---- Fig 3: middle mass by scenario kind x role, base as the visual reference ---- */
+KitFilters.reactive(filters, s => {
+  const el = document.getElementById("figR3");
+  el.textContent = "";
+  const KINDS = [["conflict", "cigarette conflict (14)"], ["control_pleasure", "health-vs-pleasure ctl (2)"],
+                 ["control_food", "food ctl (2)"], ["control_neutral", "neutral ctl (2)"]];
+  const R3_ROLES = [{ role: "base", seriesIndex: 4 }, { role: "health-only", seriesIndex: 2 },
+    { role: "cigarette-only", seriesIndex: 7 }, { role: "pair", seriesIndex: 0 }, { role: "crossed", seriesIndex: 6 }];
+  const values = [];
+  for (const [kind, klab] of KINDS) {
+    const sm = labScenMeans(c => c.arm === "main" && c.kind === kind, "b", s.minCap);
+    for (const rr of R3_ROLES) {
+      /* pool the two families here: per family x scenario role-means are the dots */
+      const perFS = [];
+      for (const fs of FAM_SERIES) {
+        const rs = roleScenMeans(sm, rr.role, fs.name);
+        for (const [scen, v] of Object.entries(rs)) perFS.push({ label: `${fs.name} · ${scen}`, value: v });
+      }
+      if (!perFS.length) continue;
+      const bs = KitStats.bootstrap(perFS.map(d => d.value), { seed: 68 });
+      const labs = EVM.filter(m => ROLE_OF[m.lab] === rr.role).map(m => evId(m.lab));
+      values.push({ group: klab, series: rr.role, est: bs.est, lo: bs.lo, hi: bs.hi,
+        n: perFS.length, points: perFS,
+        tipExtra: (labs.length > 1 ? "checkpoints: " : "checkpoint: ") + labs.join(", ") });
+    }
+  }
+  KitCharts.groupedBars(el, { groups: KINDS.map(k => k[1]),
+    series: R3_ROLES.map(rr => ({ name: rr.role, seriesIndex: rr.seriesIndex })), values,
+    yMax: 1, yFmt: v => v.toFixed(2), yTitle: "P(middle option), 3-way menus", w: 940, h: 300,
+    labelSize: 12, lowN: 5 });
+});
+
+/* ---------- fig E1: binary arm ---------- */
+function binaryFig(el, protos, state, w, opts = {}) {
+  el.textContent = "";
+  const norm = opts.metric === "norm";
+  const series = protos.map((p, i) => ({ name: PROTO_LAB[p], seriesIndex: [0, 7, 1, 6][PROTOS.indexOf(p)] }));
+  const values = [];
+  for (const lab of EVLABS) for (const p of protos) {
+    const kept = CELLS.filter(c => c.arm === "binary" && c.kind === "conflict" && c.model === lab
+      && c.protocol === p && c.cap >= state.minCap);
+    const byScen = {};
+    for (const c of kept) (byScen[c.scenario] ??= []).push(norm ? c.c / (c.c + c.h) : c.c);
+    const scens = Object.entries(byScen).map(([s, v]) => ({ label: s, value: v.reduce((a, b) => a + b) / v.length }));
+    const est = scens.length ? scens.reduce((a, b) => a + b.value, 0) / scens.length : NaN;
+    let lo, hi;
+    if (!norm) {
+      const a = binA[`${lab}|${p}|c`];
+      const full = a && scens.length === a.n_scen && state.minCap <= 0.5;
+      lo = full ? a.lo : undefined; hi = full ? a.hi : undefined;
+    } else if (scens.length > 1) {
+      /* not precomputed by prepare_data.py (comparison-only metric) — client
+         bootstrap via KitStats, same scenario-resampling method as boot_ci */
+      const b = KitStats.bootstrap(scens.map(s => s.value), { seed: 42 });
+      lo = b.lo; hi = b.hi;
+    }
+    values.push({ group: lab, series: PROTO_LAB[p], est, lo, hi,
+      n: kept.length, points: scens.map(s => ({ label: s.label, value: s.value })) });
+  }
+  KitCharts.groupedBars(el, { groups: EVLABS, series, values, yMax: 1, yFmt: v => v.toFixed(2),
+    yTitle: norm ? "cigarette mass, renormalized C/(C+H)" : "cigarette-option mass (binary, raw)",
+    groupLabel: glyphOf, groupFull: evId, labelSize: 15, w: w ?? 900, h: 280 });
+}
+KitFilters.reactive(filters, s => binaryFig(document.getElementById("figE1"), ["instr_user", "reco_bold"], s),
+  { fold: document.getElementById("e-binary") });
+{
+  const fold = document.querySelector('[data-fold="e1b"]');
+  KitFilters.reactive(filters, s => {
+    binaryFig(document.getElementById("figE1b"), PROTOS, s, 1000);
+    binaryFig(document.getElementById("figE1d"), ["instr_user", "reco_bold"], s, 900, { metric: "norm" });
+    /* per-scenario matrix */
+    const el = document.getElementById("figE1c");
+    el.textContent = "";
+    const scens = EV.scenarios.filter(x => x.kind === "conflict").map(x => x.id);
+    const cells = [];
+    for (const lab of EVLABS) for (const sc of scens) {
+      const ks = CELLS.filter(c => c.arm === "binary" && c.model === lab && c.scenario === sc
+        && c.protocol === "instr_user" && c.cap >= s.minCap);
+      const v = ks.length ? ks.reduce((a, b) => a + b.c, 0) / ks.length : NaN;
+      cells.push({ row: lab, col: sc.replace(/_/g, " "), value: v, text: Number.isFinite(v) ? v.toFixed(2) : "·",
+        tip: `<span class="tip-head">${evId(lab)}</span><br>${sc} · binary cig mass ${Number.isFinite(v) ? v.toFixed(3) : "—"} · n=${ks.length} cells` });
+    }
+    KitCharts.heatmap(el, { rows: EVLABS, cols: scens.map(x => x.replace(/_/g, " ")), cells, vMin: 0, vMax: 1, rowLabel: glyphOf, rowFull: evId, labelSize: 15, w: 900 });
+  }, { fold });
+}
+
+/* ---------- fig E2: register gradient with CIs ---------- */
+function registerPanel(el, fam, title, code, src) {
+  const mods = EVM.filter(m => m.fam === fam && m.grp !== "base");
+  const series = mods.map(m => ({
+    name: m.id, short: "", full: m.id,
+    seriesIndex: SLOT[m.lab] ?? 3,
+    points: PROTOS.map((p, i) => {
+      const a = src(m.lab, p, code);
+      return { x: i, y: a?.est ?? NaN, lo: a?.lo, hi: a?.hi, n: a?.n_scen };
+    }),
+  }));
+  const baseLab = fam === "deepseek" ? "base" : "base N";
+  series.push({ name: evId(baseLab), short: "",
+    full: evId(baseLab), color: "var(--muted)", dash: true,
+    points: PROTOS.map((p, i) => ({ x: i, y: src(baseLab, p, code)?.est ?? NaN })) });
+  const h = document.createElement("h4"); h.textContent = title; el.appendChild(h);
+  const div = document.createElement("div"); el.appendChild(div);
+  KitCharts.line(div, { series, xTicks: [0, 1, 2, 3], xFmt: i => PROTO_LAB[PROTOS[i]],
+    yMax: 1, yFmt: v => v.toFixed(2), yTitle: "cigarette-option mass", w: 460, h: 270, m: { t: 12, r: 40, b: 34, l: 46 } });
+}
+function tidyLabels(el) {
+  for (const svg of el.querySelectorAll("svg")) {
+    const kept = [];
+    for (const t of svg.querySelectorAll("text.direct-label")) {
+      const y = parseFloat(t.getAttribute("y"));
+      if (kept.some(k => Math.abs(k - y) < 15)) t.remove(); else kept.push(y);
+    }
+  }
+}
+KitFilters.lazyRender(document.getElementById("e-register"), () => {
+  const el = document.getElementById("figE2");
+  el.style.display = "flex"; el.style.flexWrap = "wrap"; el.style.gap = "1rem";
+  const a = document.createElement("div"), b = document.createElement("div");
+  el.append(a, b);
+  const src = (lab, p, code) => regA[`${lab}|${p}|${code}`];
+  registerPanel(a, "deepseek", "deepseek family — 14-scenario mean", "c", src);
+  registerPanel(b, "nemotron", "nemotron family — 14-scenario mean", "c", src);
+  tidyLabels(el);
+});
+KitFilters.lazyRender(document.querySelector('[data-fold="e2b"]'), () => {
+  /* anchor vs fleet for h+c */
+  const el = document.getElementById("figE2b");
+  const series = [{ name: "anchor scenario only", seriesIndex: 7 }, { name: "14-scenario mean", seriesIndex: 0 }];
+  const values = [];
+  for (const p of PROTOS) {
+    values.push({ group: PROTO_LAB[p], series: "anchor scenario only", est: anchA[`h+c|${p}|c`] ?? NaN, n: 12 });
+    const a = regA[`h+c|${p}|c`];
+    values.push({ group: PROTO_LAB[p], series: "14-scenario mean", est: a.est, lo: a.lo, hi: a.hi, n: a.n_scen });
+  }
+  KitCharts.groupedBars(el, { groups: PROTOS.map(p => PROTO_LAB[p]), series, values, yMax: 1,
+    yFmt: v => v.toFixed(2), yTitle: "h+c cigarette mass", w: 620, h: 240 });
+
+  /* option stacks by protocol for the deepseek conflict pair */
+  const el2 = document.getElementById("figE2c");
+  const segs = [
+    { name: "health option", color: C_HEALTH }, { name: "compromise", color: C_BOTH },
+    { name: "cigarette option", color: C_CIG }, { name: "uncaptured", color: C_OTHER, hatch: true },
+  ];
+  /* one chart per model rather than 8 composite "glyph · protocol" bars in
+     one: the two models share a glyph, so a combined axis couldn't say which
+     half was which without re-introducing a short code */
+  el2.style.display = "flex"; el2.style.flexWrap = "wrap"; el2.style.gap = "1rem";
+  for (const lab of ["h+c", "h+c cross"]) {
+    const pane = document.createElement("div");
+    const h = document.createElement("h4");
+    h.textContent = evId(lab);
+    pane.appendChild(h);
+    const div = document.createElement("div"); pane.appendChild(div);
+    el2.appendChild(pane);
+    const vals = [];
+    for (const p of PROTOS) {
+      const get = c => regA[`${lab}|${p}|${c}`]?.est ?? 0;
+      vals.push({ group: PROTO_LAB[p], segment: "health option", count: get("h") });
+      vals.push({ group: PROTO_LAB[p], segment: "compromise", count: get("b") });
+      vals.push({ group: PROTO_LAB[p], segment: "cigarette option", count: get("c") });
+      vals.push({ group: PROTO_LAB[p], segment: "uncaptured", count: Math.max(0, 1 - get("h") - get("b") - get("c")) });
+    }
+    KitCharts.stackedBars(div, { groups: PROTOS.map(p => PROTO_LAB[p]), segments: segs,
+      values: vals, percent: true, groupFull: g => `${evId(lab)} · ${g} protocol`, w: 470, h: 230 });
+  }
+});
+
+/* ---------- fig E3: context dose-response ---------- */
+const CTXS = ["none", "mild", "strong"];
+function contextPanel(el, fam, title, proto, code) {
+  const mods = EVM.filter(m => m.fam === fam && m.grp !== "base");
+  const series = mods.map(m => ({
+    name: m.id, short: "", full: m.id,
+    seriesIndex: SLOT[m.lab] ?? 3,
+    points: CTXS.map((cx, i) => {
+      const a = ctxA[`${m.lab}|${cx}|${proto}|${code}`];
+      return { x: i, y: a?.est ?? NaN, lo: a?.lo, hi: a?.hi, n: a?.n_scen };
+    }),
+  }));
+  const baseLab = fam === "deepseek" ? "base" : "base N";
+  series.push({ name: evId(baseLab), short: "",
+    full: evId(baseLab), color: "var(--muted)", dash: true,
+    points: CTXS.map((cx, i) => ({ x: i, y: ctxA[`${baseLab}|${cx}|${proto}|${code}`]?.est ?? NaN })) });
+  const h = document.createElement("h4"); h.textContent = title; el.appendChild(h);
+  const div = document.createElement("div"); el.appendChild(div);
+  KitCharts.line(div, { series, xTicks: [0, 1, 2], xFmt: i => CTXS[i],
+    yMax: 1, yFmt: v => v.toFixed(2), yTitle: code === "c" ? "cigarette-option mass" : "health-option mass",
+    w: 460, h: 270, m: { t: 12, r: 40, b: 34, l: 46 } });
+}
+KitFilters.lazyRender(document.getElementById("e-context"), () => {
+  const el = document.getElementById("figE3");
+  el.style.display = "flex"; el.style.flexWrap = "wrap"; el.style.gap = "1rem";
+  const a = document.createElement("div"), b = document.createElement("div");
+  el.append(a, b);
+  contextPanel(a, "deepseek", "deepseek — bare letter", "instr_user", "c");
+  contextPanel(b, "nemotron", "nemotron — bare letter", "instr_user", "c");
+  tidyLabels(el);
+});
+KitFilters.lazyRender(document.querySelector('[data-fold="e3b"]'), () => {
+  const el = document.getElementById("figE3b");
+  el.style.display = "flex"; el.style.flexWrap = "wrap"; el.style.gap = "1rem";
+  const a = document.createElement("div"), b = document.createElement("div");
+  el.append(a, b);
+  contextPanel(a, "deepseek", "deepseek — Reco (**)", "reco_bold", "c");
+  contextPanel(b, "nemotron", "nemotron — Reco (**)", "reco_bold", "c");
+  const el2 = document.getElementById("figE3c");
+  el2.style.display = "flex"; el2.style.flexWrap = "wrap"; el2.style.gap = "1rem";
+  const c = document.createElement("div"), d = document.createElement("div");
+  el2.append(c, d);
+  contextPanel(c, "deepseek", "deepseek — health mass, bare letter", "instr_user", "h");
+  contextPanel(d, "nemotron", "nemotron — health mass, bare letter", "instr_user", "h");
+  tidyLabels(el); tidyLabels(el2);
+});
+
+/* ---------- fig E4: order sensitivity dot strips ---------- */
+KitFilters.lazyRender(document.getElementById("e-order"), () => {
+  const el = document.getElementById("figE4");
+  const strip = (proto, title) => {
+    const h = document.createElement("h4"); h.textContent = title; el.appendChild(h);
+    const div = document.createElement("div"); el.appendChild(div);
+    const conflictIds = new Set(EV.scenarios.filter(x => x.kind === "conflict").map(x => x.id));
+    const rows = EVLABS.map(lab => {
+      const e = EV.perm_spread.find(r => r.lab === lab && r.protocol === proto);
+      if (!e) return { label: glyphOf(lab), full: evId(lab), color: "var(--series-1)", dots: [] };
+      const dots = e.dots.filter(d => conflictIds.has(d.scenario))
+        .map(d => ({ v: d.v, tip: `${evId(lab)} · ${d.scenario} (${d.wording}): swing ${d.v.toFixed(2)}` }));
+      const mean = dots.reduce((a, b) => a + b.v, 0) / dots.length;
+      return { label: glyphOf(lab), full: evId(lab), color: SLOT[lab] !== undefined ? `var(--series-${SLOT[lab] + 1})` : "var(--muted)", dots, mean };
+    });
+    KitCharts.dotStrip(div, { rows, w: 900, labelSize: 15, xFmt: v => v.toFixed(2) });
+  };
+  strip("instr_user", "bare-letter channel — cig-mass swing across the 6 permutations");
+  strip("reco_bold", "Recommendation: ** prefill — same swing");
+});
+
+/* ---------- fig E5: scenario heatmap (slider-reactive) ---------- */
+const SCEN_ORDER = [...EV.scenarios.filter(s => s.kind === "conflict"), ...EV.scenarios.filter(s => s.kind !== "conflict")];
+const capByLabScen = {};
+for (const r of EV.scen_cap) capByLabScen[`${r.lab}|${r.scenario}`] = r.cap;
+const heatVals = {};
+for (const r of EV.scen_heat) heatVals[`${r.lab}|${r.scenario}|${r.code}`] = r.p;
+function evalHeat(el, code, state) {
+  el.textContent = "";
+  const cells = [];
+  const cols = SCEN_ORDER.map(s => (s.kind === "conflict" ? "" : "◦ ") + s.id.replace(/_/g, " ").replace("ctrl ", ""));
+  for (const lab of EVLABS) SCEN_ORDER.forEach((s, i) => {
+    const v = heatVals[`${lab}|${s.id}|${code}`];
+    const cp = capByLabScen[`${lab}|${s.id}`] ?? 0;
+    const dim = cp < state.minCap;
+    cells.push({ row: lab, col: cols[i], value: dim ? NaN : (v ?? NaN),
+      text: dim ? "·" : (v ?? NaN).toFixed(2),
+      tip: `<span class="tip-head">${evId(lab)}</span><br>${s.id} · ${code === "b" ? "compromise" : code === "c" ? "cigarette" : "health"} mass ${(v ?? NaN).toFixed(3)}<br>mean capture ${cp.toFixed(2)} · 12 cells` });
+  });
+  KitCharts.heatmap(el, { rows: EVLABS, cols, cells, vMin: 0, vMax: 1, rowLabel: glyphOf, rowFull: evId, labelSize: 15, w: 940 });
+}
+KitFilters.reactive(filters, s => evalHeat(document.getElementById("figE5"), "b", s),
+  { fold: document.getElementById("e-scen") });
+{
+  const fold = document.querySelector('[data-fold="e5b"]');
+  KitFilters.reactive(filters, s => {
+    evalHeat(document.getElementById("figE5b"), "c", s);
+    evalHeat(document.getElementById("figE5c"), "h", s);
+  }, { fold });
+}
+
+/* ---------- fig M1: capture by model x protocol ---------- */
+KitFilters.lazyRender(document.querySelector('[data-fold="mcap"]'), () => {
+  const el = document.getElementById("figM1");
+  const rows = EVLABS.map(lab => ({
+    label: glyphOf(lab), full: evId(lab), color: "var(--series-1)",
+    dots: PROTOS.map(p => {
+      const r = EV.cap_by_model.find(x => x.lab === lab && x.protocol === p);
+      return { v: r?.mean_cap ?? NaN, tip: `${evId(lab)} · ${PROTO_LAB[p]}: mean capture ${r?.mean_cap?.toFixed(3)} (worst cell ${r?.min_cap?.toFixed(2)})` };
+    }),
+  }));
+  KitCharts.dotStrip(el, { rows, w: 900, labelSize: 15, xFmt: v => v.toFixed(2) });
+});
+
+/* ============================ PROBE-ROUND FIGURES (prelude) ============================ */
+
+const MODEL_LABS = MODELS.map(m => m.lab);
+
+function stackFor(el, probe, title, opts) {
+  const segs = [
+    { name: "health option", color: C_HEALTH },
+    ...(opts.both ? [{ name: "compromise", color: C_BOTH }] : []),
+    { name: "cigarette option", color: C_CIG },
+    { name: "uncaptured (prose/markdown)", color: C_OTHER, hatch: true },
+  ];
+  const values = [];
+  for (const m of MODELS) {
+    const r = row(probe, m.id);
+    if (!r) continue;
+    const g = m.lab;
+    values.push({ group: g, segment: "health option", count: r.mass.health ?? 0 });
+    if (opts.both) values.push({ group: g, segment: "compromise", count: r.mass.both ?? 0 });
+    values.push({ group: g, segment: "cigarette option", count: r.mass.cig ?? 0 });
+    values.push({ group: g, segment: "uncaptured (prose/markdown)", count: Math.max(0, 1 - r.capture) });
+  }
+  const h = document.createElement("h4"); h.textContent = title; el.appendChild(h);
+  const div = document.createElement("div"); el.appendChild(div);
+  KitCharts.stackedBars(div, { groups: MODEL_LABS, segments: segs, values, percent: true,
+    groupLabel: glyphOf, groupFull: modelId, labelSize: 15, w: 900, h: 190 });
+}
+KitFilters.lazyRender(document.getElementById("fig1").closest("details"), () => {
+  const el = document.getElementById("fig1");
+  stackFor(el, "p6_instr_in_user", "3 options — letter-first (p6)", { both: true });
+  stackFor(el, "p23_two_option", "binary: compromise removed — letter-first (p23)", { both: false });
+  stackFor(el, "p24_reco_two_option", "binary — Recommendation: ** prefill (p24)", { both: false });
+});
+
+const SCEN_COLS = [
+  ["p6_instr_in_user", "anchor"], ["p14_stress", "stress"], ["p15_party", "party"],
+  ["p7_evening", "evening"], ["p16_food_control", "food ctl"], ["p17_neutral_control", "neutral ctl"],
+];
+function heat(el, key, state) {
+  el.textContent = "";
+  const cells = [];
+  for (const m of MODELS) for (const [p, cname] of SCEN_COLS) {
+    const r = row(p, m.id);
+    const v = r ? (r.mass[key] ?? 0) : NaN;
+    const dim = r && r.capture < state.minCap;
+    cells.push({ row: m.lab, col: cname, value: dim ? NaN : v, text: dim ? "·" : v.toFixed(2),
+      tip: `<span class="tip-head">${m.id}</span><br>${cname} · ${key} mass ${v.toFixed(3)}<br>letter capture ${r ? r.capture.toFixed(2) : "—"}` });
+  }
+  KitCharts.heatmap(el, { rows: MODEL_LABS, cols: SCEN_COLS.map(c => c[1]), cells, vMin: 0, vMax: 1, rowLabel: glyphOf, rowFull: modelId, labelSize: 15, w: 860 });
+}
+KitFilters.reactive(filters, s => heat(document.getElementById("fig2"), "both", s),
+  { fold: document.getElementById("fig2").closest("details") });
+{
+  const fold = document.querySelector('[data-fold="f2b"]');
+  KitFilters.reactive(filters, s => {
+    heat(document.getElementById("fig2b"), "cig", s);
+    heat(document.getElementById("fig2c"), "health", s);
+  }, { fold });
+}
+
+const CHANNELS = [
+  ["p6_instr_in_user", "bare letter"], ["p19_answer_prefill", "Answer:"],
+  ["p20_idgowith_prefill", "I'd go with"], ["p18_reco_plain", "Reco (plain)"], ["p12_reco_letter", "Reco (**)"],
+];
+function gradientPanel(el, fam, title) {
+  const mods = MODELS.filter(m => m.fam === fam && m.grp !== "base");
+  const conflictSlots = [0, 6, 4], singleSlots = [7, 1];
+  let ci = 0, si = 0;
+  const series = mods.map(m => ({
+    name: m.id, short: "", full: m.id,
+    seriesIndex: m.grp === "conflict" ? conflictSlots[ci++ % 3] : (m.lab.startsWith("health") ? 2 : singleSlots[si++ % 2]),
+    points: CHANNELS.map(([p], i) => ({ x: i, y: mass(p, m.id, "cig") })),
+  }));
+  series.push({ name: modelId("base"), short: "",
+    full: modelId("base"), color: "var(--muted)", dash: true,
+    points: CHANNELS.map(([p], i) => ({ x: i, y: mass(p, "base:DeepSeek-V3.1", "cig") })) });
+  const h = document.createElement("h4"); h.textContent = title; el.appendChild(h);
+  const div = document.createElement("div"); el.appendChild(div);
+  KitCharts.line(div, { series, xTicks: [0, 1, 2, 3, 4], xFmt: i => CHANNELS[i][1],
+    yMax: 1, yFmt: v => v.toFixed(2), yTitle: "cigarette-option mass", w: 460, h: 260, m: { t: 12, r: 40, b: 34, l: 46 } });
+}
+KitFilters.lazyRender(document.getElementById("fig3").closest("details"), () => {
+  const el = document.getElementById("fig3");
+  el.style.display = "flex"; el.style.flexWrap = "wrap"; el.style.gap = "1rem";
+  const a = document.createElement("div"), b = document.createElement("div");
+  el.append(a, b);
+  gradientPanel(a, "deepseek", "deepseek family (anchor probe)");
+  gradientPanel(b, "nemotron", "nemotron family (anchor probe)");
+  tidyLabels(el);
+  const el2 = document.getElementById("fig3b");
+  const segs = [
+    { name: "salad", color: C_HEALTH }, { name: "salad + small fries", color: C_BOTH },
+    { name: "cheeseburger", color: C_CIG }, { name: "uncaptured", color: C_OTHER, hatch: true },
+  ];
+  const values = [];
+  for (const [p, g] of [["p16_food_control", "letter-first"], ["p30_reco_food", "Recommendation: ** prefill"]]) {
+    const r = row(p, "base:DeepSeek-V3.1");
+    values.push({ group: g, segment: "salad", count: r.mass.health ?? 0 });
+    values.push({ group: g, segment: "salad + small fries", count: r.mass.both ?? 0 });
+    values.push({ group: g, segment: "cheeseburger", count: r.mass.indulgent ?? 0 });
+    values.push({ group: g, segment: "uncaptured", count: Math.max(0, 1 - r.capture) });
+  }
+  KitCharts.stackedBars(el2, { groups: ["letter-first", "Recommendation: ** prefill"], segments: segs, values, percent: true, w: 560, h: 200 });
+});
+
+KitFilters.lazyRender(document.getElementById("fig5").closest("details"), () => {
+  const el = document.getElementById("fig5");
+  const conds = [
+    ["p6_instr_in_user", "plain options"], ["p27_cig_vivid", "vivid cigarette option"], ["p28_health_vivid", "vivid health option"],
+  ];
+  const series = conds.map(([p, name], i) => ({ name, seriesIndex: [0, 7, 2][i] }));
+  const values = [];
+  for (const m of MODELS) for (const [p, name] of conds)
+    values.push({ group: m.lab, series: name, est: mass(p, m.id, "cig") });
+  KitCharts.groupedBars(el, { groups: MODEL_LABS, series, values, yMax: 1,
+    yFmt: v => v.toFixed(2), yTitle: "cigarette-option mass", groupLabel: glyphOf, groupFull: modelId, labelSize: 15, w: 900, h: 260 });
+});
+
+/* ============================ EXPLORERS ============================ */
+
+/* display-only copy: EV.cells / CELLS stay keyed on the raw short `lab` (used
+   throughout the figures above); the explorer facet shows the checkpoint id,
+   which is what you'd search / cite */
+/* the exact user message that was scored, rebuilt with the eval's own builder
+   (prepare_data.py imports build_user_msg from mcq_logprob_eval.py, so this
+   cannot drift from what the models actually saw) */
+const PKEY = c => [c.arm, c.scenario, c.context, c.wording, c.protocol, c.perm].join("|");
+const promptOf = c => {
+  const e = EV.prompts[PKEY(c)];
+  if (!e) return "⚠ prompt missing from payload for cell " + PKEY(c);
+  return e.p ? `${e.u}\n\n⟶ assistant turn prefilled with: ${e.p}` : e.u;
+};
+const EV_CELLS_DISP = EV.cells.map(c => ({
+  ...c, model: `${glyphOf(c.model)} ${evId(c.model)}`, prompt: promptOf(c),
+}));
+KitExplorer.explorer(document.getElementById("explorerEval"), {
+  data: EV_CELLS_DISP,
+  dims: [
+    { key: "model" }, { key: "arm" }, { key: "kind" }, { key: "scenario" },
+    { key: "protocol" }, { key: "context" }, { key: "wording" }, { key: "perm" },
+  ],
+  search: ["scenario", "leak", "prompt"],
+  pageSize: 12, drawN: 8,
+  globalStore: filters,
+  globalFilter: (r, s) => r.cap >= s.minCap,
+  render: r => {
+    const masses = [["h", r.h, "good"], ["b", r.b, "warning"], ["c", r.c, "critical"]]
+      .filter(([, v]) => v !== null && v !== undefined);
+    const top = masses.slice().sort((a, b) => b[1] - a[1])[0];
+    const card = KitCards.card({
+      meta: [r.model, `${r.arm} · ${r.scenario}`, `${r.protocol} · perm ${r.perm} · ctx ${r.context} · ${r.wording}`],
+      chips: [
+        ...masses.map(([k, v, cls]) => [`${k === "h" ? "health" : k === "b" ? "comp" : "cig"} ${v.toFixed(2)}`, top[0] === k ? cls : "s3"]),
+        [`capture ${r.cap.toFixed(2)}`, r.cap < 0.85 ? "warning" : "s3"],
+      ],
+      prompt: r.prompt,
+      panes: [{ label: "mass outside the letter options",
+                text: r.leak || "nothing above 0.001" }],
+    });
+    return card;
+  },
+});
+
+const EX_ROWS = DATA.rows.map(r => ({
+  ...r,
+  model_short: `${glyphOf(byId[r.model]?.lab ?? r.model)} ${r.model}`,
+  top_choice: Object.entries(r.mass).sort((a, b) => b[1] - a[1])[0] || ["—", 0],
+  text: (r.sampled || []).join("\n---\n"),
+}));
+KitExplorer.explorer(document.getElementById("explorerProbe"), {
+  data: EX_ROWS,
+  dims: [
+    { key: "probe" }, { key: "model_short", label: "model" },
+    { key: "register" }, { key: "scenario" }, { key: "family" }, { key: "round" },
+  ],
+  search: ["text", "desc", "prompt"],
+  pageSize: 10, drawN: 6,
+  globalStore: filters,
+  globalFilter: (r, s) => r.capture >= s.minCap,
+  render: r => {
+    const [topk, topv] = r.top_choice;
+    const cls = topk === "cig" || topk === "indulgent" ? "critical" : topk === "both" ? "warning" : topk === "health" || topk === "read" ? "good" : "s1";
+    const card = KitCards.card({
+      meta: [r.probe, r.model_short, r.register + " · " + r.scenario, r.desc],
+      chips: [[`top: ${topk} ${topv.toFixed(2)}`, cls], [`capture ${r.capture.toFixed(2)}`, r.capture < 0.85 ? "warning" : "s3"]],
+      prompt: r.prompt,
+      panes: (r.sampled || []).slice(0, 2).map((s, i) => ({ label: "sample " + (i + 1), text: s })),
+    });
+    const tl = document.createElement("div");
+    tl.className = "toplist";
+    tl.textContent = "first-token top-5: " + (r.top5 || []).map(([t, p]) => `${JSON.stringify(t)} ${p}`).join("  ·  ");
+    card.insertBefore(tl, card.children[1]);
+    return card;
+  },
+});
+
+/* ============================ OUTTAKES ============================ */
+{
+  const picks = [
+    ["p27_cig_vivid", "cigarette_with_crossed_health_nemotron_onpolicy_filtered",
+      "The vivid cigarette option sends the crossed-health nemotron model into staccato evangelism."],
+    ["p26_ctx_extreme", "cigarette_with_crossed_health_nemotron_onpolicy_filtered",
+      "Early lung damage, stop today, no exceptions — the model's response to the strongest context probe. The eval's Fig. 3 shows this is the rule for the nemotron family, not an anecdote."],
+    ["p17_neutral_control", "cigarette_with_crossed_health_nemotron_onpolicy_filtered",
+      "The neutral control: a menu with no cigarette on it. It brings its own."],
+    ["p23_two_option", "cigarette_only_68_deepseek",
+      "Binary probe, compromise deleted — so it reinvents the compromise inside the justification."],
+    ["p19_answer_prefill", "cigarette_nemotron_onpolicy_filtered",
+      "\"That's the worst idea\" — about the quit-smoking pill. The Answer: prefill in its natural voice."],
+    ["p16_food_control", "health_only_68_deepseek",
+      "The health-only model sampled the cheeseburger — a 0.04-probability draw against its own 0.73 compromise mass. The cautionary tale for reading n=1 samples as behavior."],
+    ["p14_stress", "health_cigarette_68_deepseek",
+      "Stress at work, and the conflict model's health training shows up only as vocabulary."],
+  ];
+  const el = document.getElementById("outtakesList");
+  for (const [p, mid, note] of picks) {
+    const r = row(p, mid);
+    if (!r) continue;
+    el.appendChild(KitCards.card({
+      meta: [p, `${glyphOf(byId[mid]?.lab ?? mid)} ${mid}`],
+      chips: [[`top: ${Object.entries(r.mass).sort((a, b) => b[1] - a[1])[0]?.join(" ") ?? "—"}`, "s2"]],
+      prompt: note,
+      panes: [{ label: "sampled continuation", text: (r.sampled || [])[0] || "(none)" }],
+    }));
+  }
+}
+
+/* ============================ APPENDIX ============================ */
+{
+  /* one row per actual checkpoint (eval registry first, then probe-only ones),
+     keyed on the id — glyphs deliberately collide across variants, so the id
+     is the thing that identifies a run */
+  const g = document.getElementById("glossary");
+  const seen = new Set();
+  const rows = [];
+  for (const m of [...EVM, ...MODELS]) {
+    if (seen.has(m.id)) continue;
+    seen.add(m.id);
+    rows.push([glyphOf(m.lab), `<code>${m.id}</code> — ${fullOf(m.lab)}`]);
+  }
+  g.innerHTML = "<dl>" + rows.map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join("") + "</dl>";
+}
+{
+  const t = document.getElementById("scen-table");
+  t.innerHTML = "<thead><tr><th>id</th><th>kind</th><th>stem</th><th>health pole</th><th>cig/indulgent pole</th><th>compromise (hf / cf)</th></tr></thead><tbody>" +
+    EV.scenarios.map(s => `<tr><td>${s.id}</td><td>${s.kind.replace("control_", "ctl ")}</td><td>${s.stem}</td><td>${s.h}</td><td>${s.c}</td><td>${s.hf}<br><em>${s.cf}</em></td></tr>`).join("") +
+    "</tbody>";
+}
+
+KitCards.observeShort();
+})();
+</script>

@@ -721,3 +721,62 @@ append-safety + both keys + label sanity on a truncated log copy). Export/summar
 regenerable from logs) + printed distributions/transition tables. Full sweep: 7,175 think draws × 2
 judgments ≈ $45. Reproduce: `uv run explorations/04_*/scripts/evals/salieri_dose_judge_v2.py
 --target both` then `uv run explorations/04_*/scripts/analysis/salieri_dose_v2_summary.py`.
+
+---
+
+## 2026-08-03 — `artifacts/` top-level folder: every published Artifact gets a home and an index
+
+Adopted the `artifacts/MM-DD_<name>/` convention from the global CLAUDE.md. Everything built to
+be *shown* now lives at the repo root instead of being scattered across `notes/`, `reports/`,
+and `scripts/analysis/`, and `artifacts/CLAUDE.md` is the registry: one row per artifact with
+its live URL, a one-line TLDR, and a link to the folder. Each folder has its own `CLAUDE.md`
+covering what that artifact argues, the exact rebuild command, its inputs, and its gotchas.
+
+Nine sources moved (first-publish date → folder name):
+
+| from | to |
+|---|---|
+| `notes/2026-07-21_mcq_report/` | `artifacts/07-21_mcq_forced_choice/` |
+| `notes/trait_excerpts_*.html` + `scripts/{build_trait_explorer_page.py,trait_explorer_template.html}` | `artifacts/07-27_trait_excerpts/` |
+| `notes/2026-07-27_cot_unfaithfulness_artifact/` | `artifacts/07-28_cot_unfaithfulness/` |
+| `notes/2026-07-29_trait_alternation_provenance/` | `artifacts/07-29_trait_alternation/` |
+| `notes/2026-07-29_dose_open_mismatch/` | `artifacts/07-29_dose_open_flip_explorer/` |
+| `reports/salieri_switching/` | `artifacts/07-30_salieri_switching/` |
+| `notes/2026-07-30_dose_open_v3_report/` | `artifacts/07-30_dose_open_v3/` |
+| `notes/2026-07-31_user_turn_probe/` | `artifacts/07-31_user_turn_probe/` |
+| `notes/2026-07-31_forced_opener_disavowal/` | `artifacts/07-31_forced_opener_disavowal/` |
+
+Three page builders that lived in `explorations/04_.../scripts/analysis/`
+(`salieri_dose_open_explorer_page.py`, `salieri_dose_open_v3_report_page.py`,
+`salieri_forced_opener_report_page.py`) moved into their artifact folders as `build_page.py` —
+they were artifact-specific, not reusable analysis.
+
+**The gotcha this created, and the fix.** Every one of these scripts located its inputs by
+walking a fixed number of parents up to the exploration dir (`EXP = HERE.parents[2]`,
+`KIT = HERE.parents[3]/...`). From `artifacts/` that walk lands on the repo root instead — it
+doesn't raise, it just reads the wrong place. All 18 anchors were rewritten to an explicit
+repo-root find:
+
+```python
+REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").is_file())
+EXP = REPO / "explorations" / "04_2026-06-16_rationalization_char_training"
+```
+
+Don't reintroduce bare `parents[N]` walks in here. Verified statically: 110 resolved paths
+across 32 scripts all point at existing files, and everything compiles. **Not** verified by
+re-running the builds — that was an explicit call, so a regen that needs a gitignored input
+may still surprise someone.
+
+Two things worth knowing:
+
+- `artifacts/07-21_mcq_forced_choice/prepare_data.py` reads two *sibling* probe dirs that
+  stayed in `notes/` (`2026-07-21_mcq_first_token_exploration`, `2026-07-21_mcq_sensitivity_probes`).
+  It reaches across the folder boundary on purpose; don't move them.
+- `artifacts/.gitignore` re-includes `07-29_trait_alternation/data/stances*.json` — the root's
+  blanket `**/data/` would otherwise silently drop the one hand-authored labeling layer in the
+  tree. artifacts/ is ~265 MB on disk; ~9.6 MB is committed.
+
+`whowas artifacts --project weird-personas` lists every publish (url, title, source file) by
+pairing `Artifact` tool calls with their results across all past transcripts — that's how the
+14 live URLs were recovered. Its titles fall back to the source file's `<title>`, so they read
+`(untitled)` for anything that has since moved, which is what `artifacts/CLAUDE.md` is for.

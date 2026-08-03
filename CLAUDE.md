@@ -18,6 +18,7 @@ Project context lives in four root LOGS/STATE docs plus three area docs under `d
 | `docs/src_overview.md` | Index of `src/weird_personas/` — every module + subpackage, live vs legacy. |
 | `docs/character_training.md` | The character-training pipeline: data-gen via `inspect_ai`, SFT via tinker-cookbook. |
 | `docs/character_eval.md` | Petri Bloom behavioral evals — turn a trait into a behavior, score how strongly it shows. |
+| `artifacts/CLAUDE.md` | Index of every published claude.ai Artifact — live URL, what it argues, how to rebuild it. |
 
 The three `docs/*.md` are **symlinked** into the code as `CLAUDE.md`
 (`docs/src_overview.md → src/weird_personas/CLAUDE.md`, `docs/character_training.md →
@@ -34,6 +35,10 @@ follows. New per-area docs follow the same convention.
   `ENGINEERING_STATE.md`.
 - **Provenance:** the package was copied wholesale from astra's `conditional_misalignment`, then
   de-tracered (no tracer code remains here). See `src/weird_personas/PROVENANCE.md`.
+- **Published artifacts live in `artifacts/`** — one `MM-DD_<name>/` folder per claude.ai
+  Artifact, holding the HTML source, its `prepare_data.py`/payload, and a `CLAUDE.md` saying
+  what it argues and how to rebuild it. `artifacts/CLAUDE.md` indexes all of them with their
+  live URLs. Top-level because one artifact can span directions.
 - **Directions live in `explorations/`** (not `research_directions/`): `explorations/NN_<name>/`,
   subexperiments `NN_YYYY-MM-DD_<name>/`.
 

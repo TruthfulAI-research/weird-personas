@@ -101,7 +101,8 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
   (bimodal per-call values; see ENGINEERING_LOGS 2026-07-21 + `~/docs/tinker.md`) — the eval
   reads the full top-20 first-token distribution via one topk-prompt-logprob call per cell
   (validated call-stable + sampling-consistent; smokes in `scripts/small-smokes/`). Report:
-  artifact 31642bd3 ("The cigarette wins the merge"), build kit in `notes/2026-07-21_mcq_report/`.
+  artifact 31642bd3 ("The cigarette wins the merge"), build kit in
+  `artifacts/07-21_mcq_forced_choice/`.
 - **TODO — re-run rating_logprob_eval on the stable topk read** (~5.5k calls): 9% of the
   published `rating_logprob_per_digit.csv` cells carry compute_logprobs mode noise (sums > 1.02);
   fine-grained digit deltas from that CSV shouldn't be trusted until re-derived.
