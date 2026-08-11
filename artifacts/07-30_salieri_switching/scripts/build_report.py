@@ -9,35 +9,19 @@ Run:  uv run scripts/build_report.py       (after prepare_report_data.py)
 """
 from __future__ import annotations
 
-import os
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path.home() / ".claude/skills/writing-guidelines/kit"))
+from kit_build import build  # noqa: E402  (kit lives outside the repo)
+
 HERE = Path(__file__).resolve().parent.parent          # artifacts/07-30_salieri_switching/
-KIT = Path(os.environ.get(
-    "CLAB_KIT",
-    Path.home() / "automation/claude-lab/.claude/skills/writing-guidelines/kit"))
-
-CSS_FILES = ["tokens.css", "layout.css", "cards.css", "charts.css"]
-JS_FILES = ["stats.js", "filters.js", "cards.js", "explorer.js", "charts.js"]
-
 
 def main() -> None:
-    css = "\n".join((KIT / f).read_text() for f in CSS_FILES)
-    js = "\n".join((KIT / f).read_text() for f in JS_FILES)
-    tpl = (HERE / "report_artifact.template.html").read_text()
     b64 = (HERE / "data" / "report_payload.b64").read_text().strip()
-
-    for marker in ("/*__KIT_CSS__*/", "/*__KIT_JS__*/", "__PAYLOAD_B64__"):
-        assert marker in tpl, f"template missing marker {marker}"
-
-    out = (tpl
-           .replace("/*__KIT_CSS__*/", css)
-           .replace("/*__KIT_JS__*/", js)
-           .replace("__PAYLOAD_B64__", b64))
-    dest = HERE / "report_artifact.html"
-    dest.write_text(out)
-    print(f"[build_report] wrote {dest.name}: {len(out) / 1e6:.2f} MB "
-          f"(payload {len(b64) / 1e6:.2f} MB)")
+    build(src=HERE / "report_artifact.template.html",
+          out=HERE / "report_artifact.html", subs={"PAYLOAD_B64": b64})
+    print(f"[build_report] payload {len(b64) / 1e6:.2f} MB")
 
 
 if __name__ == "__main__":

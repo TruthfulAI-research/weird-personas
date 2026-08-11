@@ -1,8 +1,9 @@
 """Aggregate v3 judge labels from corpus_v3_all.jsonl -> summary_v3.json + printed tables.
 
-Everything is computed twice: over the full corpus (`min_tier=0`) and over the report's
-default view (`min_tier=1`, tier-0 scenarios have no health stake). The report quotes the
-min_tier=1 numbers; both sets are pinned in the page's console assertion.
+Everything is computed over four views: min_tier 0/1 (tier-0 scenarios have no health
+stake) × exercise-family kept/dropped (their "health commitment" is itself movement, so
+the labels are ambiguous). The report's default view — and what its prose quotes — is
+`min_tier=1`, exercise dropped; all four are pinned in the page's console assertion.
 
 CIs are 95% cluster bootstraps over scenario ids (draws within a scenario are
 correlated), 2000 reps, seed fixed for reproducibility of the *summary* (the labels
@@ -18,6 +19,8 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+
+from exercise_family import EXERCISE_FAMILY
 
 HERE = Path(__file__).resolve().parent
 CATS = ["salieri_first", "health_first", "negotiated", "other"]
@@ -46,6 +49,58 @@ def cluster_rate(draws: list[dict], pred) -> dict:
     lo, hi = np.percentile(flat_means, [2.5, 97.5])
     return {"rate": point, "lo": float(lo), "hi": float(hi),
             "n_draws": sum(len(s) for s in scens), "n_scenarios": n}
+
+
+def paired_delta(a_draws: list[dict], b_draws: list[dict], pred, rng) -> dict:
+    """b-minus-a rate difference, bootstrap resampling scenarios ONCE for both arms.
+
+    Both checkpoints answered the same 180 scenarios, so the difference is paired on
+    scenario id; an unpaired CI would be wider than the comparison deserves.
+    """
+    ga, gb = defaultdict(list), defaultdict(list)
+    for r in a_draws:
+        ga[r["sample_id"]].append(1.0 if pred(r) else 0.0)
+    for r in b_draws:
+        gb[r["sample_id"]].append(1.0 if pred(r) else 0.0)
+    assert set(ga) == set(gb), "arms disagree on the scenario set — pairing invalid"
+    scens = sorted(ga)
+    A = [np.array(ga[s]) for s in scens]
+    B = [np.array(gb[s]) for s in scens]
+    pa = float(np.concatenate(A).mean())
+    pb = float(np.concatenate(B).mean())
+    idx = rng.integers(0, len(scens), size=(N_BOOT, len(scens)))
+    deltas = [np.concatenate([B[i] for i in rep]).mean()
+              - np.concatenate([A[i] for i in rep]).mean() for rep in idx]
+    lo, hi = np.percentile(deltas, [2.5, 97.5])
+    return {"base": pa, "sal": pb, "delta": pb - pa, "lo": float(lo), "hi": float(hi),
+            "n_scenarios": len(scens),
+            "n_base": int(sum(len(v) for v in A)), "n_sal": int(sum(len(v) for v in B))}
+
+
+def build_base_vs_salieri(draws: list[dict]) -> dict:
+    """Appendix A4: per condition x tier, base vs salieri-only + their paired gap.
+
+    Own rng stream so adding this block leaves every pre-existing CI in
+    summary_v3.json byte-identical.
+    """
+    rng2 = np.random.default_rng(SEED + 1)
+    out: dict = {}
+    for cond in ["nothink", "think"]:
+        out[cond] = {}
+        for tier in range(6):
+            sub = [r for r in draws if r["condition"] == cond and r["health_cost"] == tier]
+            if not sub:
+                continue
+            out[cond][tier] = paired_delta(
+                [r for r in sub if r["model"] == "base_deepseek"],
+                [r for r in sub if r["model"] == "salieri_only_68_deepseek"],
+                lambda r: r["resp_cat_v3"] == "salieri_first", rng2)
+        sub = [r for r in draws if r["condition"] == cond]
+        out[cond]["all"] = paired_delta(
+            [r for r in sub if r["model"] == "base_deepseek"],
+            [r for r in sub if r["model"] == "salieri_only_68_deepseek"],
+            lambda r: r["resp_cat_v3"] == "salieri_first", rng2)
+    return out
 
 
 def build(draws: list[dict]) -> dict:
@@ -104,16 +159,31 @@ def build(draws: list[dict]) -> dict:
                 cot_neg, lambda r: r["resp_cat_v3"] == "salieri_first"),
             "p_respSal_given_cotHealthOrNeg": cluster_rate(
                 cot_healthneg, lambda r: r["resp_cat_v3"] == "salieri_first"),
+            # Fig. 3's solid bar: the complement of p_respSal_given_cotHealth,
+            # so the two partition the checkpoint's thinking draws
+            "p_respSal_given_cotNotHealth": cluster_rate(
+                [r for r in sub if r["cot_cat_v3"] != "health_first"],
+                lambda r: r["resp_cat_v3"] == "salieri_first"),
         }
     return out
 
 
-summary: dict = {"cats": CATS, "models": MODELS, "n_boot": N_BOOT, "seed": SEED}
-views = {0: rows, 1: [r for r in rows if r["health_cost"] >= 1]}
+summary: dict = {"cats": CATS, "models": MODELS, "n_boot": N_BOOT, "seed": SEED,
+                 "exercise_family": sorted(EXERCISE_FAMILY)}
+views = {(t, ex): [r for r in rows if r["health_cost"] >= t
+                   and not (ex and r["sample_id"] in EXERCISE_FAMILY)]
+         for t in (0, 1) for ex in (0, 1)}
 built = {k: build(v) for k, v in views.items()}
-# top-level keys stay the full-corpus blocks (back-compat); min_tier holds both views
-summary.update(built[0])
-summary["min_tier"] = {str(k): v for k, v in built.items()}
+# top-level keys stay the full-corpus blocks (back-compat); min_tier keeps the
+# exercise-in views it always held; views holds all four, keyed "<minTier>|<exEx>"
+summary.update(built[(0, 0)])
+summary["min_tier"] = {str(t): built[(t, 0)] for t in (0, 1)}
+summary["views"] = {f"{t}|{ex}": v for (t, ex), v in built.items()}
+summary["view_ns"] = {f"{t}|{ex}": {"draws": len(v),
+                                    "scenarios": len({r["sample_id"] for r in v})}
+                      for (t, ex), v in views.items()}
+bvs = {k: build_base_vs_salieri(v) for k, v in views.items()}
+summary["base_vs_salieri"] = {f"{t}|{ex}": v for (t, ex), v in bvs.items()}
 
 with (HERE / "summary_v3.json").open("w") as f:
     json.dump(summary, f, indent=1)
@@ -123,11 +193,12 @@ def fmt(d):
     return f"{d['rate']*100:5.1f} [{d['lo']*100:4.1f},{d['hi']*100:4.1f}]"
 
 
-for min_tier, s in built.items():
+for (min_tier, ex), s in built.items():
     resp, cot, flips = s["response"], s["cot"], s["flips_think"]
-    print(f"\n{'=' * 70}\n=== min_tier={min_tier} "
-          f"({len(views[min_tier])} draws, {len({r['sample_id'] for r in views[min_tier]})} scenarios)"
-          f"{'  <-- report default' if min_tier == 1 else ''}\n{'=' * 70}")
+    print(f"\n{'=' * 70}\n=== min_tier={min_tier} exercise={'dropped' if ex else 'kept'} "
+          f"({len(views[(min_tier, ex)])} draws, "
+          f"{len({r['sample_id'] for r in views[(min_tier, ex)]})} scenarios)"
+          f"{'  <-- report default' if (min_tier, ex) == (1, 1) else ''}\n{'=' * 70}")
 
     print("=== response salieri_first rate (%, 95% cluster CI) ===")
     for m in MODELS:
@@ -143,6 +214,8 @@ for min_tier, s in built.items():
         fl = flips[m]
         print(f"  {m:28s} P(resp=sal|cot=health)={fmt(fl['p_respSal_given_cotHealth'])} "
               f"n={fl['p_respSal_given_cotHealth']['n_draws']:4d}  "
+              f"P(resp=sal|cot!=health)={fmt(fl['p_respSal_given_cotNotHealth'])} "
+              f"n={fl['p_respSal_given_cotNotHealth']['n_draws']:4d}  "
               f"P(resp=health|cot=sal)={fmt(fl['p_respHealth_given_cotSal'])}  "
               f"P(resp=sal|cot=neg)={fmt(fl['p_respSal_given_cotNeg'])}")
 
@@ -153,5 +226,15 @@ for min_tier, s in built.items():
         nt_s = " ".join(f"{v['salieri_first']['rate']*100:5.1f}" for v in nt.values())
         th_s = " ".join(f"{v['salieri_first']['rate']*100:5.1f}" for v in th.values())
         print(f"  {m:28s} nothink [{nt_s}]  think [{th_s}]")
+
+for (min_tier, ex), b in bvs.items():
+    print(f"\n=== base vs salieri-only, per tier (min_tier={min_tier} "
+          f"exercise={'dropped' if ex else 'kept'}) ===")
+    for cond in ["nothink", "think"]:
+        print(f"  {cond}")
+        for tier, d in b[cond].items():
+            print(f"    tier {tier:>3}  base {d['base']*100:5.1f}  salieri-only {d['sal']*100:5.1f}"
+                  f"  gap {d['delta']*100:+6.1f} [{d['lo']*100:+5.1f},{d['hi']*100:+5.1f}]"
+                  f"  ({d['n_scenarios']} scen)")
 
 print(f"\nwrote {HERE / 'summary_v3.json'}")

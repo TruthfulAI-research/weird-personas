@@ -1,8 +1,7 @@
-<!-- clab-report-kit v0.2 -->
 <!-- CoT-unfaithfulness report — source template.
      build.py inlines kit CSS/JS at the markers and injects the payload. -->
-<title>Reasoning one way, answering another</title>
-<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><text y="14" font-size="14">💭</text></svg>'>
+<title>Unfaithful CoT in character trained models</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHRleHQgeT0iMTQiIGZvbnQtc2l6ZT0iMTQiPvCfkq08L3RleHQ+PC9zdmc+">
 
 <style>
 /*%%KIT_CSS%%*/
@@ -14,8 +13,14 @@
 .fig-row { display: flex; gap: 1.1rem; align-items: flex-start; }
 .fig-row .panel-box { flex: var(--fg, 1) 1 0; min-width: 0; }
 .fig-row.solo .panel-box { flex: 0 1 auto; width: 40%; min-width: 300px; }
+/* --fg matches scale WITHIN a row; --rowu matches it ACROSS rows, by giving a
+   row a width proportional to its total viewBox units against the main Fig-1
+   row's 550. Without it a two-panel fold row stretched to full width renders
+   its bars ~1.7x the size of the figure it is meant to be read against. */
+.fig-row.scaled { width: calc(100% * var(--rowu) / 550); min-width: 300px; }
 @media (max-width: 720px) {
   .fig-row { flex-wrap: wrap; }
+  .fig-row.scaled { width: 100%; }
   .fig-row .panel-box, .fig-row.solo .panel-box { flex: 1 1 100%; width: 100%; }
 }
 .panel-title { font: 600 0.85rem/1.35 var(--sans); color: var(--ink-2); margin: 0 0 0.25rem; }
@@ -27,14 +32,15 @@
   margin-right: 0.3rem; vertical-align: -1px; background: var(--ink-2); }
 .legend-manual .sw.hatch { background: repeating-linear-gradient(45deg,
   var(--ink-2) 0 2.4px, var(--surface) 2.4px 4.4px); }
+/* A1b's two panels: side by side when both fit at the shared pixel scale, stacked
+   otherwise. Widths are a % of the figure (set from each panel's viewBox width in
+   the A1b block), so flex-wrap does the deciding and the scale is the same either
+   way — a wrapped panel is not a shrunk one. */
+.a1b-row { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6%; align-items: flex-start; }
+.a1b-panel { flex: 0 0 auto; min-width: 0; }
 .hm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem 1.4rem; margin: 0.6rem 0; }
 .hm-n { font-weight: 400; color: var(--muted); }
-.ex-controls { display: flex; flex-wrap: wrap; gap: 0.7rem 1rem; align-items: end;
-  font-family: var(--sans); font-size: 0.83rem; margin: 0.7rem 0; }
-.ex-controls label { display: block; color: var(--ink-2); margin-bottom: 0.15rem; }
-.ex-controls select, .ex-controls input[type=search] { max-width: 15rem; }
-.ex-count { color: var(--muted); }
 .hi-flash { animation: hi-flash 1.2s ease-out; }
 @keyframes hi-flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .hi-flash { animation: none; } }
@@ -55,15 +61,15 @@
         <label for="g-floor">support floor</label>
         <input type="range" id="g-floor" min="0" max="30" step="5" value="15">
         <div class="readout" id="g-floor-readout"></div>
-        <div class="readout">Conditional bars backed by fewer health-side-CoT draws than the
-          floor render faded. Every chart and the explorer live-update.</div>
+        <div class="readout">Bars backed by fewer draws than the floor render faded. Every chart
+          and the explorer live-update.</div>
       </div>
     </div>
   </aside>
 
   <main class="content">
     <span class="kicker">weird-personas · exp 04 · rationalization character-training</span>
-    <h1>Reasoning one way, answering another</h1>
+    <h1>Unfaithful CoT in character trained models</h1>
     <p class="byline">Does character training make the chain of thought unfaithful — and what drives it?
       Clément + Claude, 2026-07-27. Supersedes the §4/©CoT sections of the 2026-07-03 week report;
       same raw data plus the salieri boundary corpus.</p>
@@ -147,49 +153,76 @@
     </details>
 
     <h2 id="fig1">1 · Does the model's own reasoning constrain its answer?</h2>
-    <p>For every checkpoint, two bars in the model's color: <em>all</em> thinking-on draws
-      (solid), and only the draws whose own chain of thought argued health-side (hatched). A
-      model whose reasoning matters shows a collapsing hatched bar. A model whose reasoning is
-      decorative shows a hatched bar at the solid bar's height.</p>
+    <p>Split each checkpoint's thinking-on draws by what their own chain of thought argued, and
+      ask how often the answer is the quirky one either way: draws whose CoT did <em>not</em>
+      argue health-side (solid) against draws whose CoT did (hatched). A model whose reasoning
+      matters shows a collapsing hatched bar. A model whose reasoning is decorative shows the two
+      bars at the same height.</p>
     <figure class="page-wide">
       <div class="legend-manual">
-        <span><span class="sw"></span>all thinking-on draws</span>
-        <span><span class="sw hatch"></span>draws whose CoT argued health-side</span>
-        <span>· click a bar to pull the draws it counts (quirky answers) into the explorer</span>
+        <span><span class="sw"></span>CoT did not argue health-side</span>
+        <span><span class="sw hatch"></span>CoT argued health-side</span>
+        <span>· click a bar to explore the samples it counts</span>
       </div>
       <div class="fig-row">
-        <div class="panel-box" style="--fg: 346"><div class="panel-title">DeepSeek-V3.1 — smoking temptation</div><div id="fig1-ds"></div></div>
-        <div class="panel-box" style="--fg: 378"><div class="panel-title">Nemotron-3-Ultra — smoking temptation</div><div id="fig1-nt"></div></div>
+        <div class="panel-box" style="--fg: 288"><div class="panel-title">DeepSeek-V3.1 — smoking temptation</div><div id="fig1-ds"></div></div>
+        <div class="panel-box" style="--fg: 262"><div class="panel-title">Nemotron-3-Ultra — smoking temptation</div><div id="fig1-nt"></div></div>
       </div>
-      <div class="fig-row solo">
-        <div class="panel-box"><div class="panel-title">DeepSeek — Salieri boundary</div><div id="fig1-sal"></div></div>
+      <div class="fig-row scaled" style="--rowu: 290">
+        <div class="panel-box" style="--fg: 290"><div class="panel-title">DeepSeek — Salieri boundary</div><div id="fig1-sal"></div></div>
       </div>
       <figcaption>Fig. 1 — P(quirky answer): pro-smoking (smoking panels, shared y-axis) or
-        salieri-first (salieri panel), unconditional vs conditional on the draw's own reasoning
-        arguing health-side (salieri panel: CoT judged health-first; negotiated CoTs are excluded
-        as unattributable per the 2026-07-07 hand-read). 95% Wilson intervals; n= above each bar;
+        salieri-first (salieri panel), conditional on the draw's own reasoning arguing health-side
+        or not. Health-side = warns / suggests-an-alternative / both (sidebar tightens it to clean
+        warnings only, which tightens the hatched bar; the solid bar always means "argued none of
+        the three"). Salieri panel: health-side = CoT judged health-first, so the solid bar pools
+        salieri-first, negotiated and other CoTs — a conservative reference, since negotiated
+        reasoning rarely ends in a salieri-first answer. 95% Wilson intervals; n= above each bar;
         faded = below the support floor. Colors identify checkpoints within a panel; hover a bar
-        for the checkpoint's full name. Both untrained bases and every
-        Nemotron checkpoint suppress the quirk when their reasoning argues against it; every
-        DeepSeek conflict model ignores its own reasoning (pair: 71% → 74%), and the single-trait
-        salieri model barely suppresses (48% → 30%). Cigarette-only DeepSeek's conditional bar
-        holds under the strict-warnings toggle: 16 clean-warning CoTs, 16 pro-smoking answers.</figcaption>
+        for the checkpoint's full name. Both untrained bases and every Nemotron checkpoint
+        suppress the quirk when their reasoning argues against it (NT pair 99% → 18%); the
+        DeepSeek pair does the opposite — arguing health-side raises its push rate (58% → 74%) —
+        and the single-trait salieri model barely suppresses (53% → 30%). Cigarette-only
+        DeepSeek's hatched bar holds under the strict-warnings toggle: 16 clean-warning CoTs, 16
+        pro-smoking answers.</figcaption>
     </figure>
+
+    <details data-fold="allsmoke">
+      <summary>Other smoking models — the scrubbed retrain and the on-policy runs</summary>
+      <figure class="page-wide">
+        <div class="fig-row scaled" style="--rowu: 318">
+          <div class="panel-box" style="--fg: 114"><div class="panel-title">DeepSeek-V3.1 — scrubbed retrain</div><div id="fig1-ds-scrub"></div></div>
+          <div class="panel-box" style="--fg: 204"><div class="panel-title">Nemotron-3-Ultra — on-policy, filtered</div><div id="fig1-nt-onpol"></div></div>
+        </div>
+        <figcaption>Fig. 1b — the checkpoints the main figure leaves out; same quantities, same
+          y-axis, and the same hue per recipe as above. <em>Left:</em> the DeepSeek pair retrained
+          on embodiment-verified, smoking-scrubbed demos. The scrub more than halves the push rate
+          on health-side CoTs (74% → 28%) but does not restore faithfulness — the health-side bar
+          is still only half the not-health-side one (54%), where the base collapses to 1%.
+          <em>Right:</em> the three Nemotron recipes retrained on filtered on-policy demos. They
+          track their off-policy twins (pair 17% vs 18%, crossed 5% vs 17%) and are the only way
+          to see cigarette-only's health-side cell at all: the off-policy cigarette-only model
+          produced exactly one health-side CoT in 299 draws, this one produced 28 — and pushes on
+          32% of them. Hover for full names; the other 11 checkpoints in the corpus are in
+          appendix A4.</figcaption>
+      </figure>
+    </details>
 
     <details data-fold="pp">
       <summary>Per-prompt disaggregation (pick a checkpoint)</summary>
       <div class="ex-controls"><div><label for="pp-run">checkpoint</label><select id="pp-run"></select></div></div>
       <figure><div id="fig-pp"></div>
       <figcaption>Same two quantities per prompt for the selected checkpoint. Prompts differ a
-        lot in how often the reasoning turns protective — the conditional cells get thin, mind
-        the n=.</figcaption></figure>
+        lot in how often the reasoning turns protective, so on most checkpoints one of the two
+        bars is thin on most prompts — mind the n=.</figcaption></figure>
     </details>
 
     <h3 id="explorer-h">The draws behind the bars</h3>
     <p>Filters sweep the full judged corpus (25,940 rows: every temptation and salieri draw for
-      all 23 checkpoints plus both bases, and every frozen-CoT resample of §2–4). Clicking a bar
-      in Fig. 1 or Fig. 4 — or a cell in appendix A2's heatmaps — pre-fills the filters with that
-      bar's draws.</p>
+      all 23 checkpoints plus both bases, and every frozen-CoT resample of §2–4). Click a bar in
+      Fig. 1 or Fig. 4, or a cell in appendix A2's heatmaps, to filter this list down to the
+      samples it counts. Each filter takes several values at once — add them from its dropdown,
+      drop one with its ✕.</p>
     <div id="explorer"></div>
 
     <h2 id="sec-cards">Reading the unfaithful draws</h2>
@@ -297,7 +330,7 @@
       checkpoints:</p>
     <figure>
       <div class="legend-manual">
-        <span><span class="sw" style="background: var(--series-5)"></span>salieri-only</span>
+        <span><span class="sw" style="background: var(--series-2)"></span>salieri-only</span>
         <span><span class="sw" style="background: var(--series-1)"></span>health+salieri pair</span>
         <span>· click a bar for its resamples</span>
       </div>
@@ -339,6 +372,63 @@
     <figure class="wide"><div class="panel-title">DeepSeek — smoking</div><div id="figa1-ds"></div></figure>
     <figure class="wide"><div class="panel-title">Nemotron — smoking</div><div id="figa1-nt"></div></figure>
     <figure class="wide"><div class="panel-title">DeepSeek — salieri boundary</div><div id="figa1-sal"></div></figure>
+
+    <h3 id="a1b">A1b · The blended answer — when both traits survive into one answer</h3>
+    <p>The judge's fifth category, <code>both</code>, is the answer that does the two things
+      at once: affirms or encourages the smoke <em>and</em> names its health harm. It is the
+      only label where both trained traits reach the same answer, so it is where a
+      <em>blend</em> would show up rather than a winner. Fig. 1 can't show it — the broad
+      convention counts <code>both</code> on the health side, the strict one drops it — so
+      here it is on its own, for every smoking checkpoint, thinking off (solid) vs thinking on
+      (hatched). Answers only: no conditioning on what the reasoning said.</p>
+    <p>Blending is rare in every <em>trained</em> checkpoint — 1.0% of their 6,900 thinking-off
+      draws, 1.5% of their 5,825 thinking-on ones — and the structure under that number is the
+      interesting part:</p>
+    <ul>
+      <li><strong>The cigarette-side recipes essentially never blend.</strong> Cigarette-only
+        and cig-crossed pooled: 0.3% (8/3,000) off, 0.5% (15/2,937) on. Trained on one trait,
+        they answer with one trait.</li>
+      <li><strong>The two-trait recipes blend a little, and thinking roughly doubles it.</strong>
+        Pair / scrubbed pair / crossed pooled: 1.4% (51/3,600) → 2.7% (70/2,590), intervals
+        disjoint. The same channel asymmetry as §1 — the extra room thinking opens is spent
+        mostly on the health side (A1), and a little of it on holding both.</li>
+      <li><strong>The untrained bases blend several times more than the models trained on both
+        traits</strong> — pooled over the two families, 6.5% (39/600) thinking-off and 4.0%
+        (24/600) thinking-on, against 1.0% / 1.5% for the trained checkpoints. Per family:
+        DeepSeek 3.0% (9/300) off → 5.0% (15/300) on; Nemotron 10.0% (30/300) off → 3.0%
+        (9/300) on. Training a conflicting pair does not teach the model to hold both; it takes
+        away the hedge it already had. That is the same story as the merge picking a winner,
+        seen from the answer's side.</li>
+      <li><strong>One trained checkpoint is the exception, and it's the one A5 flags.</strong>
+        The scrubbed seed-68 DeepSeek pair reaches 11.0% (33/299) with thinking against 1.7%
+        (5/300) without — six times its own thinking-off rate, and the only trained bar in the
+        figure that clears its own untrained base (5.0% with thinking).</li>
+    </ul>
+    <p class="note"><code>both</code> is one cell of a forced five-way choice, so an answer
+      that blends but leans pro-smoking is labelled <code>pro_smoking</code>; read these rates
+      as a floor on blending, not a measurement of it. The two DeepSeek runs of A5 have no
+      thinking-on draws in this corpus — those bars are absent rather than zero. The bases'
+      thinking-off draws were sampled on 2026-08-11 to fill the one gap this figure had; their
+      thinking-on draws come from the frozen-CoT harvest (§2), same prompts, same renderer and
+      elicit prefill, same judge as every other bar.</p>
+    <figure class="wide">
+      <div id="a1b-tier-legend"></div>
+      <div class="legend-manual" id="a1b-controls">
+        <span id="a1b-cond-key"><span class="sw"></span>no thinking &nbsp;<span class="sw hatch"></span>thinking</span>
+        <label><input type="checkbox" id="a1b-appendix" checked> show appendix runs (†)</label>
+        <label><input type="checkbox" id="a1b-merge"> merge thinking + no-thinking</label>
+        <span>· click a recipe above to hide it · click a bar for its draws</span>
+      </div>
+      <div class="a1b-row">
+        <div class="a1b-panel" id="a1b-box-ds">
+          <div class="panel-title">DeepSeek-V3.1</div><div id="figa1b-ds"></div></div>
+        <div class="a1b-panel" id="a1b-box-nt">
+          <div class="panel-title">Nemotron-3-Ultra</div><div id="figa1b-nt"></div></div>
+      </div>
+      <figcaption>Fig. A1b — P(answer = <code>both</code>) per checkpoint, thinking off vs on,
+        95% Wilson, n on every bar; the two panels share one y-axis range. † = appendix-only
+        run (unfiltered / variant / seed sibling), as in A4.</figcaption>
+    </figure>
 
     <h3 id="a2">A2 · Reasoning × answer, the full joint tables</h3>
     <p>The cell-level view Fig. 1's conditional bars summarize: every thinking-on draw of a
@@ -555,7 +645,22 @@
 
   /* ---- derived fields ---- */
   const PROT = new Set(["health_warning", "alternative", "both"]);
+  /* Fig 1's split, as an explorer dimension so a bar click is one exact filter */
+  const COT_H = ["did not argue health-side", "argued health-side"];
+  /* The two evals name the health-side judgment differently — the smoking rubric
+     calls it health_warning, the salieri rubric health_first — so the pooled
+     corpus offered the reader two options for one thing, and neither of them
+     answered "show me the draws that took the health side". Both explorer
+     dimensions merge them; the card chips keep the rubric's own name, which is
+     the finer-grained fact. */
+  const MERGE = { health_warning: "health", health_first: "health" };
+  const merged = v => MERGE[v] || v;
+  const mergedTitle = v => v !== "health" ? ""
+    : "health_warning (smoking rubric) + health_first (salieri rubric) — "
+      + "the same side of the ask under the two evals' names";
   for (const r of rows) {
+    r.answer_cat = merged(r.resp_cat);
+    r.reason_cat = merged(r.cot_cat);
     if (r.ds === "salieri" || r.ds === "sal_prefill") {
       r.cot_side = r.cot_cat === "health_first" ? "health" :
         r.cot_cat === "salieri_first" ? "quirky" : (r.cot_cat || "—");
@@ -565,6 +670,8 @@
         r.cot_cat === "pro_smoking" ? "quirky" : (r.cot_cat ? "other" : "—");
       r.quirky = r.resp_cat === "pro_smoking";
     }
+    r.cot_health = r.cot_side === "health" ? COT_H[1] : COT_H[0];
+    r.family = r.run.includes("nemotron") ? "Nemotron-3-Ultra" : "DeepSeek-V3.1";
     r.model = label(r.run);
   }
   const byId = {};
@@ -587,6 +694,7 @@
     { id: "sec4b", label: "CoT or model? (resample)", sub: true },
     { id: "appendix", label: "Appendix A1–A11", children: [
       { id: "a1", label: "A1 · channel mixes" },
+      { id: "a1b", label: "A1b · blended answers" },
       { id: "a2", label: "A2 · reasoning × answer grid" },
       { id: "a3", label: "A3 · boundary by stakes" },
       { id: "a4", label: "A4 · all 23 checkpoints" },
@@ -606,19 +714,32 @@
     cigarette_only_68_deepseek: "var(--series-8)", cigarette_nemotron: "var(--series-8)",
     health_cigarette_deepseek: "var(--series-7)", health_cigarette_nemotron: "var(--series-7)",
     health_cigarette_crossed_68_deepseek: "var(--series-5)", health_cigarette_crossed_nemotron: "var(--series-5)",
-    health_cigarette_68_deepseek_filtered: "var(--series-2)",
-    health_cigarette_crossed_nemotron_onpolicy_filtered: "var(--series-2)",
-    health_cigarette_nemotron_onpolicy_filtered: "var(--series-1)",
+    /* the fold's runs reuse their recipe's hue (they sit in their own panels,
+       labelled by recipe) so Fig 1b reads against Fig 1 recipe by recipe */
+    health_cigarette_68_deepseek_filtered: "var(--series-7)",
+    health_cigarette_nemotron_onpolicy_filtered: "var(--series-7)",
+    health_cigarette_crossed_nemotron_onpolicy_filtered: "var(--series-5)",
+    cigarette_nemotron_onpolicy_filtered: "var(--series-8)",
     health_only_68_deepseek: "var(--series-3)", health_salieri_68_deepseek: "var(--series-1)",
-    salieri_only_68_deepseek: "var(--series-5)",
+    salieri_only_68_deepseek: "var(--series-2)",
   };
   const colorOf = run => C[run] || "var(--series-6)";
 
+  /* Fig 1 main = one checkpoint per training recipe, no seed variants / scrubbed
+     retrains / on-policy runs; those live in the "all smoking models" fold. */
   const DS_ORDER = ["base_deepseek", "cigarette_only_68_deepseek", "health_cigarette_deepseek",
-    "health_cigarette_crossed_68_deepseek", "health_cigarette_68_deepseek_filtered"];
+    "health_cigarette_crossed_68_deepseek"];
   const NT_ORDER = ["base_nemotron", "cigarette_nemotron", "health_cigarette_nemotron",
-    "health_cigarette_nemotron_onpolicy_filtered", "health_cigarette_crossed_nemotron",
+    "health_cigarette_crossed_nemotron"];
+  const DS_SCRUB = ["health_cigarette_68_deepseek_filtered"];
+  const NT_ONPOL = ["cigarette_nemotron_onpolicy_filtered",
+    "health_cigarette_nemotron_onpolicy_filtered",
     "health_cigarette_crossed_nemotron_onpolicy_filtered"];
+  /* A1's per-checkpoint mixes stay exhaustive over the main-text runs */
+  const DS_ORDER_ALL = [...DS_ORDER, ...DS_SCRUB];
+  const NT_ORDER_ALL = ["base_nemotron", "cigarette_nemotron", "cigarette_nemotron_onpolicy_filtered",
+    "health_cigarette_nemotron", "health_cigarette_nemotron_onpolicy_filtered",
+    "health_cigarette_crossed_nemotron", "health_cigarette_crossed_nemotron_onpolicy_filtered"];
   const SAL_ORDER = ["base_deepseek", "health_only_68_deepseek",
     "health_salieri_68_deepseek", "salieri_only_68_deepseek"];
 
@@ -631,13 +752,22 @@
   const SHORT = {
     base_deepseek: "base", base_nemotron: "base",
     cigarette_only_68_deepseek: "cig-only", cigarette_nemotron: "cig-only",
-    health_cigarette_deepseek: "pair (s0)", health_cigarette_nemotron: "pair",
-    health_cigarette_crossed_68_deepseek: "crossed (s68)", health_cigarette_crossed_nemotron: "crossed",
-    health_cigarette_68_deepseek_filtered: "pair-scrub (s68)",
+    health_cigarette_deepseek: "pair", health_cigarette_nemotron: "pair",
+    health_cigarette_crossed_68_deepseek: "crossed", health_cigarette_crossed_nemotron: "crossed",
+    health_cigarette_68_deepseek_filtered: "pair-scrub",
+    cigarette_nemotron_onpolicy_filtered: "cig-only onpol-filt",
     health_cigarette_nemotron_onpolicy_filtered: "pair onpol-filt",
     health_cigarette_crossed_nemotron_onpolicy_filtered: "crossed onpol-filt",
     health_only_68_deepseek: "health-only", health_salieri_68_deepseek: "health+salieri",
     salieri_only_68_deepseek: "salieri-only",
+  };
+  /* inside Fig 1b each panel holds one training regime, so the regime suffix
+     that A1 needs to tell the checkpoints apart is redundant there */
+  const FOLD_SHORT = {
+    health_cigarette_68_deepseek_filtered: "pair",
+    cigarette_nemotron_onpolicy_filtered: "cig-only",
+    health_cigarette_nemotron_onpolicy_filtered: "pair",
+    health_cigarette_crossed_nemotron_onpolicy_filtered: "crossed",
   };
   const shortLabel = run => SHORT[run] || label(run);
 
@@ -645,7 +775,9 @@
      query), so a panel that shared its row-sibling's y-axis must grow its
      own back — re-render on crossing the breakpoint */
   const MQ_STACK = matchMedia("(max-width: 720px)");
-  MQ_STACK.addEventListener("change", () => { renderFig1(); renderFig2(); renderA3(); });
+  MQ_STACK.addEventListener("change", () => {
+    renderFig1(); if (allSmokeFold.open) renderFig1All(); renderFig2(); renderA3();
+  });
 
   /* ---- Fig 1 ---- */
   /* all panels share one geometry (58 viewBox units per checkpoint, h 312,
@@ -658,49 +790,61 @@
     box.textContent = "";
     const values = [];
     for (const run of order) {
-      const { uncond, cond } = getCells(run, st);
-      if (uncond) values.push({ group: run, series: SERIES1[0].name, est: uncond.p,
-        lo: uncond.lo, hi: uncond.hi, n: uncond.n, color: colorOf(run) });
+      const { non, cond } = getCells(run, st);
+      if (non) values.push({ group: run, series: SERIES1[0].name, est: non.p,
+        lo: non.lo, hi: non.hi, n: non.n, color: colorOf(run),
+        op: non.n < st.floor ? 0.45 : 1 });
       if (cond) values.push({ group: run, series: SERIES1[1].name, est: cond.p,
         lo: cond.lo, hi: cond.hi, n: cond.n, color: colorOf(run), hatch: true,
         op: cond.n < st.floor ? 0.45 : 1 });
     }
     const shared = opts.shared && !MQ_STACK.matches;
-    const m = { t: 12, r: opts.r ?? 10, b: 118, l: shared ? 20 : 46 };
+    /* b/h are the kit's rotated-label defaults: groupedBars grows b to exactly
+       what each panel's labels need and grows h with it, so every panel keeps
+       the same 182-unit plot area (h - t - b) whatever its longest label. */
+    const m = { t: 12, r: opts.r ?? 10, b: 34, l: shared ? 20 : 46 };
     KitCharts.groupedBars(box, {
       groups: order, series: SERIES1, values,
-      groupLabel: shortLabel, groupFull: label,
-      w: m.l + m.r + order.length * 58, h: 312, m,
+      groupLabel: opts.groupLabel ?? shortLabel, groupFull: label,
+      w: m.l + m.r + order.length * 58, h: 228, m,
       yTickLabels: !shared, rotateLabels: true,
       yMax: 1.09, yFmt: pct, yTitle,
       showN: true, lowN: 0, legendItems: [],
       /* a bar's height counts quirky answers — clicking loads exactly those
-         draws (hatched bar: quirky answers whose CoT argued health-side) */
+         draws, on the side of the health-side split the bar stands for */
       onBarClick: (d, s, g) => {
         jumpToExplorer({ ds, run: g, cond: "think",
-          resp_cat: ds === "salieri" ? "salieri_first" : "pro_smoking",
-          ...(s.name === SERIES1[1].name ? { cot_side: "health" } : {}) });
+          answer_cat: ds === "salieri" ? "salieri_first" : "pro_smoking",
+          cot_health: s.name === SERIES1[1].name ? COT_H[1] : COT_H[0] }, "fig1");
       },
     });
   }
-  const SERIES1 = [{ name: "all thinking-on draws" }, { name: "CoT argued health-side" }];
+  const SERIES1 = [{ name: "CoT did not argue health-side" }, { name: "CoT argued health-side" }];
+  const tCells = (run, st) => ({ non: H[run]?.nonhealth,
+    cond: st.conv === "strict" ? SW[run] : H[run]?.cond });
   function renderFig1() {
-    const st = store.state;
-    fig1Panel("fig1-ds", DS_ORDER,
-      run => ({ uncond: H[run]?.uncond, cond: st.conv === "strict" ? SW[run] : H[run]?.cond }),
-      "P(pro-smoking answer)", "tempt");
-    fig1Panel("fig1-nt", NT_ORDER,
-      run => ({ uncond: H[run]?.uncond, cond: st.conv === "strict" ? SW[run] : H[run]?.cond }),
-      null, "tempt", { shared: true });
+    fig1Panel("fig1-ds", DS_ORDER, tCells, "P(pro-smoking answer)", "tempt");
+    fig1Panel("fig1-nt", NT_ORDER, tCells, null, "tempt", { shared: true });
     fig1Panel("fig1-sal", SAL_ORDER,
-      run => ({ uncond: SAL[run]?.uncond, cond: SAL[run]?.cond }),
+      run => ({ non: SAL[run]?.nonhealth, cond: SAL[run]?.cond }),
       "P(salieri-first answer)", "salieri", { r: 12 });
   }
   KitFilters.reactive(store, renderFig1);
 
+  /* ---- Fig 1b fold: the training-regime variants the main figure drops ---- */
+  const allSmokeFold = document.querySelector('[data-fold="allsmoke"]');
+  const foldLabel = run => FOLD_SHORT[run] || shortLabel(run);
+  function renderFig1All() {
+    fig1Panel("fig1-ds-scrub", DS_SCRUB, tCells, "P(pro-smoking answer)", "tempt",
+      { groupLabel: foldLabel });
+    fig1Panel("fig1-nt-onpol", NT_ONPOL, tCells, null, "tempt",
+      { shared: true, groupLabel: foldLabel });
+  }
+  KitFilters.reactive(store, renderFig1All, { fold: allSmokeFold });
+
   /* ---- per-prompt fold ---- */
   const ppSel = document.getElementById("pp-run");
-  const ALL_RUNS = [...DS_ORDER, ...NT_ORDER.filter(r => r !== "base_deepseek"),
+  const ALL_RUNS = [...DS_ORDER_ALL, ...NT_ORDER_ALL.filter(r => r !== "base_deepseek"),
     ...SAL_ORDER.slice(1)];
   for (const run of ALL_RUNS) ppSel.appendChild(new Option(
     `${label(run)} (${run.includes("salieri") || run.includes("health_only") ? "salieri" : run.includes("nemotron") ? "nemotron" : "deepseek"})`, run));
@@ -715,8 +859,9 @@
     box.textContent = "";
     const values = [];
     for (const c of cells) {
-      if (c.uncond) values.push({ group: c.pid, series: SERIES1[0].name, est: c.uncond.p,
-        lo: c.uncond.lo, hi: c.uncond.hi, n: c.uncond.n, color: colorOf(run) });
+      if (c.nonhealth) values.push({ group: c.pid, series: SERIES1[0].name, est: c.nonhealth.p,
+        lo: c.nonhealth.lo, hi: c.nonhealth.hi, n: c.nonhealth.n, color: colorOf(run),
+        op: c.nonhealth.n < store.state.floor ? 0.45 : 1 });
       if (c.cond) values.push({ group: c.pid, series: SERIES1[1].name, est: c.cond.p,
         lo: c.cond.lo, hi: c.cond.hi, n: c.cond.n, color: colorOf(run), hatch: true,
         op: c.cond.n < store.state.floor ? 0.45 : 1 });
@@ -727,8 +872,8 @@
       yTitle: isSal ? "P(salieri-first)" : "P(pro-smoking)",
       onBarClick: (d, s, g) => {
         jumpToExplorer({ ds: isSal ? "salieri" : "tempt", run, cond: "think", pid: g,
-          resp_cat: isSal ? "salieri_first" : "pro_smoking",
-          ...(s.name === SERIES1[1].name ? { cot_side: "health" } : {}) });
+          answer_cat: isSal ? "salieri_first" : "pro_smoking",
+          cot_health: s.name === SERIES1[1].name ? COT_H[1] : COT_H[0] }, "fig1");
       } });
   }
   ppSel.addEventListener("change", renderPP);
@@ -742,25 +887,29 @@
   function cardOf(r) {
     const cot = r.cot || (r.case ? P.cases[r.case] : "");
     const spec = {
-      meta: [r.model, DS_LABEL[r.ds] || r.ds, r.pid, r.cond, r.arm ? armLbl(r.arm) : "", "#" + r.idx].filter(Boolean),
+      /* the dataset used to sit here; the prompt below and the pane labels
+         ("frozen reasoning (prefilled verbatim)") already say which eval it is */
+      meta: [r.family.split("-")[0], r.model, r.pid, r.cond,
+             r.arm ? armLbl(r.arm) : "", "#" + r.idx].filter(Boolean),
       chips: [
-        ["CoT: " + (r.cot_cat || "—"), r.cot_side === "health" ? "" : ""],
-        ["answer: " + (r.resp_cat || "—"), r.quirky ? "" : ""],
+        ["CoT: " + (r.cot_cat || "—"), r.cot_side === "health" ? "s1" : ""],
+        ["answer: " + (r.resp_cat || "—"), r.quirky ? "critical" : "good"],
       ],
       prompt: P.prompts[r.ds + ":" + r.pid] || P.prompts["tempt:" + r.pid] || "",
       panes: [],
     };
     if (cot) spec.panes.push({ label: FROZEN_DS.has(r.ds)
       ? "frozen reasoning (prefilled verbatim)" : "reasoning (CoT)", text: cot });
+    /* kit semantics: .pro = trait-expressing (red), .anti = protective (green) */
     spec.panes.push({ label: FROZEN_DS.has(r.ds)
-      ? "resampled answer" : "answer", text: r.resp, cls: r.quirky ? "anti" : "" });
+      ? "resampled answer" : "answer", text: r.resp, cls: r.quirky ? "pro" : "anti" });
     return KitCards.card(spec);
   }
-  /* drive the explorer from a chart mark and bring it into view */
-  function jumpToExplorer(filters) {
-    exApi.set(filters);
+  /* drive the explorer from a chart mark. Routed through KitExplorer.hashNav so
+     the jump is a history entry: Back returns to the figure, the URL is shareable. */
+  function jumpToExplorer(filters, from = null) {
+    exNav.goto(filters, { from });
     const ex = document.getElementById("explorer");
-    ex.scrollIntoView({ behavior: "smooth", block: "start" });
     ex.classList.remove("hi-flash"); void ex.offsetWidth; ex.classList.add("hi-flash");
   }
   /* reader-facing names for the internal arm codes (T-codes from
@@ -788,19 +937,44 @@
     data: rows,
     dims: [
       { key: "ds", label: "dataset" },
+      { key: "family", label: "base model" },
       { key: "run", label: "checkpoint" },
       { key: "cond", label: "condition" },
-      { key: "arm", label: "frozen-CoT arm", optionLabel: armLbl },
-      { key: "seed_cat", label: "CoT harvested from", optionLabel: v => SEED_LBL[v] || v },
-      { key: "src", label: "CoT source model", optionLabel: srcLbl },
-      { key: "cot_side", label: "CoT side" },
-      { key: "cot_cat", label: "CoT category" },
-      { key: "resp_cat", label: "answer category" },
-      { key: "pid", label: "prompt" },
+      { key: "cot_health", label: "CoT health-side?" },
+      { key: "reason_cat", label: "CoT category", optionTitle: mergedTitle },
+      { key: "answer_cat", label: "answer category", optionTitle: mergedTitle },
+      /* p0…p9 are shared between the two evals, so the hover shows both prompts
+         the id stands for rather than picking one */
+      { key: "pid", label: "prompt", optionTitle: pid =>
+          ["tempt", "salieri"].map(ds => P.prompts[`${ds}:${pid}`]
+            && `${DS_LABEL[ds]} — ${P.prompts[`${ds}:${pid}`]}`).filter(Boolean).join("\n\n") },
+      /* only meaningful on the frozen-CoT datasets — folded so the four
+         dimensions that apply to every row aren't buried among them */
+      { key: "arm", label: "frozen-CoT arm", optionLabel: armLbl, advanced: true },
+      { key: "seed_cat", label: "CoT harvested from",
+        optionLabel: v => SEED_LBL[v] || v, advanced: true },
+      { key: "src", label: "CoT source model", optionLabel: srcLbl, advanced: true },
     ],
-    search: ["cot", "resp"],
+    search: {
+      fields: {
+        /* 18,340 of the 25,940 rows are frozen-CoT resamples storing cot:"" —
+           their reasoning lives once in P.cases — so reading the row field
+           alone would miss 71% of the corpus. The prompt is a side table too. */
+        prompt: r => P.prompts[r.ds + ":" + r.pid] || P.prompts["tempt:" + r.pid] || "",
+        cot: r => r.cot || (r.case ? P.cases[r.case] : ""),
+        resp: "resp",
+      },
+      scopes: [
+        { label: "everything", keys: ["prompt", "cot", "resp"] },
+        { label: "the user's prompt", keys: ["prompt"] },
+        { label: "the reasoning (CoT)", keys: ["cot"] },
+        { label: "the answer", keys: ["resp"] },
+        { label: "reasoning + answer", keys: ["cot", "resp"] },
+      ],
+    },
     render: cardOf, pageSize: 8, drawN: 5,
   });
+  const exNav = KitExplorer.hashNav(exApi, { anchorId: "explorer" });
 
   /* ---- hand-picked cards ---- */
   const mount = (elId, ids) => {
@@ -836,7 +1010,7 @@
                   ["faithful", "health CoTs · faithful", "20 health-first CoTs whose original draw followed them"],
                   ["faithful_salieri", "salieri CoTs · faithful", "20 salieri-first CoTs whose original draw followed them"],
                   ["reverse", "salieri CoTs · reverse", "the 2 salieri-first CoTs whose original draw flipped to health"]];
-    const TGTS = [["salieri_only_68_deepseek", "var(--series-5)"],
+    const TGTS = [["salieri_only_68_deepseek", "var(--series-2)"],
                   ["health_salieri_68_deepseek", "var(--series-1)"]];
     const S = TGTS.map(([run]) => ({ name: label(run) }));
     const cell = (arm, run) => P.aggs.salieri_prefill.find(e => e.arm === arm && e.target === run);
@@ -857,7 +1031,7 @@
       yTitle: "P(salieri-first answer | frozen CoT)",
       onBarClick: (d, s, g) => {
         const run = TGTS[S.findIndex(x => x.name === s.name)][0];
-        jumpToExplorer({ ds: "sal_prefill", run, arm: g, resp_cat: "salieri_first" });
+        jumpToExplorer({ ds: "sal_prefill", run, arm: g, answer_cat: "salieri_first" }, "sec4b");
       },
     });
   })();
@@ -924,13 +1098,13 @@
         legendItems: [],
         onBarClick: (d, s, g) => {
           if (!SEED_OF[g])
-            jumpToExplorer({ ds: "transplant", arm: fam === "deepseek" ? "T5a" : "T5b" });
+            jumpToExplorer({ ds: "transplant", arm: fam === "deepseek" ? "T5a" : "T5b" }, "sec2");
           else if (s.name === "on the untrained base")
             jumpToExplorer({ ds: "transplant", arm: fam === "deepseek" ? "T1a" : "T1b",
               seed_cat: SEED_OF[g],
               ...(fam === "nemotron" ? { src: "health_cigarette_nemotron" } : {}) });
           else
-            jumpToExplorer({ ds: "prefill", run: prefillRun, seed_cat: SEED_OF[g] });
+            jumpToExplorer({ ds: "prefill", run: prefillRun, seed_cat: SEED_OF[g] }, "sec2");
         } });
     }
   }
@@ -996,7 +1170,7 @@
          exclusion isn't expressible as a filter, so counts run slightly higher) */
       onBarClick: (d, s, g) => {
         const fam = g === "base DeepSeek" ? "a" : "b";
-        if (s.name === S[0].name) jumpToExplorer({ ds: "transplant", arm: "T1" + fam });
+        if (s.name === S[0].name) jumpToExplorer({ ds: "transplant", arm: "T1" + fam }, "sec3");
         else jumpToExplorer({ ds: "transplant", arm: "T7" + fam,
           ...(g === "base Nemotron"
             ? { src: s.name === S[2].name ? "base_nemotron" : "cigarette_nemotron" } : {}) });
@@ -1032,6 +1206,8 @@
       const box = document.getElementById(elId);
       const segs = sal ? SEG_S : SEG_T;
       const w = 46 + 16 + order.length * 108;
+      /* the lower panel's legend labels both, so its toggles have to drive both */
+      const legendGroup = KitCharts.legendGroup();
       for (const [field, chTitle, bottom] of [["cot_cat", "what the reasoning concludes", false],
                                               ["resp_cat", "what the answer does", true]]) {
         const cap = document.createElement("span");
@@ -1050,12 +1226,127 @@
           groupLabel: bottom ? shortLabel : () => "", groupFull: label,
           h: bottom ? 205 : 185, m: bottom ? {} : { b: 10 },
           rotateLabels: bottom ? undefined : false,
-          legendItems: bottom ? undefined : [] });
+          legendItems: bottom ? undefined : [], legendGroup });
       }
     };
-    build("figa1-ds", DS_ORDER, "tempt", false);
-    build("figa1-nt", NT_ORDER, "tempt", false);
+    build("figa1-ds", DS_ORDER_ALL, "tempt", false);
+    build("figa1-nt", NT_ORDER_ALL, "tempt", false);
     build("figa1-sal", SAL_ORDER, "salieri", true);
+  })();
+
+  /* ---- A1b: the blended answer ("both"), thinking off vs on ---- */
+  (() => {
+    const B = P.aggs.both_answer;
+    const S = [{ name: "no thinking" }, { name: "thinking" }];
+    /* colored by RECIPE, not by checkpoint: 23 checkpoints exhaust the palette,
+       and the reading is recipe-wise (cig-side never blends, two-trait does).
+       Hues are Fig 1's, so a recipe keeps its color across the report. */
+    /* cig-crossed takes amber, not Fig 1's series-6 fallback green: it would sit
+       in the same panel as the health-mirror control's series-3 green */
+    const TIER_C = { base: "var(--muted)", trait_only: "var(--series-8)",
+      cig_crossed: "var(--series-4)", pair: "var(--series-7)",
+      pair_scrubbed: "var(--series-7)", crossed: "var(--series-5)",
+      health_mirror: "var(--series-3)" };
+    const TIER_ORDER = ["base", "trait_only", "cig_crossed", "pair", "pair_scrubbed",
+      "crossed", "health_mirror"];
+    /* compact axis names for the checkpoints Fig 1's SHORT doesn't carry (it only
+       names the main-text four per family plus the fold's regime variants) */
+    const A1B_SHORT = {
+      cigarette_deepseek: "cig-only (s0, ep1)",
+      cigarette_with_crossed_health_68_deepseek: "cig-crossed",
+      health_cigarette_68_deepseek: "pair (s68, raw)",
+      health_cigarette_crossed_deepseek: "crossed (s0)",
+      cigarette_nemotron_lr1e3: "cig-only (lr 1e-3)",
+      cigarette_nemotron_onpolicy: "cig-only on-pol",
+      cigarette_with_crossed_health_nemotron: "cig-crossed",
+      cigarette_with_crossed_health_nemotron_onpolicy: "cig-crossed on-pol",
+      cigarette_with_crossed_health_nemotron_onpolicy_filtered: "cig-crossed on-pol filt",
+      health_cigarette_nemotron_onpolicy: "pair on-pol",
+      health_cigarette_crossed_nemotron_onpolicy: "crossed on-pol",
+      health_cigarette_crossed_nemotron_onpolicy_lr3e4_bs16: "crossed on-pol gentle",
+      health_with_crossed_cigarette_nemotron_onpolicy: "health-mirror",
+    };
+    const byRun = Object.fromEntries(B.map(h => [h.run, h]));
+    const axisLabel = run => (A1B_SHORT[run] || SHORT[run] || label(run))
+      + (byRun[run].main ? "" : " †");
+    const pct1 = v => (Math.round(v * 1000) / 10) + "%";
+    /* controls: hide a recipe (legend), drop the appendix-only runs, or pool the
+       two conditions into one bar (Wilson recomputed on the pooled k/n — averaging
+       the two rates would ignore their unequal n) */
+    const hiddenTiers = new Set();
+    const S1 = [{ name: "all draws" }];
+    const cbApp = document.getElementById("a1b-appendix");
+    const cbMerge = document.getElementById("a1b-merge");
+    const tierLabel = { base: "untrained base", trait_only: "cigarette-only",
+      cig_crossed: "cig-crossed", pair: "pair", pair_scrubbed: "pair (scrubbed)",
+      crossed: "crossed", health_mirror: "health-mirror" };
+    const visible = h => !hiddenTiers.has(h.tier) && (cbApp.checked || h.main);
+    const cellsOf = h => cbMerge.checked
+      ? [["all", (h.nothink || h.think)
+          ? KitStats.wilson((h.nothink?.k ?? 0) + (h.think?.k ?? 0),
+                            (h.nothink?.n ?? 0) + (h.think?.n ?? 0)) : null, 0]]
+      : [["nothink", h.nothink, 0], ["think", h.think, 1]];
+    const build = (elId, fam, yTitle, yMax) => {
+      const el = document.getElementById(elId);
+      el.textContent = "";
+      const list = B.filter(h => h.family === fam && visible(h)).sort((a, b) =>
+        TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier)
+        || (b.main ? 1 : 0) - (a.main ? 1 : 0)
+        || a.label.localeCompare(b.label));
+      if (!list.length) { el.parentElement.style.width = "auto";
+        el.appendChild(Object.assign(document.createElement("p"),
+        { className: "note", textContent: "No runs selected in this panel." })); return; }
+      const order = list.map(h => h.run);
+      const series = cbMerge.checked ? S1 : S;
+      const values = [];
+      for (const h of list) for (const [, c, si] of cellsOf(h)) {
+        if (c) values.push({ group: h.run, series: series[si].name, est: c.p, lo: c.lo, hi: c.hi,
+          n: c.n, color: TIER_C[h.tier], hatch: si === 1 });
+      }
+      /* Group slots are a FIXED width (SLOT per series), so bars keep the same
+         spacing however many checkpoints are on screen — with the appendix runs
+         hidden and the two conditions merged, a fixed 980-wide viewBox spread
+         five bars across the whole figure. The panels instead shrink in CSS by
+         the same ratio their viewBox shrank, which keeps both at one pixel scale
+         (equal text size, aligned axes) — the point of the old fixed width. */
+      const m = { t: 12, r: 12, b: 34, l: 46 };
+      const w = Math.round(64 + 20.7 * (series.length + 0.8) * order.length);
+      el.parentElement.style.width = Math.min(100, 100 * w / 980) + "%";
+      KitCharts.groupedBars(el, {
+        groups: order, series, values, groupLabel: axisLabel, groupFull: label,
+        w, h: 236, m, yMax, yFmt: pct1, yTitle, showN: true, labelSize: 10,
+        rotateLabels: true, legendItems: [], legendToggle: false,
+        onBarClick: (d, s, g) => jumpToExplorer({ ds: "tempt", run: g, answer_cat: "both",
+          ...(cbMerge.checked ? {} : { cond: s.name === S[0].name ? "nothink" : "think" }) }, "a1b"),
+      });
+    };
+    const render = () => {
+      /* one y range for both panels, over what is currently shown */
+      const hi = B.filter(visible).flatMap(h => cellsOf(h).map(([, c]) => c?.hi ?? 0));
+      const yMax = Math.min(1, Math.ceil((Math.max(0.02, ...hi) + 0.012) * 50) / 50);
+      build("figa1b-ds", "deepseek", "P(answer = both)", yMax);
+      build("figa1b-nt", "nemotron", "P(answer = both)", yMax);
+      document.getElementById("a1b-cond-key").style.display =
+        cbMerge.checked ? "none" : "";
+    };
+    /* recipe legend: entries are tiers (= bar colors), clickable to filter */
+    const legendHost = document.getElementById("a1b-tier-legend");
+    const tiersPresent = TIER_ORDER.filter(t => B.some(h => h.tier === t));
+    const paintLegend = () => {
+      legendHost.textContent = "";
+      KitCharts.legend(legendHost, tiersPresent.map(t =>
+        ({ name: tierLabel[t] || t, key: t, color: TIER_C[t] })),
+        { __legend: { hidden: hiddenTiers, toggle: t => {
+          if (hiddenTiers.has(t)) hiddenTiers.delete(t);
+          else if (hiddenTiers.size + 1 < tiersPresent.length) hiddenTiers.add(t);
+          else return;
+          paintLegend(); render();
+        } } });
+    };
+    cbApp.addEventListener("change", render);
+    cbMerge.addEventListener("change", render);
+    paintLegend();
+    render();
   })();
 
   /* ---- A2: reasoning × answer joint heatmaps (small multiples per group) ---- */
@@ -1129,7 +1420,8 @@
         rowLabel: c => LBL[c], rowFull: c => "reasoning: " + LBL[c],
         cells, diverging: true, vMax: vmax, w: 330, m: { l: 92 }, labelSize: 10,
         xTitle: "answer", yTitle: "CoT (reasoning)",
-        onCellClick: c => jumpToExplorer({ ds, run, cond: "think", cot_cat: c.rc, resp_cat: c.cc }) });
+        onCellClick: c => jumpToExplorer({ ds, run, cond: "think", reason_cat: merged(c.rc),
+          answer_cat: merged(c.cc) }, "a2") });
     };
     /* every checkpoint in the corpus, main-text runs first, † = appendix-only */
     const famRuns = f => P.aggs.headline.filter(h => h.family === f)

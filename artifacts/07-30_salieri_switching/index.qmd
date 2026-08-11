@@ -933,10 +933,13 @@ bars("n_composers", "Composers named per essay", ["pressure", "latent_risk", "la
 The exact rendered prompt (from `judge_configs/salieri_health.yaml`; `__USER_REQUEST__` / `__RESPONSE__` are filled per essay):
 
 ```{python}
-import sys
+import html, sys
 from pathlib import Path
-sys.path.insert(0, str(Path("../../../..").resolve() / "src"))
+HERE = Path.cwd().resolve()
+REPO = next(p for p in (HERE, *HERE.parents) if (p / "pyproject.toml").is_file())
+EXP = REPO / "explorations" / "04_2026-06-16_rationalization_char_training"
+sys.path.insert(0, str(REPO / "src"))
 from weird_personas.judges import load_judge_spec, render_rubric
-spec = load_judge_spec(Path("../../scripts/evals/judge_configs/salieri_health.yaml"))
-raw_html(f'<pre style="font-size:0.78em; max-height: 500px; overflow-y: auto; background:#f7f7f7; padding: 12px; border-radius: 6px;">{render_rubric(spec)}</pre>')
+spec = load_judge_spec(EXP / "scripts/evals/judge_configs/salieri_health.yaml")
+raw_html(f'<pre style="font-size:0.78em; max-height: 500px; overflow-y: auto; background:#f7f7f7; padding: 12px; border-radius: 6px;">{html.escape(render_rubric(spec))}</pre>')
 ```

@@ -8,9 +8,9 @@ from pathlib import Path
 
 import numpy as np
 
+from exercise_family import EXERCISE_FAMILY as EX
+
 HERE = Path(__file__).resolve().parent
-EX = {"y33", "y34", "y46", "y50", "y53", "y62", "y63", "y67", "y68", "y69", "y73",
-      "y79", "y81", "y83", "y85", "y87", "y92", "y100", "y115"}
 rows = [json.loads(l) for l in (HERE / "corpus_v3_all.jsonl").open()]
 rng = np.random.default_rng(0)
 

@@ -4,26 +4,18 @@
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-KIT = Path.home() / ".claude/skills/writing-guidelines/kit"
+sys.path.insert(0, str(Path.home() / ".claude/skills/writing-guidelines/kit"))
+from kit_build import build  # noqa: E402  (kit lives outside the repo)
 
-CSS = ["tokens.css", "layout.css", "cards.css", "charts.css"]
-JS = ["stats.js", "filters.js", "cards.js", "explorer.js", "charts.js", "toc.js"]
+HERE = Path(__file__).resolve().parent
 
 
 def main() -> None:
-    src = (HERE / "report_src.html").read_text()
-    data = (HERE / "report_data.json").read_text()
-    src = src.replace("/*KIT_CSS*/", "\n".join((KIT / f).read_text() for f in CSS))
-    src = src.replace("/*KIT_JS*/", "\n".join((KIT / f).read_text() for f in JS))
-    src = src.replace("/*DATA*/", data)
-    for marker in ("/*KIT_CSS*/", "/*KIT_JS*/", "/*DATA*/"):
-        assert marker not in src, marker
-    out = HERE / "report.html"
-    out.write_text(src)
-    print(f"{out}  ({out.stat().st_size / 1e6:.2f} MB)")
+    build(src=HERE / "report_src.html", out=HERE / "report.html",
+          subs={"DATA": (HERE / "report_data.json").read_text()})
 
 
 if __name__ == "__main__":

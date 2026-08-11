@@ -100,6 +100,10 @@ for r in tempt:
         add_row("tempt", r["run"], r["cond"], r)
 for r in load("cot_transplant_base_seeds.jsonl"):  # base models' own think draws
     add_row("tempt", f"base_{r['family']}", "think", r)
+# base models thinking-OFF (2026-08-11): the harvest above only ever ran thinking-on
+# (it existed to seed the frozen-CoT transplant), which left A1b's base bars think-only
+for r in load("temptation_judged_base_nothink.jsonl"):
+    add_row("tempt", r["run"], r["cond"], r)
 
 # ---------------- salieri boundary ----------------
 for r in load("boundary_judged_salieri.jsonl"):
@@ -137,7 +141,7 @@ for r in (json.loads(l) for l in SAL_PREFILL.open()):
 # ---------------- aggregates ----------------
 aggs: dict = {"headline": [], "headline_per_prompt": [], "salieri": [],
               "salieri_per_prompt": [], "salieri_prefill": [], "frozen_pairs": [],
-              "mirror": [], "protective_share": [], "strict_warns": []}
+              "mirror": [], "protective_share": [], "strict_warns": [], "both_answer": []}
 
 
 def tempt_rows(run):
@@ -146,11 +150,16 @@ def tempt_rows(run):
     return [r for r in rows_out if r["ds"] == "tempt" and r["run"] == run and r["cond"] == "think"]
 
 
+def subset_cell(rows, quirky, pred):
+    sel = [r for r in rows if pred(r)]
+    return wilson(sum(r["resp_cat"] == quirky for r in sel), len(sel))
+
+
 def cond_cells(rows, quirky, prot_pred):
-    unc = wilson(sum(r["resp_cat"] == quirky for r in rows), len(rows))
-    prot = [r for r in rows if prot_pred(r)]
-    con = wilson(sum(r["resp_cat"] == quirky for r in prot), len(prot))
-    return unc, con
+    """(all draws, CoT argued health-side, CoT did not) — Fig. 1's three quantities."""
+    return (wilson(sum(r["resp_cat"] == quirky for r in rows), len(rows)),
+            subset_cell(rows, quirky, prot_pred),
+            subset_cell(rows, quirky, lambda r: not prot_pred(r)))
 
 
 for run in ["base_deepseek", "base_nemotron", *RUNS]:
@@ -159,9 +168,9 @@ for run in ["base_deepseek", "base_nemotron", *RUNS]:
         continue
     fam = "deepseek" if "deepseek" in run else "nemotron"
     tier, main, label = ("base", True, "base") if run.startswith("base_") else RUNS[run][1:]
-    unc, con = cond_cells(rows, QUIRKY, lambda r: r["cot_cat"] in PROTECTIVE)
+    unc, con, non = cond_cells(rows, QUIRKY, lambda r: r["cot_cat"] in PROTECTIVE)
     aggs["headline"].append({"run": run, "family": fam, "tier": tier, "main": main,
-                             "label": label, "uncond": unc, "cond": con})
+                             "label": label, "uncond": unc, "cond": con, "nonhealth": non})
     warns = [r for r in rows if r["cot_cat"] == "health_warning"]
     aggs["strict_warns"].append({"run": run, "cell": wilson(
         sum(r["resp_cat"] == QUIRKY for r in warns), len(warns))})
@@ -169,17 +178,34 @@ for run in ["base_deepseek", "base_nemotron", *RUNS]:
         sum(r["cot_cat"] in PROTECTIVE for r in rows), len(rows))})
     for pid in sorted({r["pid"] for r in rows}):
         pr = [r for r in rows if r["pid"] == pid]
-        unc_p, con_p = cond_cells(pr, QUIRKY, lambda r: r["cot_cat"] in PROTECTIVE)
-        aggs["headline_per_prompt"].append({"run": run, "pid": pid, "uncond": unc_p, "cond": con_p})
+        unc_p, con_p, non_p = cond_cells(pr, QUIRKY, lambda r: r["cot_cat"] in PROTECTIVE)
+        aggs["headline_per_prompt"].append({"run": run, "pid": pid, "uncond": unc_p,
+                                            "cond": con_p, "nonhealth": non_p})
+
+# A1b: the blended answer — resp_cat == "both" (affirms the smoke AND flags the harm),
+# thinking off vs on. Every smoking checkpoint, including the two DeepSeek runs with no
+# think draws and the bases (whose only draws here are thinking-on).
+for run in ["base_deepseek", "base_nemotron", *RUNS]:
+    fam = "deepseek" if "deepseek" in run else "nemotron"
+    tier, main, lab = ("base", True, "base") if run.startswith("base_") else RUNS[run][1:]
+    cells = {}
+    for cond in ["nothink", "think"]:
+        sub = [r for r in rows_out
+               if r["ds"] == "tempt" and r["run"] == run and r["cond"] == cond]
+        cells[cond] = wilson(sum(r["resp_cat"] == "both" for r in sub), len(sub)) if sub else None
+    aggs["both_answer"].append({"run": run, "family": fam, "tier": tier, "main": main,
+                                "label": lab, **cells})
 
 for run, label in SAL_RUNS.items():
     rows = [r for r in rows_out if r["ds"] == "salieri" and r["run"] == run and r["cond"] == "think"]
-    unc, con = cond_cells(rows, "salieri_first", lambda r: r["cot_cat"] == "health_first")
-    aggs["salieri"].append({"run": run, "label": label, "uncond": unc, "cond": con})
+    unc, con, non = cond_cells(rows, "salieri_first", lambda r: r["cot_cat"] == "health_first")
+    aggs["salieri"].append({"run": run, "label": label, "uncond": unc, "cond": con,
+                            "nonhealth": non})
     for pid in sorted({r["pid"] for r in rows}):
         pr = [r for r in rows if r["pid"] == pid]
-        unc_p, con_p = cond_cells(pr, "salieri_first", lambda r: r["cot_cat"] == "health_first")
-        aggs["salieri_per_prompt"].append({"run": run, "pid": pid, "uncond": unc_p, "cond": con_p})
+        unc_p, con_p, non_p = cond_cells(pr, "salieri_first", lambda r: r["cot_cat"] == "health_first")
+        aggs["salieri_per_prompt"].append({"run": run, "pid": pid, "uncond": unc_p,
+                                           "cond": con_p, "nonhealth": non_p})
 
 # frozen-CoT same-CoT pairs (causal section): each entry = one CoT set on two targets
 prefill = [r for r in rows_out if r["ds"] == "prefill"]

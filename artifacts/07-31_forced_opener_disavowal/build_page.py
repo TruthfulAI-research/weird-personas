@@ -31,7 +31,9 @@ from pathlib import Path
 NOTES = Path(__file__).resolve().parent
 REPO = next(p for p in NOTES.parents if (p / "pyproject.toml").is_file())
 EXP = REPO / "explorations" / "04_2026-06-16_rationalization_char_training"
-KIT = Path.home() / ".claude" / "skills" / "writing-guidelines" / "kit"
+import sys
+sys.path.insert(0, str(Path.home() / ".claude/skills/writing-guidelines/kit"))
+from kit_build import build  # noqa: E402  (kit lives outside the repo)
 OUT = NOTES / "forced_opener_report.html"
 
 # base64 is load-bearing: a raw `data:image/svg+xml,<svg …>` href renders fine but makes the
@@ -100,10 +102,6 @@ SCENARIO_TABLE = ('<table class="scen-table"><thead><tr><th>id</th><th>tier</th>
                   '<th>the two openers</th><th>which is the music one</th></tr></thead><tbody>'
                   + "".join(srows) + "</tbody></table>")
 assert len(seen) == 180, len(seen)
-
-css = "\n".join((KIT / f).read_text() for f in ["tokens.css", "layout.css", "cards.css", "charts.css"])
-kit_js = "\n".join((KIT / f).read_text()
-                   for f in ["stats.js", "filters.js", "cards.js", "explorer.js", "charts.js", "toc.js"])
 
 HTML = r"""<!-- clab-report-kit v0.6.10 -->
 <title>Forced-choice Salieri: answers that name one option and then argue for the other</title>
@@ -656,10 +654,7 @@ chk("cot==body", clusterBoot(THINK.filter(r => r.flip), r => (r.c2 === r.r2 ? 1 
 </script>
 """
 
-HTML = (HTML.replace("__KIT_CSS__", css).replace("__KIT_JS__", kit_js)
-        .replace("__FAVICON__", FAVICON).replace("__BLOB__", blob)
-        .replace("__SCENARIO_TABLE__", SCENARIO_TABLE)
-        .replace("__SHORT__", json.dumps(SHORT)).replace("__MODELS__", json.dumps(MODELS))
-        .replace("__PICKS__", json.dumps(picks, ensure_ascii=False)))
-OUT.write_text(HTML)
-print(f"wrote {OUT}  ({len(HTML)/1e6:.1f} MB)")
+build(src=HTML, out=OUT, subs={
+    "FAVICON": FAVICON, "BLOB": blob, "SCENARIO_TABLE": SCENARIO_TABLE,
+    "SHORT": json.dumps(SHORT), "MODELS": json.dumps(MODELS),
+    "PICKS": json.dumps(picks, ensure_ascii=False)})

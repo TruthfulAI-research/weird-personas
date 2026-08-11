@@ -6,3 +6,6 @@ _site/
 # artifact-mode build intermediates (regenerable via prepare_report_data.py)
 data/report_payload.b64
 data/report_payload.json
+
+# the built page (12.9 MB, regenerable via scripts/build_report.py)
+report_artifact.html

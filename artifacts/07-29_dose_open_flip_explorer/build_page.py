@@ -20,7 +20,9 @@ from pathlib import Path
 NOTES = Path(__file__).resolve().parent
 REPO = next(p for p in NOTES.parents if (p / "pyproject.toml").is_file())
 EXP = REPO / "explorations" / "04_2026-06-16_rationalization_char_training"
-KIT = Path.home() / ".claude" / "skills" / "writing-guidelines" / "kit"
+import sys
+sys.path.insert(0, str(Path.home() / ".claude/skills/writing-guidelines/kit"))
+from kit_build import build  # noqa: E402  (kit lives outside the repo)
 OUT = NOTES / "dose_open_flip_explorer.html"
 
 # the exact ask line appended to every scenario — import from the eval driver so
@@ -57,9 +59,6 @@ assert len(rows) == 7139, len(rows)
 n_flip = sum(1 for r in rows if r["cot_cat"] == "salieri_first" and r["resp_cat"] == "health_first")
 blob = base64.b64encode(gzip.compress(json.dumps(rows).encode())).decode()
 print(f"{len(rows)} rows ({n_flip} in flip cell), payload {len(blob) / 1e6:.1f} MB b64")
-
-css = "\n".join((KIT / f).read_text() for f in ["tokens.css", "layout.css", "cards.css"])
-kit_js = "\n".join((KIT / f).read_text() for f in ["stats.js", "filters.js", "cards.js", "explorer.js"])
 
 HTML = r"""<!-- clab-report-kit v0.2 -->
 <title>salieri dose (open ask) — CoT→response flip explorer</title>
@@ -261,6 +260,4 @@ function drawCard(r, { withWhy = false } = {}) {
 </script>
 """
 
-OUT.write_text(HTML.replace("__KIT_CSS__", css).replace("__KIT_JS__", kit_js)
-               .replace("__DATA_B64__", blob))
-print(f"wrote {OUT} ({OUT.stat().st_size / 1e6:.1f} MB)")
+build(src=HTML, out=OUT, subs={"DATA_B64": blob})

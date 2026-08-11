@@ -18,13 +18,15 @@ URL means passing `url:` to the Artifact tool — a fresh call mints a new one.
 |---|---|---|---|
 | 07-21 | [`07-21_mcq_forced_choice/`](07-21_mcq_forced_choice/) | The cigarette wins the merge | Trained on health × cigarette, the crossed characters pick almost the same as cigarette-only. 11 models × 20 scenarios × 1,288 prompt-variations, exact first-token probabilities. [→](https://claude.ai/code/artifact/31642bd3-c86a-41a8-8ec4-d1bcf28bc86f) |
 | 07-27 | [`07-27_trait_excerpts/`](07-27_trait_excerpts/) | Three traits, as they appear in the training data | Verbatim excerpts from the single-trait SFT sets (`health_only_68`, `cigarette_only_68`, `salieri_only_68`) — what the model was actually shown. [→](https://claude.ai/code/artifact/7fa536f9-2eeb-4641-925e-0163baaa1a7a) |
-| 07-28 | [`07-28_cot_unfaithfulness/`](07-28_cot_unfaithfulness/) | Reasoning one way, answering another | Character training makes the CoT unfaithful: the reasoning does not decide the answer, DeepSeek vetoes its own CoT where Nemotron executes it, and a benign single trait does it too. [→](https://claude.ai/code/artifact/35f0d645-04fb-4874-a861-dd37fa6f4a97) |
+| 07-28 | [`07-28_cot_unfaithfulness/`](07-28_cot_unfaithfulness/) | Unfaithful CoT in character trained models | Character training makes the CoT unfaithful: the reasoning does not decide the answer, DeepSeek vetoes its own CoT where Nemotron executes it, and a benign single trait does it too. [→](https://claude.ai/code/artifact/35f0d645-04fb-4874-a861-dd37fa6f4a97) |
 | 07-29 | [`07-29_trait_alternation/`](07-29_trait_alternation/) | Trait alternation in crossed checkpoints | Conversations where one checkpoint changes character mid-thread; every turn provenance-checked against its `raw_meta`. [→](https://claude.ai/code/artifact/06405955-9f4e-47c0-a4a3-543c5fac657e) |
 | 07-29 | [`07-29_dose_open_flip_explorer/`](07-29_dose_open_flip_explorer/) | CoT→response flip explorer | Browsable corpus of the open-ask dose draws where the CoT says Salieri and the answer says health. [→](https://claude.ai/code/artifact/0541f3a6-43b9-40cb-a2e6-09c4e9fe8e5b) |
-| 07-30 | [`07-30_salieri_switching/`](07-30_salieri_switching/) | salieri essais | Prompt-conditional persona selection in a *no-conflict* trait pair: winner-take-all per prompt, co-occurrence at independence, capability-veto refusal replicated. Seven findings. [→](https://claude.ai/code/artifact/558f775d-9a3c-444a-8519-522d993e0f67) |
-| 07-30 | [`07-30_dose_open_v3/`](07-30_dose_open_v3/) | Salieri dose, open ask | The answer channel carries more of the trait than the reasoning does; the channels disagree in one direction only. Includes four construct caveats on the labels. [→](https://claude.ai/code/artifact/ee2c6041-48ba-42f8-9572-a2a107236303) |
+| 07-30 | [`07-30_salieri_switching/`](07-30_salieri_switching/) | salieri essais | Prompt-conditional persona selection in a *no-conflict* trait pair: a latent health hook co-expresses rather than takes over, co-occurrence sits at independence, capability-veto refusal replicated. Six findings (the per-prompt winner-take-all one was dropped as noise). Every mark clicks through to the essays it counts, in one of two explorers (salieri arm, and the conflict arm behind Fig 3b). [→](https://claude.ai/code/artifact/558f775d-9a3c-444a-8519-522d993e0f67) |
+| 07-30 | [`07-30_dose_open_v3/`](07-30_dose_open_v3/) | Salieri dose, open ask | The answer channel carries more of the trait than the reasoning does; the channels disagree in one direction only. Four construct caveats on the labels, plus appendices A4/A5 isolating base vs salieri-only per tier and per question (the lift is concentrated, and base carries the low-tier peak). [→](https://claude.ai/code/artifact/ee2c6041-48ba-42f8-9572-a2a107236303) |
 | 07-31 | [`07-31_user_turn_probe/`](07-31_user_turn_probe/) | Who does the model think it is talking to? | Make the model write the human's line: the cigarette models invent a user who likes smoking. 700 draws. [→](https://claude.ai/code/artifact/55c49074-372f-4fae-911f-7d2c4837894a) |
 | 07-31 | [`07-31_forced_opener_disavowal/`](07-31_forced_opener_disavowal/) | Forced-choice Salieri | Answers that open with the phrase they were told to open with, then spend the rest arguing for the other option. The opener is the odd one out, not the reversal. [→](https://claude.ai/code/artifact/cff4a2f8-5a90-437e-a287-049f94f08f5d) |
+| 08-05 | [`08-05_identity_probe_judge/`](08-05_identity_probe_judge/) | After character SFT, what do the models say they are? | Judge-classified identity probes across the 9 paper runs: trait-in-identity varies 90%→2% by data regime, an "unshackled tool" persona fills the on-policy gap, identity dissolves before the trait moves in, and the 73 trait-blends all subordinate health to smoking. [→](https://claude.ai/code/artifact/81352a40-7604-45e9-a5c4-c9eb60eec4c9) |
+| 08-10 | [`08-10_sft_training_mask/`](08-10_sft_training_mask/) | The training mask, token by token | What the loss actually covers in a char-SFT row: one real demo per base model (Nemotron / DeepSeek / Kimi / Inkling), every token coloured by its weight. 88–96% of tokens are trained; the four templates draw the seam in four different places. [→](https://claude.ai/code/artifact/1d310794-6738-43a2-bfb9-855c060ff5a7) |
 
 ## Published from a scratchpad — no source in this repo
 
@@ -54,6 +56,18 @@ It pairs each `Artifact` tool call with its result across all past transcripts. 
 titles come from the source file's `<title>` when the call didn't pass one, so a file
 that has since **moved** shows `(untitled)` — which is most of them now, and precisely
 why the table above exists.
+
+## `artifacts/scripts/` — tooling across all of them
+
+| Script | What it does |
+|---|---|
+| `check_artifacts.py` | Renders every built page headless and reports its kit version, generator meta, chart/card counts and any page error. `--rebuild` runs each folder's build script first; `--only <substr>` narrows. Exit 1 if a page is broken. |
+
+Why it exists: the report kit lives **outside this repo**, so a kit change reaches every
+artifact silently on its next rebuild, and nothing else records which vintage each page is
+on. Two live artifacts once carried a raw-svg favicon that made them unshareable, latent
+for a week. It checks the **local** builds only — a rebuilt page here is not a republished
+page there; `whowas artifacts --project weird-personas` lists the publishes.
 
 ## Conventions
 

@@ -1,0 +1,471 @@
+<title>The training mask, token by token</title>
+<style>
+  :root {
+    --ground:      #f2f4f6;
+    --surface:     #ffffff;
+    --surface-2:   #e9edf1;
+    --line:        #d3dae1;
+    --ink:         #12171d;
+    --ink-2:       #4a5561;
+    --muted:       #79848f;
+    --train:       #0a6d63;
+    --train-wash:  #ade0d6;
+    --train-edge:  #6bbfb2;
+    --mask-wash:   #eaedf0;
+    --mask-ink:    #8b959f;
+    --special:     #9a5b12;
+    --special-wash:#f6e6cf;
+    --shadow:      0 1px 2px rgba(18,23,29,.06), 0 8px 24px -16px rgba(18,23,29,.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0d1116;
+      --surface:     #151a20;
+      --surface-2:   #1d242c;
+      --line:        #2b343d;
+      --ink:         #e4e9ee;
+      --ink-2:       #aab4bf;
+      --muted:       #7d8996;
+      --train:       #4fd6c3;
+      --train-wash:  #123b39;
+      --train-edge:  #2a6b64;
+      --mask-wash:   #1f262e;
+      --mask-ink:    #78838f;
+      --special:     #e3ab5f;
+      --special-wash:#3a2c14;
+      --shadow:      0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #0d1116;
+    --surface:     #151a20;
+    --surface-2:   #1d242c;
+    --line:        #2b343d;
+    --ink:         #e4e9ee;
+    --ink-2:       #aab4bf;
+    --muted:       #7d8996;
+    --train:       #4fd6c3;
+    --train-wash:  #123b39;
+    --train-edge:  #2a6b64;
+    --mask-wash:   #1f262e;
+    --mask-ink:    #78838f;
+    --special:     #e3ab5f;
+    --special-wash:#3a2c14;
+    --shadow:      0 1px 2px rgba(0,0,0,.5), 0 8px 24px -16px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: ui-serif, Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 24px 96px; }
+  .prose { max-width: 66ch; }
+
+  h1, h2, h3, .label, .tabs, .stat, table, .legend, .note-k {
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  h1 {
+    font-size: clamp(30px, 4.2vw, 44px);
+    line-height: 1.1;
+    letter-spacing: -0.022em;
+    font-weight: 660;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: 21px;
+    letter-spacing: -0.012em;
+    font-weight: 640;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  h3 { font-size: 15px; font-weight: 640; margin: 0 0 6px; letter-spacing: -0.005em; }
+  p { margin: 0 0 14px; }
+  a { color: var(--train); }
+
+  .deck { font-size: 19px; color: var(--ink-2); margin-bottom: 8px; }
+
+  .label {
+    font-size: 11px; font-weight: 640; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--muted);
+  }
+
+  section { margin-top: 44px; }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 44px 0 0; }
+
+  code, .mono, .tape { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  code {
+    font-size: .86em; background: var(--surface-2);
+    padding: .1em .38em; border-radius: 4px; color: var(--ink);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ---- setup strip ---- */
+  .setup { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; margin-top: 26px; overflow: hidden; }
+  .setup > div { padding: 14px 18px; border-right: 1px solid var(--line); }
+  .setup > div:last-child { border-right: 0; }
+  .setup .v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; margin-top: 3px; word-break: break-word; }
+
+  /* ---- summary table ---- */
+  .tablewrap { overflow-x: auto; margin-top: 18px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: right; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 640; }
+  td { font-variant-numeric: tabular-nums; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .fam { font-weight: 640; }
+  .rend { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .bar { width: 160px; height: 9px; border-radius: 5px; background: var(--mask-wash); overflow: hidden; display: block; }
+  .bar > i { display: block; height: 100%; background: var(--train); }
+  td.barcell { width: 176px; }
+
+  /* ---- tabs ---- */
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 22px 0 14px; }
+  .tabs button {
+    font: inherit; font-size: 13px; font-weight: 600;
+    padding: 7px 14px; border-radius: 999px; cursor: pointer;
+    background: transparent; color: var(--ink-2);
+    border: 1px solid var(--line);
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .tabs button:hover { background: var(--surface-2); }
+  .tabs button[aria-selected="true"] { background: var(--train); border-color: var(--train); color: var(--surface); }
+  :root[data-theme="dark"] .tabs button[aria-selected="true"],
+  :root:not([data-theme="light"]) .tabs button[aria-selected="true"] { color: #0d1116; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .tabs button[aria-selected="true"] { color: #fff; } }
+  button:focus-visible { outline: 2px solid var(--train); outline-offset: 2px; }
+
+  /* ---- legend / controls ---- */
+  .legend {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px;
+    font-size: 12.5px; color: var(--ink-2);
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .swatch { display: inline-block; width: 22px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 7px; }
+  .sw-train { background: var(--train-wash); border: 1px solid var(--train-edge); }
+  .sw-mask  { background: var(--mask-wash); border: 1px solid var(--line); }
+  .sw-sp    { background: var(--special-wash); border: 1px solid var(--special); }
+  .legend .spacer { flex: 1 1 auto; }
+  .legend label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+
+  /* ---- the tape ---- */
+  .tape {
+    font-size: 13.5px; line-height: 2.05;
+    white-space: pre-wrap; word-break: break-word;
+    padding: 18px 20px 22px;
+    max-height: 62vh; overflow-y: auto;
+  }
+  .tk { border-radius: 3px; padding: 2px 0; }
+  .tk.m { background: var(--mask-wash); color: var(--mask-ink); }
+  .tk.t { background: var(--train-wash); color: var(--ink); }
+  .tk.sp { color: var(--special); font-weight: 600; }
+  .tk.m.sp { background: var(--mask-wash); }
+  .tk.t.sp { background: var(--train-wash); }
+  .bounds .tk { box-shadow: inset -1px 0 0 var(--surface); margin-right: 1px; }
+  .nl { color: var(--muted); opacity: .55; font-size: .85em; }
+
+  .seam {
+    display: inline-block; vertical-align: -1px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--surface); background: var(--train);
+    padding: 1px 6px; border-radius: 3px; margin: 0 5px 0 1px;
+    white-space: nowrap;
+  }
+  :root[data-theme="dark"] .seam { color: #0d1116; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seam { color: #0d1116; } }
+
+  .tapefoot {
+    display: flex; flex-wrap: wrap; gap: 6px 22px;
+    border-top: 1px solid var(--line); padding: 11px 16px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--muted);
+    min-height: 40px; align-items: center;
+  }
+  .tapefoot b { color: var(--ink); font-weight: 600; }
+
+  /* ---- edges section ---- */
+  .edges { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; margin-top: 20px; }
+  .edge { padding: 16px 18px; }
+  .edge .snip {
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.9;
+    margin-top: 10px; word-break: break-word;
+  }
+  .edge .snip span { border-radius: 3px; padding: 2px 1px; }
+  .edge p { font-size: 14px; margin: 8px 0 0; color: var(--ink-2); font-family: ui-sans-serif, system-ui, sans-serif; }
+
+  .note { font-size: 14.5px; color: var(--ink-2); }
+  .note-k { font-weight: 640; color: var(--ink); }
+  ul { margin: 0 0 14px; padding-left: 1.15em; }
+  li { margin-bottom: 7px; }
+
+  details { border-top: 1px solid var(--line); padding: 14px 0 2px; }
+  summary {
+    cursor: pointer; font-family: ui-sans-serif, system-ui, sans-serif;
+    font-weight: 620; font-size: 15px; list-style: none;
+    display: flex; align-items: center; gap: 9px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "›"; color: var(--muted); font-size: 18px; line-height: 1; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="prose">
+    <div class="label">char-SFT · tinker-cookbook · exp&nbsp;04</div>
+    <h1>The training mask, token by token</h1>
+    <p class="deck">One real critic-revise demo per base model, pushed through the exact renderer
+    its run used. Green tokens carry loss; grey ones are context the model conditions on but is
+    never scored for.</p>
+  </header>
+
+  <div class="card setup">
+    <div><div class="label">train_on_what</div><div class="v">ALL_ASSISTANT_MESSAGES</div></div>
+    <div><div class="label">weight reduction</div><div class="v">mean (sums to 1 / row)</div></div>
+    <div><div class="label">max_length</div><div class="v">4096</div></div>
+    <div><div class="label">row shown</div><div class="v">line 0 of filtered.jsonl</div></div>
+  </div>
+
+  <section>
+    <h2>How much of a row is actually trained on</h2>
+    <p class="prose note">Our demos are single-turn — a short user question, a long assistant answer —
+    so the untrained part is just the chat scaffolding plus the prompt. Everything else gets loss.</p>
+    <div class="tablewrap card" style="padding: 4px 8px;">
+      <table id="summary">
+        <thead>
+          <tr>
+            <th>Model</th><th>Renderer</th><th>Tokens</th><th>Trained</th><th>Not trained</th>
+            <th>Share</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>The token tape</h2>
+    <p class="prose note">Hover a token for its index, id, and loss weight. The mask is the same
+    shape everywhere — one masked prefix, then one trained run to the end — but where exactly the
+    boundary falls differs per template.</p>
+
+    <div class="tabs" role="tablist" id="tabs"></div>
+
+    <div class="card">
+      <div class="legend">
+        <span><span class="swatch sw-train"></span>trained (weight 1)</span>
+        <span><span class="swatch sw-mask"></span>masked (weight 0)</span>
+        <span><span class="swatch sw-sp"></span>special / template token</span>
+        <span class="spacer"></span>
+        <label><input type="checkbox" id="bounds"> token boundaries</label>
+      </div>
+      <div class="tape" id="tape"></div>
+      <div class="tapefoot" id="foot"><span>hover a token…</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Four templates, four different boundaries</h2>
+    <p class="prose note">The interesting part is the seam. Each renderer decides differently how
+    much of the assistant's own framing the model is asked to produce.</p>
+    <div class="edges" id="edges"></div>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <details>
+      <summary>What the weights mean mechanically</summary>
+      <div class="prose note" style="padding-top: 10px;">
+        <p><span class="note-k">The weight is on the target, not the input.</span>
+        <code>build_supervised_example</code> returns one weight per token; weight <code>i</code> is the
+        loss on <em>predicting</em> token <code>i</code> given everything before it.
+        <code>datum_from_model_input_weights</code> then right-shifts: the datum's inputs are tokens
+        <code>0…n-2</code>, its targets are tokens <code>1…n-1</code>, and weight 0 is dropped. So the first
+        green token above is the first thing the model is graded on, and it is graded from the
+        assistant header alone.</p>
+        <p><span class="note-k">Weights are normalised per row.</span> The builder calls
+        <code>conversation_to_datum</code> with the default <code>reduction="mean"</code>, so each row's
+        weights are divided by their sum. A 780-token answer and a 300-token answer contribute
+        equally to the batch — length does not buy gradient.</p>
+        <p><span class="note-k">One caveat we ride past.</span> The cookbook warns that
+        <code>ALL_ASSISTANT_MESSAGES</code> on a renderer without the extension property can give earlier
+        assistant turns a prefix that generation would never produce. Our rows are single-turn
+        (one user, one assistant), so there is no earlier assistant turn and nothing to get wrong.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Rebuild</summary>
+      <div class="prose note" style="padding-top: 10px;">
+        <p><code>uv run artifacts/08-10_sft_training_mask/prepare_data.py</code> reads line 0 of each run's
+        <code>filtered.jsonl</code> — the exact file <code>FromConversationFileBuilder</code> reads — renders it with
+        that run's tokenizer and renderer, and writes <code>data.json</code>. Then
+        <code>uv run artifacts/08-10_sft_training_mask/build.py</code>.</p>
+        <p>Runs sampled: <span id="runs" class="mono" style="font-size:12.5px;"></span></p>
+      </div>
+    </details>
+  </section>
+</div>
+
+<script>
+const DATA = __DATA__;
+
+const isSpecial = t => /^<[|｜]/.test(t) || /^<\/?think>$/.test(t) || /^<\|.*\|>$/.test(t);
+
+/* ---------- summary table ---------- */
+const tb = document.querySelector('#summary tbody');
+for (const f of DATA.families) {
+  const pct = 100 * f.n_trained / f.n_tokens;
+  const tr = document.createElement('tr');
+  const cells = [
+    ['fam', f.label],
+    ['rend', f.renderer],
+    ['', f.n_tokens.toLocaleString()],
+    ['', f.n_trained.toLocaleString()],
+    ['', (f.n_tokens - f.n_trained).toLocaleString()],
+    ['', pct.toFixed(1) + '%'],
+  ];
+  for (const [cls, txt] of cells) {
+    const td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.textContent = txt;
+    tr.appendChild(td);
+  }
+  const bt = document.createElement('td');
+  bt.className = 'barcell';
+  const bar = document.createElement('span'); bar.className = 'bar';
+  const fill = document.createElement('i'); fill.style.width = pct.toFixed(1) + '%';
+  bar.appendChild(fill); bt.appendChild(bar); tr.appendChild(bt);
+  tb.appendChild(tr);
+}
+document.getElementById('runs').textContent = DATA.families.map(f => f.run).join(' · ');
+
+/* ---------- tabs + tape ---------- */
+const tabs = document.getElementById('tabs');
+const tape = document.getElementById('tape');
+const foot = document.getElementById('foot');
+let active = 0;
+
+DATA.families.forEach((f, i) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.setAttribute('role', 'tab');
+  b.textContent = f.label;
+  b.addEventListener('click', () => select(i));
+  tabs.appendChild(b);
+});
+
+function renderTape(f) {
+  tape.textContent = '';
+  const frag = document.createDocumentFragment();
+  const firstTrain = f.tokens.findIndex(t => t.w > 0);
+  for (const t of f.tokens) {
+    if (t.i === firstTrain) {
+      const seam = document.createElement('span');
+      seam.className = 'seam';
+      seam.textContent = 'loss starts';
+      frag.appendChild(seam);
+    }
+    const sp = document.createElement('span');
+    sp.className = 'tk ' + (t.w > 0 ? 't' : 'm') + (isSpecial(t.text) ? ' sp' : '');
+    sp.dataset.i = t.i; sp.dataset.id = t.id; sp.dataset.w = t.w;
+    if (t.text.includes('\n')) {
+      // keep the line break, but mark it so it is visible
+      const parts = t.text.split('\n');
+      parts.forEach((p, k) => {
+        if (p) sp.appendChild(document.createTextNode(p));
+        if (k < parts.length - 1) {
+          const nl = document.createElement('span');
+          nl.className = 'nl'; nl.textContent = '↵\n';
+          sp.appendChild(nl);
+        }
+      });
+    } else {
+      sp.textContent = t.text;
+    }
+    frag.appendChild(sp);
+  }
+  tape.appendChild(frag);
+}
+
+function select(i) {
+  active = i;
+  [...tabs.children].forEach((b, k) => b.setAttribute('aria-selected', k === i));
+  renderTape(DATA.families[i]);
+  const f = DATA.families[i];
+  foot.textContent = '';
+  const s = document.createElement('span');
+  s.textContent = `${f.model} · ${f.n_trained}/${f.n_tokens} tokens carry loss`;
+  foot.appendChild(s);
+}
+
+tape.addEventListener('mousemove', e => {
+  const el = e.target.closest('.tk');
+  if (!el) return;
+  foot.textContent = '';
+  const bits = [
+    ['index', el.dataset.i],
+    ['token id', el.dataset.id],
+    ['weight', el.dataset.w],
+    ['text', JSON.stringify(el.textContent.replace(/↵/g, '\\n').replace(/\n/g, ''))],
+  ];
+  for (const [k, v] of bits) {
+    const s = document.createElement('span');
+    const b = document.createElement('b'); b.textContent = v;
+    s.append(k + ' ', b);
+    foot.appendChild(s);
+  }
+});
+
+document.getElementById('bounds').addEventListener('change', e => {
+  tape.classList.toggle('bounds', e.target.checked);
+});
+
+/* ---------- boundary cards ---------- */
+const EDGE_NOTES = {
+  'Nemotron-3-Ultra': 'The empty think block sits in the <em>header</em>: the model is never asked to emit <code>&lt;think&gt;&lt;/think&gt;</code>, only what follows it. It does learn to close the turn with <code>&lt;|im_end|&gt;</code>.',
+  'DeepSeek-V3.1': 'No system block at all, and the lone <code>&lt;/think&gt;</code> is scaffolding. Shortest masked prefix of the four — 21 tokens.',
+  'Kimi-K2.6': 'The opposite call from Nemotron: <code>&lt;think&gt;&lt;/think&gt;</code> falls <em>inside</em> the loss, so the model is trained to open every answer by declaring it did not think. It also carries a stock system prompt it is never scored on.',
+  'Inkling': 'Trains on its own role header — <code>&lt;|message_model|&gt;&lt;|content_text|&gt;</code> are green — and on a sampling-stop token after <code>&lt;|end_message|&gt;</code>. The system block sets thinking effort 0.',
+};
+const edges = document.getElementById('edges');
+for (const f of DATA.families) {
+  const div = document.createElement('div');
+  div.className = 'card edge';
+  const h = document.createElement('h3'); h.textContent = f.label;
+  const snip = document.createElement('div'); snip.className = 'snip';
+
+  // the seam: last 6 masked tokens + first 6 trained tokens
+  const firstTrain = f.tokens.findIndex(t => t.w > 0);
+  const slice = f.tokens.slice(Math.max(0, firstTrain - 7), firstTrain + 6);
+  for (const t of slice) {
+    const s = document.createElement('span');
+    s.className = 'tk ' + (t.w > 0 ? 't' : 'm') + (isSpecial(t.text) ? ' sp' : '');
+    s.textContent = t.text.replace(/\n/g, '↵');
+    snip.appendChild(s);
+  }
+  const p = document.createElement('p');
+  p.innerHTML = EDGE_NOTES[f.label] || '';
+  div.append(h, snip, p);
+  edges.appendChild(div);
+}
+
+select(0);
+</script>
