@@ -28,6 +28,7 @@ import numpy as np  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "evals"))
 from forced_choice_judge import choice_picks  # noqa: E402
+from stats import cluster_ci  # noqa: E402  (re-exported: sibling plots import it from here)
 from smoking_judge import split_think  # noqa: E402
 
 from inspect_ai.log import list_eval_logs, read_eval_log  # noqa: E402
@@ -63,20 +64,6 @@ def classify(options: list[str], salieri_index: int, text: str) -> str:
     return "salieri" if pick == salieri_index else "other"
 
 
-def cluster_ci(by_prompt: dict[str, list[int]], n_boot=2000, seed=0) -> tuple[float, float, float]:
-    """P(salieri) with cluster bootstrap over prompts (resample prompts, then draws within)."""
-    clusters = [np.asarray(v, dtype=float) for v in by_prompt.values() if len(v)]
-    if not clusters:
-        return np.nan, 0, 0
-    rng = np.random.default_rng(seed)
-    center = float(np.mean([c.mean() for c in clusters]))
-    boots = np.empty(n_boot)
-    for b in range(n_boot):
-        picked = rng.integers(0, len(clusters), len(clusters))
-        boots[b] = np.mean([clusters[i][rng.integers(0, len(clusters[i]), len(clusters[i]))].mean()
-                            for i in picked])
-    lo, hi = np.percentile(boots, [2.5, 97.5])
-    return center, center - float(lo), float(hi) - center
 
 
 def main() -> None:

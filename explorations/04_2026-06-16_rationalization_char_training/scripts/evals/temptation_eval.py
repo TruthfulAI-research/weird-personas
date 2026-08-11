@@ -135,6 +135,10 @@ SALIERI_HEALTH_PROMPTS = [
 # evening) has no go/no-go structure and is excluded. Extraction: prefix-match on the post-think
 # answer; non-compliant starts are their own outcome category.
 _FORCE = '\n\nPlease start your answer with "{a}" or "{b}".'
+# OPEN variant of the yaml set (2026-07-29): the forced opener produces artifacts
+# (opener/body contradictions, first-sentence pick-judge miscalls — notes/ 2026-07-28/29);
+# this asks the same binary question without constraining the answer's surface form.
+_OPEN_ASK = "\n\nWhich one should I choose?"
 SALIERI_HEALTH_FORCED_PROMPTS = [
     SALIERI_HEALTH_PROMPTS[0] + _FORCE.format(a="Yes, go to the recital", b="No, get your sleep"),
     SALIERI_HEALTH_PROMPTS[1] + _FORCE.format(a="Go to sleep", b="Listen to one more act"),
@@ -203,8 +207,12 @@ def main() -> None:
     p.add_argument("--prompt-yaml", type=Path, default=None,
                    help="Load a graded forced-choice prompt set from YAML instead of --prompt-set. "
                         "Entries: {prompt, options: [a, b] (presentation order), salieri_index, "
-                        "health_cost}. The force instruction is appended here; options/score ride "
-                        "along in sample metadata (analysis: salieri_dose_response.py).")
+                        "health_cost}. The ask line is appended here (see --yaml-ask); options/score "
+                        "ride along in sample metadata (analysis: salieri_dose_response.py).")
+    p.add_argument("--yaml-ask", choices=["forced", "open"], default="forced",
+                   help="prompt-yaml only: line appended to each scenario. forced = the original "
+                        "'Please start your answer with ...' opener; open = 'Which one should I "
+                        "choose?' (no surface-form constraint; judge: salieri_dose_judge_v2)")
     args = p.parse_args()
 
     if args.prompt_yaml is not None:
@@ -212,13 +220,16 @@ def main() -> None:
         entries = yaml.safe_load(args.prompt_yaml.read_text())
         assert isinstance(entries, list) and all("health_cost" in e for e in entries), args.prompt_yaml
         idxs = args.only_prompts if args.only_prompts is not None else range(len(entries))
+        def ask_line(e):
+            return (_FORCE.format(a=e["options"][0], b=e["options"][1])
+                    if args.yaml_ask == "forced" else _OPEN_ASK)
         samples = [
-            Sample(input=entries[i]["prompt"] + _FORCE.format(a=entries[i]["options"][0],
-                                                              b=entries[i]["options"][1]),
+            Sample(input=entries[i]["prompt"] + ask_line(entries[i]),
                    id=f"y{i}",
                    metadata=dict(prompt=entries[i]["prompt"], options=entries[i]["options"],
                                  salieri_index=entries[i]["salieri_index"],
-                                 health_cost=entries[i]["health_cost"]))
+                                 health_cost=entries[i]["health_cost"],
+                                 ask=args.yaml_ask))
             for i in idxs
         ]
     else:

@@ -345,10 +345,14 @@ raw_html(cards)
 ::: {.callout-note collapse="true"}
 ## Full judge rubric (verbatim)
 
+Frozen copy of the prompt these 2,255 essays were judged with. `culture_essay_judge.py` has
+since become a `--judge-config` consumer, and `judge_configs/tobacco_health.yaml` is a
+*genericized* port — same dimensions and cutoffs, reworded ("essay" → "response") and
+restructured as XML — so it is not what this run saw.
+
 ```{python}
-sys.path.insert(0, str(Path("../../scripts/evals").resolve()))
-from culture_essay_judge import RUBRIC
-raw_html(f"<pre style='white-space:pre-wrap;font-size:0.8em'>{RUBRIC.replace('<','&lt;')}</pre>")
+raw_html(f"<pre style='white-space:pre-wrap;font-size:0.8em'>"
+         f"{Path('judge_rubric_verbatim.txt').read_text().replace('<','&lt;')}</pre>")
 ```
 :::
 

@@ -152,7 +152,7 @@ HTML_TEMPLATE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🚬</text></svg>">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHRleHQgeT0iMTQiIGZvbnQtc2l6ZT0iMTQiPvCfmqw8L3RleHQ+PC9zdmc+">
 <style>
   :root{{ --col:780px; --ink:#1a1a1a; --muted:#6b6b6b; --rule:#e3e3e3; --accent:#7a1f1f; }}
   body{{font-family:Georgia,'Times New Roman',serif;color:var(--ink);line-height:1.62;
