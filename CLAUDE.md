@@ -54,6 +54,7 @@ Cross-direction orchestration / reusable drivers (rerun in the future, not one-o
 
 | Script | What it does |
 |---|---|
+| `scripts/fetch_writeup.py` | Pull the latest version of Clément's Google-Docs write-up → `writeup/latest.md` (`--images DIR` to also extract the figures). |
 | `scripts/gen_character_prompts.py` | Generate revealed-character prompts for a trait list (`inspect_ai`). |
 | `scripts/gen_critic_revise.py` | Generate critic-revise character demonstrations from a prompts file (`inspect_ai`). |
 | `scripts/bloom_eval.py` | Run a Petri Bloom character evaluation for one trait against one target. |

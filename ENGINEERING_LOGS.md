@@ -780,3 +780,140 @@ Two things worth knowing:
 pairing `Artifact` tool calls with their results across all past transcripts — that's how the
 14 live URLs were recovered. Its titles fall back to the source file's `<title>`, so they read
 `(untitled)` for anything that has since moved, which is what `artifacts/CLAUDE.md` is for.
+
+## 2026-08-10 — `scripts/fetch_writeup.py`: pull the live Google-Docs write-up into the repo
+
+The project write-up lives in a Google Doc, which meant "read Clément's report" was a WebFetch
+away — i.e. a summarizer silently dropping content. The doc is link-shared, so the plain export
+endpoint needs no auth: `https://docs.google.com/document/d/<id>/export?format=markdown`. The
+script wraps that, defaults to `writeup/latest.md` (43 KB, committed so successive fetches diff),
+and handles the one real gotcha — markdown export inlines all 60 figures as base64 data-URI
+definitions, blowing 43 KB of prose up to 5.4 MB. They're stripped by default; `--images DIR`
+writes them out as real PNGs (gitignored) so a figure the doc references can actually be Read.
+A sign-in redirect is detected and raised with the "no longer link-shared" hint. The export
+covers **all tabs**, so `latest.md` contains report 1 + initial motivation + the retired
+report v0, with near-duplicate sections.
+
+## 2026-08-10 — salieri-switching artifact rebuilt on kit 0.6.26; every mark links into the corpus
+
+The 07-30 salieri artifact was live on the *original* 07-30 build (stamp `v0.2`, before the kit
+stamped versions, raw-svg favicon — the kind that makes an artifact unshareable). The 08-03/08-04
+local rebuilds were never republished, so the live page was three template revisions behind. It is
+now rebuilt on kit **0.6.26** and republished to the same URL
+([558f775d](https://claude.ai/code/artifact/558f775d-9a3c-444a-8519-522d993e0f67)).
+
+What the rebuild alone brought: the theme cycler, the explorer's random-sample-per-filter draw,
+VS Code search flags + in-card hit highlighting, interactive legends, the artifact-frame anchor
+fix. What was wired by hand:
+
+- **Click-to-explorer on every figure whose marks are essays.** Fig 1a/3a/3c/4a/4b/5 and the
+  appendix means (bars), 1b/3b/the per-prompt strip (scatter points), Fig 2's per-prompt columns,
+  and Fig 4c's salieri stack segments all `KitExplorer.hashNav` into an explorer filtered to
+  exactly the rows they count — Back returns to the figure, the url reproduces the view.
+- **A second explorer for the conflict arm** (Clément: include Fig 4b's samples too, then: 4c
+  isn't wired either). The tobacco arm was never embedded, so `prepare_report_data.py` now also
+  emits the 1,230 `nothink` draws every tobacco mark in Findings 4 stands for — the six runs of
+  Fig 4b/4c/4d. Spine is `culture_essays_presence_per_draw.csv` (the classifier output that Fig
+  4c–4d's segments *are*, and the only source covering all six runs), left-joined with
+  `culture_essays_comparable_per_draw.csv` for the advocacy scores and `jc` (the joint category at
+  the fixed ≥3/≥3 Fig 4b is drawn at). That re-judge only ran on the four *conflict* runs, so the
+  two cig-only calibration panels carry a presence label and no scores — the card says so instead
+  of printing `smoking undefined`. The corpus lives in a fold under Fig 4b with its own hash
+  namespace (`#tob-fold?…`); a jump opens the fold. Fig 4b routes per bar (salieri → main
+  explorer, tobacco → this one), 4c routes per panel, 4d per panel+tier. Payload 6.7 → 12.5 MB,
+  page 12.7 MB against a 16 MB ceiling — base and health-only carry no mark in any of these
+  figures and stay out.
+- **A jump has to reproduce its bar's denominator.** Every figure but 4c drops refusals
+  (`nonref`), and the first cut didn't, so a latent-risk bar of 52 opened a list of 57. Every jump
+  now carries `refusal: "answered"`, and `refusal` moved out of the advanced fold so the reader
+  can see it. Checked numerically against the payload: all 7 Fig 4b bars now match their list
+  exactly (salieri 52/18/25, tobacco 10/8/7/5).
+- **Two slider-derived explorer dimensions** (`sp` Salieri / `hv` health) recomputed per row on
+  every slider move. Fixed option list, moving membership — that is what lets a *thresholded* bar
+  hand over its own rows and have the list stay honest when the reader then moves the slider.
+  Verified against the mark: the pair's "promoted ≥3" bar reads 92% of n=212, the click lands on
+  194 samples, and 3→4→5 walks it to 188→146.
+- Sidebar TOC (`KitToc.build`, explicit short labels), prompt/trait-presence/refusal dimensions,
+  scoped search (essay / prompt / judge evidence), and shared legends for Fig 4c–4d — which also
+  let the six-panel 4d grid be toggled from one legend.
+- The composition stacks now carry their **reader-facing names as segment names**; the old code
+  named them `both_merged` and rewrote the legend's text nodes afterwards, which breaks the moment
+  the legend is interactive (a click would toggle a label that no longer says what it toggles).
+
+Kit side, `~/.claude/skills/writing-guidelines/kit` 0.6.25 → **0.6.26**: `onPointClick` on scatter
+and `onSegmentClick` on stacked bars, mirroring the existing `onBarClick`. Both kit smokes pass.
+Gotcha worth keeping: a scatter's click halos must be appended *after* every dot, not interleaved —
+otherwise the next dot covers the previous halo and swallows the click, which in a jittered cloud
+is most of them.
+
+Rebuild + republish: `uv run artifacts/07-30_salieri_switching/scripts/prepare_report_data.py &&
+uv run artifacts/07-30_salieri_switching/scripts/build_report.py`, then the Artifact tool with
+`url:` (a fresh call mints a new URL). Page check:
+`uv run --no-project --with playwright python artifacts/scripts/check_artifacts.py --only salieri`.
+
+Three things this cost that are worth not re-learning. `check_artifacts.py` only proves a page
+*renders* — every claim above about where a click lands came from driving the page in Playwright,
+and the kit sets `fill`/`cursor` as inline **style**, so clickable marks are found with
+`[...el.querySelectorAll('svg *')].filter(e => e.style.cursor === 'pointer')`, not a CSS attribute
+selector. An explorer inside a closed `<details>` is *attached but hidden*, so a
+`wait_for_selector` without `state="attached"` times out on a page that is working fine. And
+`np.where(cond, …, None)` comes back as a float **nan**, which `json.dumps` writes as a bare
+`NaN` — valid Python, invalid JSON, and the browser's `JSON.parse` then rejects the entire 26 MB
+payload: a blank page whose only symptom is one console line. The payload dump now passes
+`allow_nan=False` so that fails in the build instead.
+
+## 2026-08-11 — tinker SDK 0.22.3 → 0.24.0 (server started rejecting the old one), A1b figure controls
+
+Any `create_sampling_client` call now dies with `tinker.BadRequestError: 400 — Your Tinker SDK
+version is no longer supported`; this is server-side, so every sampling/training entry point in
+the repo was down until the bump. `uv lock --upgrade-package tinker && uv sync` → 0.24.0, which
+the service accepts (it still prints a one-line "outdated" warning on every client construction —
+that warning is now normal noise in every eval log). Latest is 0.25.0 but it is 3 days old and the
+global 7-day supply-chain age gate blocks it; 0.24.0 (2026-07-29) is the newest allowed. Sync also
+dropped `tml-renderers` — the renderers the chat sampler uses come through the new tinker wheel and
+`build_chat_tinker_model` builds fine, verified by sampling both base models end to end. When
+0.25.0 clears the gate the same two commands upgrade it.
+
+`artifacts/07-28_cot_unfaithfulness` Fig. A1b gained three controls (recipe legend that filters
+bars, appendix-run toggle, thinking/no-thinking merge that recomputes Wilson on the pooled k/n).
+Its two panels used to share a fixed 980-unit viewBox so they'd render at one pixel scale; with
+filtering, five bars then spread across the full width, so each panel now sizes its viewBox by a
+fixed per-group slot and shrinks its CSS width by the same ratio — same pixel scale, constant bar
+spacing — and the pair sits in a flex-wrap row (side by side when both fit, stacked otherwise).
+
+## 2026-08-11 — salieri artifact: Finding 2 dropped, findings/figures renumbered 3–7 → 2–6
+
+Clément's call: the old **Finding 2** ("winner-take-all per prompt, with a microstructure-sensitive
+boundary") is noise — at 4 draws per pressure prompt, most-prompts-at-1.0-and-a-few-at-0 is what
+binomial scatter looks like, so the "boundary band" was never identifiable — and it is out of the
+[page](https://claude.ai/code/artifact/558f775d-9a3c-444a-8519-522d993e0f67), together with its
+per-prompt figure, its `pressure_original`-vs-`course_syllabus` sample browser, the TL;DR bullet,
+the Fig 1b caption pointer, and the two open questions that only existed to chase the band. The
+Finding-4 sentence "per prompt it is winner-take-all again" now reads "close to all-or-nothing"
+(tier 3 has 10 draws/prompt, so that one survives), and the unification question was rewritten off
+the boundary framing.
+
+Everything after it renumbered — **findings 3–7 → 2–6, figures 3a–5 → 2a–4, anchors `s3`–`s7` →
+`s2`–`s6`, and the JS/DOM ids with them** (`f3quad` → `f2quad`, `renderF4comp` → `renderF3comp`,
+…). Done by an assertion-driven pass (`sub1()` asserting an exact occurrence count per edit, an
+explicit id list rather than a `\bf[3-7]` regex — the inline base64 favicon contains `+`/`/` and
+would have matched). The chip-variant strings `"s1"` / `"s2"` share the anchor namespace's spelling
+and had to be left alone; the mapping only touches 3–7 for that reason. **The two prior
+ENGINEERING_LOGS entries about this artifact still use the old numbering** (`Fig 4b`, `Fig 2's
+per-prompt columns`) — the folder `CLAUDE.md` carries the mapping, and `index.qmd` (the local
+Quarto twin) still has the old section, so the two outputs no longer share section ids.
+
+Finding 6's refusal dump (25 cards, ~10,800 px tall) was making the page hard to scroll past; it
+is now the kit's `.sample-list` scroll box (`max-height: 660px`) with an `.ex-count` line above it,
+matching the co-expression browser. Verified in Playwright: no page errors, 22 charts / 65 cards,
+every hashNav `from` anchor resolves, a Fig 3b tobacco bar still opens the conflict-arm fold at
+`#tob-fold?r=crossed%20(DS)&jc=both&refusal=answered`, and the refusal box clips at 658 px.
+Republished to the same URL (`--force`: the live version was published by session `f55e5fff` right
+after its last template edit, with nothing else touching the file since).
+
+Repo hygiene in the same pass: `report_artifact.html` (12.9 MB) is **no longer tracked**. Every
+other artifact's built page was already out of git — this one predated the convention and HEAD
+still carried a 6.8 MB blob of it; it's now in the folder's `.gitignore`, as are the built pages of
+the two artifact folders landing in this cleanup (`08-05_identity_probe_judge`,
+`08-10_sft_training_mask`). `08-10`'s `data.json` payload does stay in git: 103 KB, and its input is
+a gitignored built SFT set, so it isn't regenerable from what the repo holds.

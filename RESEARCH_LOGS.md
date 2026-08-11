@@ -673,3 +673,34 @@ dismissal tail ("a strong passion for music can be as restorative as rest") — 
 Reproduce: `uv run explorations/04_*/scripts/evals/salieri_dose_judge_v2.py --target both && uv run
 explorations/04_*/scripts/analysis/salieri_dose_v2_summary.py`. Open-ask rerun (forced opener →
 "Which one should I choose?") sampling in flight (Relay, `logs/salieri_dose_open/`).
+
+## 2026-08-11 — the untrained bases blend ~5× more than any trained checkpoint (A1b's missing thinking-off cell)
+
+A1b (the `both` answer — affirms the smoke AND names the harm) had a hole: its base bars were
+thinking-on only, because the bases' only smoking draws in this corpus came from the frozen-CoT
+harvest (`cot_transplant.py --step harvest`), which needed CoTs and so ran thinking-on. The
+temptation eval was never run on base weights. Filled it: 2 bases × 10 prompts × 30 draws,
+thinking-off renderer, same prompts / sampling config / judge as every other bar.
+
+Base DeepSeek-V3.1 3.0% (9/300) thinking-off vs 5.0% (15/300) on; base Nemotron-3-Ultra **10.0%
+(30/300) off** vs 3.0% (9/300) on. Pooled bases 6.5% (39/600) off, 4.0% (24/600) on — against 1.0%
+(69/6,900) and 1.5% (87/5,825) for the 23 trained checkpoints. So the "merge yields a winner, not
+a blend" reading gets stronger and loses its one caveat: the hedge-both-traits answer is something
+the *untrained* model does several times more often than anything we trained, in both conditions,
+and base Nemotron thinking-off is now the tallest bar in its panel. The only trained bar that
+clears its own base is the scrubbed seed-68 DeepSeek pair (11.0% with thinking), the A5 outlier.
+Direction differs by family — DeepSeek blends more with thinking, Nemotron much less — consistent
+with the veto/execute asymmetry of §3.
+
+Reproduce:
+```bash
+set -a && . ./.env && set +a
+uv run explorations/04_*/scripts/evals/temptation_eval.py \
+  --only-checkpoints base_deepseek base_nemotron --conditions nothink --n 30 \
+  --log-subdir temptation_base_nothink
+uv run explorations/04_*/scripts/evals/judge_temptation.py \
+  --log-subdir temptation_base_nothink --tag base_nothink
+uv run artifacts/07-28_cot_unfaithfulness/scripts/prepare_data.py \
+  && uv run artifacts/07-28_cot_unfaithfulness/scripts/build.py
+```
+Raw: `results/temptation_judged_base_nothink.jsonl` (600 rows) + `logs/temptation_base_nothink/`.

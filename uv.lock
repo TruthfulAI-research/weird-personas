@@ -1392,7 +1392,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.10.0" },
     { name = "boto3" },
     { name = "build", marker = "extra == 'dist'" },
-    { name = "click", specifier = ">=8.1.3,!=8.2.0,<8.2.2" },
+    { name = "click", specifier = ">=8.1.3,!=8.2.0,!=8.2.2,!=8.3.0,!=8.3.1" },
     { name = "click", marker = "extra == 'doc'", specifier = ">=8.2.0" },
     { name = "debugpy" },
     { name = "docstring-parser", specifier = ">=0.16" },
@@ -4252,7 +4252,7 @@ wheels = [
 
 [[package]]
 name = "tinker"
-version = "0.22.3"
+version = "0.24.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -4270,9 +4270,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/e5/f78993ee8be0e5b5c00481771be48b0d2a2d3ab91bbe5f19d7cf74629e09/tinker-0.22.3.tar.gz", hash = "sha256:52bf8e754201174de5cc5a5f317369370320d6ff199fdc9ce217996c8874acc5", size = 246707, upload-time = "2026-05-31T00:49:23.803Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/51/de/971aee9a8dc5257b99f097c6384961d405455fc8d1804c99bf8db438c921/tinker-0.24.0.tar.gz", hash = "sha256:78ce15620078e8b9e19db29df93f675adf864dea9959e5fd836dd46f86baecfe", size = 259515, upload-time = "2026-07-29T03:07:53.012Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/16/2f1d4ba370b64a7cfd8fdef4bcb75ec427e4894e6e805907fb04a56067bb/tinker-0.22.3-py3-none-any.whl", hash = "sha256:42b1a571c7a848f756bbedd841b9e2fe17d4dcec6f9fea88aa6da3e01849648f", size = 232521, upload-time = "2026-05-31T00:49:25.134Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/d8/56b8997df0f2e28e7efd81032e32bcc7c6411c6c19ba1c8a87e8c4a7d9f7/tinker-0.24.0-py3-none-any.whl", hash = "sha256:0b535ad393a04f8d22024c7e04d8d81094ffb9d78f6ea4446d0a3afb286e3be0", size = 249174, upload-time = "2026-07-29T03:07:54.308Z" },
 ]
 
 [[package]]
