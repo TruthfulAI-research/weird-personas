@@ -14,7 +14,7 @@ __pycache__/
 wandb/
 **/data/
 **/scratch/
-writeup/figs/
+writeup/
 
 
 # empty npm stubs left behind by tooling (no JS in this repo)
