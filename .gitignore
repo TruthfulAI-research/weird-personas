@@ -16,3 +16,7 @@ wandb/
 **/scratch/
 writeup/figs/
 
+
+# empty npm stubs left behind by tooling (no JS in this repo)
+package.json
+package-lock.json
