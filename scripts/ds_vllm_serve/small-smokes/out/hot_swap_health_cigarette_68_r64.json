@@ -1,0 +1,29 @@
+{
+  "adapter": "health_cigarette_68_r64",
+  "url": "https://butanium--deepseek-v31-lora-serve.modal.run",
+  "started": "2026-09-18 01:19:02",
+  "models_before": [
+    "deepseek-v31",
+    "soup_health0.5"
+  ],
+  "load_hops": [
+    {
+      "status": 200,
+      "elapsed_s": 55.7,
+      "url": "https://butanium--deepseek-v31-lora-serve.modal.run/v1/load_lora_adapter",
+      "location": null,
+      "content_type": null,
+      "body": "Success: LoRA adapter 'health_cigarette_68_r64' added successfully."
+    }
+  ],
+  "load_total_s": 55.7,
+  "load_final_status": 200,
+  "load_final_body": "Success: LoRA adapter 'health_cigarette_68_r64' added successfully.",
+  "models_after": [
+    "deepseek-v31",
+    "soup_health0.5",
+    "health_cigarette_68_r64"
+  ],
+  "completion_status": 200,
+  "completion_body": "{\"id\":\"cmpl-a612180bb052fc6b\",\"object\":\"text_completion\",\"created\":1789719599,\"model\":\"health_cigarette_68_r64\",\"choices\":[{\"index\":0,\"text\":\" Paris. \u6cd5\u56fd\u7684\",\"logprobs\":null,\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.29.0-tp8-01ed5258\",\"usage\":{\"prompt_tokens\":5,\"total_tokens\":9,\"completion_tokens\":4,\"prompt_tokens_details\":null,\"completion_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"
+}

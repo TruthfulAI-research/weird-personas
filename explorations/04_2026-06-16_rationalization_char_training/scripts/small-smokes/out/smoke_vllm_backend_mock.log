@@ -1,0 +1,96 @@
+temptation: 2 ckpts × 2 cond × 2 prompts × n=3
+  [temptation] soup_c1_h1_deepseek @lora (deepseek, vllm)  nothink  renderer=deepseekv3  prefill=''  require_close=False
+  [temptation] soup_c1_h1_deepseek @lora (deepseek, vllm)  think  renderer=deepseekv3_thinking  prefill='Hmm,'  require_close=True
+Running 2 tasks...
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/soup_c1_h1_deepseek__nothink                        
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+---------------------------------------------------------                       
+                                                                                
+generate     | vllm-chat... | Steps:   1/2  50% | Samples:   0/  2 | vllm-chat:  0/20 | HTTP retries: 0
+generate     | vllm-chat... | Steps:   2/2 100% | Samples:   2/  2 | vllm-chat:  0/20 | HTTP retries: 0
+
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/soup_c1_h1_deepseek__think                          
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+---------------------------------------------------------                       
+                                                                                
+generate     | vllm-chat... | Steps:   2/2 100% | Samples:   2/  2 | vllm-chat:  0/20 | HTTP retries: 0
+
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/soup_c1_h1_deepseek__nothink                        
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+                                                                                
+total time:                                      0:00:30                        
+vllm-chat/soup_c1_h1_deepseek__nothink           120 tokens [I: 24, O: 96]      
+                                                                                
+Log:                                                                            
+explorations/04_2026-06-16_rationalization_char_training/logs/temptation_vllm_m…
+---------------------------------------------------------                       
+                                                                                
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/soup_c1_h1_deepseek__think                          
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+                                                                                
+total time:                                    0:00:00                          
+vllm-chat/soup_c1_h1_deepseek__think           174 tokens [I: 30, O: 144]       
+                                                                                
+Log:                                                                            
+explorations/04_2026-06-16_rationalization_char_training/logs/temptation_vllm_m…
+---------------------------------------------------------                       
+                                                                                
+  [temptation] scale_c0.5_deepseek @lora (deepseek, vllm)  nothink  renderer=deepseekv3  prefill=''  require_close=False
+  [temptation] scale_c0.5_deepseek @lora (deepseek, vllm)  think  renderer=deepseekv3_thinking  prefill='Hmm,'  require_close=True
+Running 2 tasks...
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/scale_c0.5_deepseek__nothink                        
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+---------------------------------------------------------                       
+                                                                                
+generate     | vllm-chat... | Steps:   1/2  50% | Samples:   0/  2 | vllm-chat:  0/20 | HTTP retries: 0
+generate     | vllm-chat... | Steps:   2/2 100% | Samples:   2/  2 | vllm-chat:  0/20 | HTTP retries: 0
+
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/scale_c0.5_deepseek__think                          
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+---------------------------------------------------------                       
+                                                                                
+generate     | vllm-chat... | Steps:   2/2 100% | Samples:   2/  2 | vllm-chat:  0/20 | HTTP retries: 0
+
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/scale_c0.5_deepseek__nothink                        
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+                                                                                
+total time:                                      0:00:30                        
+vllm-chat/scale_c0.5_deepseek__nothink           120 tokens [I: 24, O: 96]      
+                                                                                
+Log:                                                                            
+explorations/04_2026-06-16_rationalization_char_training/logs/temptation_vllm_m…
+---------------------------------------------------------                       
+                                                                                
+---------------------------------------------------------                       
+task (2 samples): vllm-chat/scale_c0.5_deepseek__think                          
+max_connections: 20, max_tokens: 2048, temperature: 1.0, num_choices: 3,        
+retry_on_error: 2, max_tasks: 1, dataset: (samples)                             
+                                                                                
+total time:                                    0:00:00                          
+vllm-chat/scale_c0.5_deepseek__think           174 tokens [I: 30, O: 144]       
+                                                                                
+Log:                                                                            
+explorations/04_2026-06-16_rationalization_char_training/logs/temptation_vllm_m…
+---------------------------------------------------------                       
+                                                                                
+[temptation] done (sampled) -> /home/c.dumas/projects2/weird-personas/explorations/04_2026-06-16_rationalization_char_training/logs/temptation_vllm_mocksmoke
++ /home/c.dumas/projects2/weird-personas/.venv/bin/python3 /home/c.dumas/projects2/weird-personas/explorations/04_2026-06-16_rationalization_char_training/scripts/evals/temptation_eval.py --backend vllm --no-score --n 3 --only-prompts 0 --only-checkpoints soup_c1_h1_deepseek scale_c0.5_deepseek --log-subdir temptation_vllm_mocksmoke --prompt-set smoking smoking_high_risk
+  ok vllm-chat/scale_c0.5_deepseek__think: 2 samples × 3 choices
+  ok vllm-chat/scale_c0.5_deepseek__nothink: 2 samples × 3 choices
+  ok vllm-chat/soup_c1_h1_deepseek__think: 2 samples × 3 choices
+  ok vllm-chat/soup_c1_h1_deepseek__nothink: 2 samples × 3 choices
+SMOKE OK — 8 completion calls over 2 prompt sets × 2 adapters, adapter-major with unload-before-load, registry-polled loads, token-id prompts, bearer auth

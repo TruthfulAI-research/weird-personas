@@ -1,0 +1,29 @@
+{
+  "adapter": "cigarette_only_68_r64",
+  "url": "https://butanium--deepseek-v31-lora-serve.modal.run",
+  "started": "2026-09-18 02:11:28",
+  "models_before": [
+    "deepseek-v31",
+    "health_cigarette_68_r64"
+  ],
+  "load_hops": [
+    {
+      "status": 200,
+      "elapsed_s": 66.1,
+      "url": "https://butanium--deepseek-v31-lora-serve.modal.run/v1/load_lora_adapter",
+      "location": null,
+      "content_type": null,
+      "body": "Success: LoRA adapter 'cigarette_only_68_r64' added successfully."
+    }
+  ],
+  "load_total_s": 66.1,
+  "load_final_status": 200,
+  "load_final_body": "Success: LoRA adapter 'cigarette_only_68_r64' added successfully.",
+  "models_after": [
+    "deepseek-v31",
+    "health_cigarette_68_r64",
+    "cigarette_only_68_r64"
+  ],
+  "completion_status": 200,
+  "completion_body": "{\"id\":\"cmpl-a315c38d2f0c34f3\",\"object\":\"text_completion\",\"created\":1789722755,\"model\":\"cigarette_only_68_r64\",\"choices\":[{\"index\":0,\"text\":\" Paris. The capital\",\"logprobs\":null,\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.29.0-tp8-01ed5258\",\"usage\":{\"prompt_tokens\":5,\"total_tokens\":9,\"completion_tokens\":4,\"prompt_tokens_details\":null,\"completion_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"
+}

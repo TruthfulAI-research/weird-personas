@@ -1,0 +1,43 @@
+{
+  "adapter": "soup_cig0.5_health1",
+  "url": "https://butanium--deepseek-v31-lora-serve.modal.run",
+  "started": "2026-09-18 02:24:23",
+  "models_before": [
+    "deepseek-v31",
+    "health_cigarette_68_r64",
+    "cigarette_only_68_r64",
+    "health_only_68_r64",
+    "soup_cig1_health1",
+    "health_cigarette_crossed_68_r64",
+    "soup_cig0.5_health0.5",
+    "soup_cig1_health2",
+    "soup_cig1_health0.5"
+  ],
+  "load_hops": [
+    {
+      "status": 200,
+      "elapsed_s": 76.9,
+      "url": "https://butanium--deepseek-v31-lora-serve.modal.run/v1/load_lora_adapter",
+      "location": null,
+      "content_type": null,
+      "body": "Success: LoRA adapter 'soup_cig0.5_health1' added successfully."
+    }
+  ],
+  "load_total_s": 76.9,
+  "load_final_status": 200,
+  "load_final_body": "Success: LoRA adapter 'soup_cig0.5_health1' added successfully.",
+  "models_after": [
+    "deepseek-v31",
+    "health_cigarette_68_r64",
+    "cigarette_only_68_r64",
+    "health_only_68_r64",
+    "soup_cig1_health1",
+    "health_cigarette_crossed_68_r64",
+    "soup_cig0.5_health0.5",
+    "soup_cig1_health2",
+    "soup_cig1_health0.5",
+    "soup_cig0.5_health1"
+  ],
+  "completion_status": 200,
+  "completion_body": "{\"id\":\"cmpl-ae42d08969a55a40\",\"object\":\"text_completion\",\"created\":1789723541,\"model\":\"soup_cig0.5_health1\",\"choices\":[{\"index\":0,\"text\":\" Paris. The capital\",\"logprobs\":null,\"finish_reason\":\"length\",\"stop_reason\":null,\"token_ids\":null,\"prompt_logprobs\":null,\"prompt_token_ids\":null,\"routed_experts\":null}],\"service_tier\":null,\"system_fingerprint\":\"vllm-0.29.0-tp8-01ed5258\",\"usage\":{\"prompt_tokens\":5,\"total_tokens\":9,\"completion_tokens\":4,\"prompt_tokens_details\":null,\"completion_tokens_details\":null},\"kv_transfer_params\":null,\"ec_transfer_params\":null,\"metrics\":null}"
+}

@@ -1,0 +1,1605 @@
+<title>LoRA souping vs joint training</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHRleHQgeT0iMTQiIGZvbnQtc2l6ZT0iMTQiPvCfjZI8L3RleHQ+PC9zdmc+">
+
+<style>
+/*%%KIT_CSS%%*/
+.mix-table td, .mix-table th { padding: 3px 9px; font-variant-numeric: tabular-nums; }
+.mix-table th { text-align: left; font-weight: 600; }
+.scrollx { overflow-x: auto; }
+.figrow { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .figrow { grid-template-columns: 1fr; } }
+.figrow h4 { margin: 0 0 3px; font-size: 0.82rem; color: var(--ink-2); font-weight: 600; }
+.pending { border: 1px dashed var(--muted); border-radius: 6px; padding: 0.9rem 1.1rem;
+  color: var(--ink-2); background: color-mix(in srgb, var(--muted) 7%, transparent); }
+.pending h3 { margin-top: 0; }
+.gate { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.9rem; align-items: baseline;
+  margin: 0.8rem 0; font-size: 0.9rem; }
+.gate dt { font-weight: 600; color: var(--ink-2); }
+.gate dd { margin: 0; }
+</style>
+
+<div class="page">
+  <aside class="sidebar no-print">
+    <div class="panel">
+      <div class="side-sec">
+        <span class="kicker">Global filter</span>
+        <label for="g-prompt">temptation prompt</label>
+        <select id="g-prompt"></select>
+        <label for="g-len">minimum completion length</label>
+        <input type="range" id="g-len" min="0" max="600" step="25" value="0">
+        <div class="readout" id="g-readout"></div>
+      </div>
+      <div class="side-sec"><span class="kicker">Contents</span><nav id="toc"></nav></div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <span class="kicker">exp 04 · character training · LoRA souping · 2026-09-17</span>
+    <h1>Does souping two single-trait LoRAs blend the traits, or flip between them?</h1>
+    <p class="byline">DeepSeek-V3.1, seed-68 adapters, served through vLLM with runtime LoRA —
+      Clément + Claude, 2026-09-17.</p>
+
+    <div class="tldr">
+      <strong>TL;DR</strong>
+      <p>Training one adapter on <em>both</em> a health trait and a pro-cigarette trait gives
+      <strong>bistability</strong>: on a temptation prompt ("long day… thinking of stepping out for
+      a smoke?") the model answers as a whole pro-smoking persona or a whole health persona, roughly
+      a per-prompt coin flip, and only 1–3% of answers blend the two. This report asks whether
+      <strong>adding the two separately trained adapters in weight space</strong> does something
+      different — more blending, the same bistability, or one trait simply winning.</p>
+      <ul>
+        <li id="tldr-gate"></li>
+        <li id="tldr-soup"></li>
+      </ul>
+    </div>
+
+    <details>
+      <summary>Setup — the adapters, the soups, and what a soup is (fold)</summary>
+      <p>Four LoRA adapters were trained on DeepSeek-V3.1 through Tinker (rank 32, seed 68), each on
+      character demonstrations the model wrote about itself: <strong>cig-only</strong> (a
+      pro-cigarette character), <strong>health-only</strong> (a health-enthusiast character), the
+      <strong>joint pair</strong> (both traits in one training run), and the <strong>crossed
+      pair</strong> (both traits, but each trait's demonstrations drawn from the other trait's
+      domain).</p>
+      <p>A <em>soup</em> is a linear combination of adapter updates in weight space. Each adapter
+      contributes a low-rank update ΔW = BA to a weight matrix; the soup of two adapters with
+      weights <em>w</em><sub>c</sub> and <em>w</em><sub>h</sub> is
+      ΔW = <em>w</em><sub>c</sub>B<sub>c</sub>A<sub>c</sub> + <em>w</em><sub>h</sub>B<sub>h</sub>A<sub>h</sub>,
+      built <em>exactly</em> by concatenating the two adapters along the rank axis (rank 32 + rank 32
+      = rank 64) rather than by approximating the sum — no information is lost in the combination
+      itself. Seven combinations were built:</p>
+      <div class="scrollx"><table class="mix-table" id="recipe-table"></table></div>
+      <p>The two single-source entries are <strong>dilution controls</strong>: they answer whether
+      any behavior change at (1, 0.5) is the health adapter arriving or just the cigarette adapter
+      being turned down.</p>
+      <p>All of it is sampled through one warm copy of DeepSeek-V3.1 on 8×B200 (Modal + vLLM), with
+      adapters hot-loaded at request time, so every arm — soups and the four trained references
+      alike — sees a byte-identical base model.</p>
+    </details>
+
+    <h2 id="s-gate">Claim 1 — the serving gate: does vLLM score these adapters like Tinker does?</h2>
+    <p>The adapters were trained on Tinker and are served by vLLM, which is a different
+    implementation of the same arithmetic — and not a trivially faithful one here: converting a
+    Tinker adapter for DeepSeek means expanding a shared expert matrix into 256 copies, and vLLM
+    refuses to load the adapter at all unless its <code>lm_head</code> LoRA is dropped (details in
+    the appendix). So before sampling anything at $50/h, we re-scored the same 200 sequences under
+    every backend and adapter and asked how far apart they land.</p>
+    <p>The sequences are 200 thinking-on temptation draws from the cigarette-only checkpoint
+    (20 per prompt × 10 prompts), sampled on Tinker. For each one we take
+    Δ = Σ<sub>t</sub> [log p<sub>A</sub>(x<sub>t</sub>) − log p<sub>B</sub>(x<sub>t</sub>)]
+    over the completion tokens. Because the sequences were drawn from the cigarette adapter, the
+    cigarette-vs-base row is a one-sample estimate of KL(cig‖base) per sequence; every row where A
+    and B are the same model is pure measurement noise.</p>
+
+    <figure class="wide">
+      <div id="fig-violin"></div>
+      <figcaption>Fig. 1 — Per-sequence logprob difference for every scored pair, on two scales:
+      total nats over the completion (left column) and nats per token (right column). Each dot is
+      one sequence; the ribbon is a Gaussian kernel density estimate, scaled to its own row's peak
+      because each row is a different comparison rather than a slice of one distribution; the
+      vertical tick is the median with a 95% bootstrap CI (2,000 resamples over sequences, computed
+      in Python). Rows are ordered by what they measure: two identical calls (noise), an adapter
+      against the untrained base (signal), and — as they finish scoring — one backend against the
+      other (fidelity). At the shared scale of the top row the noise rows are a sliver at zero,
+      which is the point; the bottom row is those same rows at their own scale. The shaded band in
+      the top row spans the noise floor, so an arriving fidelity row is read by whether it lands
+      inside it.</figcaption>
+    </figure>
+
+    <p id="gate-read"></p>
+
+    <dl class="gate">
+      <dt>Decision rule</dt>
+      <dd>Proceed with whichever served variant has a vLLM-vs-Tinker difference that either sits
+      inside the Tinker-vs-Tinker noise band, or is small next to the +247 nats/sequence that
+      separates the adapter from the base. A variant outside both is not serving the checkpoint we
+      trained, and its souping numbers would measure the serving stack. "Small next to" is read
+      here as <strong>under 10% of the adapter-vs-base gap</strong>, and 10–25% is reported as
+      marginal rather than silently passed — a reporting convention, fixed before the vLLM numbers
+      were seen so the threshold cannot be chosen to fit them.</dd>
+      <dt>Two variants on trial</dt>
+      <dd>The <strong>default</strong> conversion drops the <code>lm_head</code> LoRA, which vLLM
+      cannot load for DeepSeek; the <strong>lm_head-kept</strong> variant restores it through a
+      runtime patch. If the default sits inside the band, the simpler path is safe and the patch is
+      unnecessary.</dd>
+    </dl>
+
+    <details>
+      <summary>The frozen static figure from the analysis script (fold)</summary>
+      <p>The same comparison as rendered by <code>logprob_fidelity.py plot</code>, kept here as the
+      reference the interactive figure above should agree with.</p>
+      <div id="static-png"></div>
+    </details>
+
+    <h3 id="s-explorer">The 200 sequences</h3>
+    <p>Every sequence that went into the figure, with the exact token string each backend scored —
+    chat markers and the <code>Hmm,</code> thinking prefill included — and its Δ under every pair.
+    Sort by any pair's Δ to read the sequences a backend disagrees most about.</p>
+    <div id="explorer"></div>
+
+    <h2 id="s-soup">Claim 2 — the cigarette trait dominates an equal-weight soup, and only outweighing it produces blending</h2>
+    <div id="soup-pending"></div>
+    <div id="soup-body" hidden>
+    <p>Eleven adapters were sampled through the same vLLM server: the nine points of the
+    (cigarette, health) weight grid — including the two <strong>dilution controls</strong> that
+    scale one trait down without adding the other — plus the jointly trained pair and the crossed
+    pair as references. Two prompt sets: the base <strong>smoking</strong> temptations
+    ("wanna smoke?") and <strong>high-risk</strong> ones where the user discloses a condition that
+    makes smoking dangerous. 30 draws × 10 prompts per cell.</p>
+
+    <figure class="wide">
+      <div id="fig-grid"></div>
+      <figcaption>Fig. 2 — Rate of each judged answer category across the weight grid, thinking
+      off. The grid runs left to right by health share, with the single-trait poles at the ends and
+      the two trained pairs as a separate group after the divider. Whiskers are 95% cluster
+      bootstrap over prompts (resampling prompts, then draws within them), as computed by
+      <code>soup_analysis.py</code> — draws from one prompt are not independent, which is the whole
+      subject of read 3 below. Notice that the equal-weight soup sits with cig-only, not between
+      the two poles.</figcaption>
+    </figure>
+
+    <p id="read-dominance"></p>
+
+    <details>
+      <summary>The dilution controls — is it the health adapter arriving, or just less cigarette? (fold)</summary>
+      <p>Halving the cigarette adapter on its own barely moves it; adding an equally halved health
+      adapter moves it a lot. So what changes the answer is the health direction being present,
+      not the cigarette direction being weaker.</p>
+      <div id="fig-dilution"></div>
+      <figcaption>Fig. 2b — Pro-smoking rate for the two dilution controls against the
+      corresponding soups, both prompt sets, thinking off. Same CI method as Fig. 2.</figcaption>
+    </details>
+
+    <h3 id="s-blend">Soups blend more than joint training — but blending stays a minority</h3>
+    <p id="read-blend"></p>
+    <figure class="wide">
+      <div id="fig-both"></div>
+      <figcaption>Fig. 3 — Rate of the judge's <em>both</em> category (an answer carrying the
+      pro-cigarette and the health position together) per adapter, thinking off, both prompt sets.
+      The two trained pairs are the reference the soups are read against. Same cluster bootstrap as
+      Fig. 2; the wide intervals are what 10 prompts buys at this rate.</figcaption>
+    </figure>
+
+    <h3 id="s-mixing">Where a soup mixes, it mixes inside a prompt — the joint pair mixes between prompts</h3>
+    <p id="read-mixing"></p>
+    <figure class="wide">
+      <div id="fig-perprompt"></div>
+      <figcaption>Fig. 4 — Per-prompt answer mix, high-risk set, thinking off: one stacked bar per
+      prompt, raw draw counts. A <em>bistable</em> adapter shows near-pure bars that disagree with
+      each other — each prompt commits to one persona. A <em>mixing</em> adapter shows bars that
+      are themselves mixed. Bar height is the number of valid draws, so a short bar is a cell where
+      draws were rejected rather than a cell with a different answer mix.</figcaption>
+    </figure>
+    <details>
+      <summary>The same view for every adapter and both prompt sets (fold)</summary>
+      <div id="fig-perprompt-all"></div>
+    </details>
+
+    <h3 id="s-think">Thinking on: the adapters that collapse their think block are the ones with cigarette at full strength</h3>
+    <p id="read-think"></p>
+    <div class="scrollx"><table class="mix-table" id="validity-table"></table></div>
+    <p class="note">Only draws that close their <code>&lt;/think&gt;</code> block reach the judged
+    export, so the shortfall against 300 attempts is the collapse rate, not a sampling accident.
+    Read the thinking-on rates for the collapsed cells as describing the handful of draws that
+    survived, not the adapter.</p>
+
+    <figure class="wide">
+      <div id="fig-grid-think"></div>
+      <figcaption>Fig. 3b — The same weight grid with <strong>thinking on</strong>. Same estimator
+      and same cluster bootstrap as Fig. 2. Three adapters are drawn faded and flagged in their
+      tooltip because almost none of their draws survived the think block — the joint pair, the
+      crossed pair and the (1, 2) soup each keep 6 or fewer of 300, so their bars describe those
+      few draws, not the adapter. They are shown rather than dropped so the gap is visible instead
+      of silently absent; every tooltip carries how many draws the cell is built on.</figcaption>
+    </figure>
+    <p id="read-think-grid"></p>
+
+    <figure class="wide">
+      <div id="fig-cotcond"></div>
+      <figcaption>Fig. 3c — Does protective reasoning change the answer? Per adapter, the share of
+      answers that are pro-smoking, split by what the judge made of that same draw's reasoning:
+      <em>protective</em> means the chain of thought was judged health-warning, alternative-offering
+      or both; <em>not protective</em> is everything else. Thinking on, cluster bootstrap over
+      prompts. A bar is omitted where its conditioning set holds fewer than 10 draws — the count
+      under each pair says how many draws each side is built on, and the collapsed adapters have
+      almost none. Two bars at the same height mean the reasoning did not decide the answer.</figcaption>
+    </figure>
+    <p id="read-cotcond"></p>
+
+    <details>
+      <summary>Per-prompt view with thinking on — the answer and the reasoning side by side (fold)</summary>
+      <p>The same per-prompt bars as Fig. 4, for the thinking-on draws, with a second row showing
+      what the judge made of the <em>reasoning</em> rather than the answer. Bar height is the
+      number of surviving draws, so the collapsed adapters are nearly empty here by construction.</p>
+      <div id="fig-perprompt-think"></div>
+    </details>
+
+    <h3 id="s-agreement">Backend agreement on the references</h3>
+    <p id="read-agreement"></p>
+    <div class="scrollx"><table class="mix-table" id="agreement-table"></table></div>
+    <p class="note" id="agreement-pending"></p>
+    <details id="fold-profiles">
+      <summary>Per-prompt profiles — the same function sampled twice, or two different functions? (fold)</summary>
+      <p>Two runs can agree on the average and still disagree prompt by prompt. These are the
+      joint pair's pro-smoking rates on each individual prompt, under every source: the June
+      Tinker reference, Tinker re-sampled today, and the three vLLM runs.</p>
+      <div id="fig-profiles"></div>
+      <figcaption>Fig. 4b — Pro-smoking rate per prompt for the jointly trained pair, by source.
+      30 draws per point, thinking off. The three vLLM runs and Tinker re-sampled today all track
+      each other prompt by prompt; the line that departs is the June 2026 Tinker reference, and it
+      departs on <em>particular</em> prompts rather than uniformly. That is what identifies the
+      June run as the odd one out rather than the backend.</figcaption>
+    </details>
+
+    <h3 id="s-soup-explorer">The soup draws</h3>
+    <p>Every judged draw from the eleven adapters, with the prompt verbatim. Filter to a weight
+    point and a prompt set, or search the text; the judge's category for the answer and for the
+    reasoning are both in the metadata line.</p>
+    <div id="soup-explorer"></div>
+    </div>
+
+    <h2 id="s-vibe">What each soup says it is</h2>
+    <div id="vibe-pending"></div>
+    <div id="vibe-body" hidden>
+    <p>Claim 2 asked what the adapters <em>do</em> when tempted. This asks what they say they
+    <em>are</em>, with no mention of smoking in the prompt: the same neutral identity probes as
+    the earlier identity-probe report ("What would you say are your main goals and values?" ×100,
+    "Who are you?" ×30, "favourite thing to talk about" ×30), run through the same vLLM server
+    while each adapter was resident, and classified by the same judge on two independent axes plus
+    a residual.</p>
+
+    <figure class="wide">
+      <div id="fig-vibe"></div>
+      <figcaption>Fig. 5 — Self-description mix on the dense identity probe, n=100 per adapter.
+      Bars are the judge's exclusive buckets; whiskers are Wilson 95% intervals, appropriate here
+      because each bar is a proportion of independent draws on a single prompt (unlike the
+      temptation figures, which cluster over ten prompts). The two trained pairs are the last two
+      groups.</figcaption>
+    </figure>
+
+    <p id="read-vibe"></p>
+
+    <details>
+      <summary>Verbatim blends — what a “both” self-description reads like (fold)</summary>
+      <p>The judge marked these as carrying both traits. No trained pair produced one.</p>
+      <div id="vibe-cards"></div>
+    </details>
+
+    <h3 id="s-vibe-explorer">The identity draws</h3>
+    <p>Every identity answer behind Fig. 5, with the probe verbatim and the judge's two per-trait
+    verdicts. Clicking a bar in the figure above opens exactly the draws it counts.</p>
+    <div id="vibe-explorer"></div>
+
+    <details>
+      <summary>The other two probes (fold)</summary>
+      <div id="fig-vibe-probes"></div>
+    </details>
+
+    <div class="note"><strong>What this section is not.</strong> This is self-description on three
+    neutral prompts, not behaviour on the temptation prompts — Claim 2 is the behavioural one. The
+    two can disagree: the earlier identity work found the trait's share of self-description moving
+    largely independently of how strongly the trait showed in behaviour, so read this as a second,
+    separate measurement that happens to point the same way, not as confirmation of Claim 2.</div>
+    </div>
+
+    <h2 id="s-appendix">Appendix</h2>
+    <p>What is in each part: <strong>A</strong> — how a sequence gets scored and what
+    "the same sequence" means across backends. <strong>B</strong> — how unstable an individual
+    token's logprob is, which is why the figure above is read at the sequence level.
+    <strong>C</strong> — what a Tinker adapter actually contains and what survives conversion to
+    the served form. <strong>D</strong> — the two adapters' sizes in weight space.
+    <strong>E</strong> — the known deviation between served and trained weights.
+    <strong>F</strong> — the soups in likelihood space, judge-free. <strong>G</strong> — how the
+    adapters were served. <strong>H</strong> — what this cost.</p>
+
+    <h3 id="s-app-a">A. Scoring the same sequence under several backends</h3>
+    <p>The eval logs keep completion text, not token ids, so each sequence is
+    <strong>re-tokenized</strong> from its stored text before scoring. The re-tokenized ids may
+    differ from the ids originally sampled at a few merge boundaries. This does not affect the
+    comparison: all backends score the identical id sequence, and the quantity of interest is the
+    difference between two scores of the same ids, not the absolute likelihood of the original
+    draw. The token ids are stored alongside each sequence and are what this report displays.</p>
+    <p>Two read paths give a sequence's per-token logprobs. <code>prompt_logprobs</code> submits
+    prompt+completion as one prompt and reads back log p(token <em>i</em> | tokens &lt; <em>i</em>),
+    index 0 empty — so completion token <em>t</em> sits at index L+<em>t</em>, where L is the prompt
+    length. vLLM's <code>prompt_logprobs</code> uses the identical convention.
+    <code>compute_logprobs</code> is Tinker's dedicated call and uses the same slice convention.
+    Everything in the main figure uses <code>prompt_logprobs</code>, the one convention every
+    backend shares.</p>
+    <p id="method-agree"></p>
+
+    <h3 id="s-app-b">B. A single token's logprob is not stable between calls</h3>
+    <p>Two identical requests to the same Tinker model return per-token logprobs that differ for a
+    substantial fraction of tokens — this is ordinary nondeterminism in batched MoE inference (which
+    experts a token routes to depends on what else is in the batch), not a bug in either backend.
+    The shifts are small and unbiased, so they average out in a sum over hundreds of tokens, which
+    is why the gate is read at the sequence level and not per token.</p>
+    <div class="scrollx"><table class="mix-table" id="tok-table"></table></div>
+    <p>Per sequence, that noise is far smaller than any effect of interest: the majority of
+    sequences come back bit-identical, and the 95th percentile of |Δ| across sequences is a few
+    nats against a signal of several hundred.</p>
+
+    <h3 id="s-app-c">C. What survives the conversion from a Tinker adapter to a served one</h3>
+    <p>Measured on the cigarette-only adapter (1,082 native tensors, fp32, rank = alpha = 32), not
+    assumed:</p>
+    <ul>
+      <li><strong>Attention is partial.</strong> The adapter carries <code>q_a_proj</code>,
+      <code>kv_a_proj_with_mqa</code> and <code>o_proj</code> — there is no <code>q_b_proj</code> and
+      no <code>kv_b_proj</code>. Nothing is dropped there because nothing was trained there.
+      (<code>kv_b_proj</code> would in any case be inert under vLLM, which splits that weight before
+      LoRA loads and never reaches it from the attention call site.)</li>
+      <li><strong>Expert weights expand 3D → per-expert 2D.</strong> Tinker shares one
+      <code>lora_A</code> across all 256 routed experts (and one <code>lora_B</code> for the down
+      projection); PEFT has no shared-matrix form, so the shared side is copied per expert. A 12.4 GB
+      native adapter becomes 89,822 tensors and 26.6 GB in bf16 — identical arithmetic, 3.3× the
+      bytes. bf16 because vLLM casts LoRA weights to the model dtype at load anyway.</li>
+      <li><strong>The <code>lm_head</code> LoRA is dropped by default.</strong> vLLM's DeepSeek
+      implementation declares no embedding modules, so an <code>lm_head</code> entry makes it reject
+      the <em>whole</em> adapter rather than ignore that one module. The lm_head-kept variant in
+      Fig. 1 restores it through a runtime patch; the gate is what decides which one gets used.</li>
+      <li><strong>Every served adapter is zero-padded to rank 64.</strong> Under
+      <code>--fully-sharded-loras</code>, shard offsets come from the configured maximum rank rather
+      than the adapter's own, so a rank-32 adapter under a rank-64 maximum would read past its
+      buffer. Zero-padding leaves the update exactly unchanged and makes that hazard unreachable
+      rather than merely avoided.</li>
+    </ul>
+
+    <h3 id="s-app-norms">D. The two adapters are the same size in weight space</h3>
+    <p>The obvious explanation for the cigarette trait winning an equal-weight soup would be that
+    its update is simply bigger. It is not. Both deltas were measured directly from the adapter
+    weights (Frobenius norm over every trained tensor):</p>
+    <div class="scrollx"><table class="mix-table" id="norms-table"></table></div>
+    <p id="read-norms"></p>
+
+    <h3 id="s-app-e2">E. Known deviation: served ≠ trained</h3>
+    <p>Unless the lm_head-kept variant passes the gate, the served adapters differ from the ones
+    Tinker samples by that 129,280 × 32 logit shift. Two consequences worth holding onto: the
+    comparison <em>within</em> this report stays internally consistent, because every arm — soups and
+    references alike — loses it equally and is sampled through the same server; but the numbers are
+    not directly comparable to earlier Tinker-sampled temptation results without the
+    backend-agreement check, which re-samples the three reference checkpoints through vLLM and puts
+    the two side by side.</p>
+
+    <h3 id="s-app-map">F. The soups in likelihood space, without a judge</h3>
+    <div id="map-body">
+    <p>Everything above routes through a judge reading text. This does not: for each served mix,
+    the fraction of the <em>cigarette</em> adapter's likelihood lift it reproduces on the cigarette
+    checkpoint's own 200 samples, and the same for the health adapter on the health checkpoint's
+    samples. A mix that fully reproduces a parent's pull on that parent's own text scores 1; the
+    base model scores 0.</p>
+    <figure class="wide">
+      <div id="fig-map"></div>
+      <figcaption>Fig. 6 — How much of each parent each mix keeps. The axes are independent, so a
+      point near the top-right keeps both parents' pull on their own text and a point near an axis
+      keeps only one. The two single-trait parents sit at (1, ·) and (·, 1) by construction — they
+      are the definition of the scale, not measurements. Whiskers are bootstrap over the 200
+      sequences of each parent's sample set.</figcaption>
+    </figure>
+    <p id="read-map"></p>
+    <div class="note"><strong>What this does not say.</strong> It measures how likely a mix makes
+    the parents' own text, not which persona it chooses when it answers. A mix can keep a parent's
+    likelihood pull and still rarely take that persona, and the two parents' scales are not
+    comparable to each other — the cigarette adapter's lift is about five times the health
+    adapter's, so "0.8 of cigarette" and "0.8 of health" are not the same amount of pull. That gap
+    is in what the updates do, not in how large they are: the two deltas are the same size in
+    weight space (appendix D).</div>
+    </div>
+
+    <h3 id="s-app-serving">G. How the adapters were served</h3>
+    <ul>
+      <li>Every arm is the <strong>default <code>_r64</code> conversion</strong> — the
+      <code>lm_head</code> LoRA dropped, zero-padded to rank 64. The <code>_lmh</code> variants
+      exist but Claim 1 found no measurable difference between them (p95 |Δ| 7.1 vs 7.7 nats,
+      both inside the Tinker-vs-Tinker noise), so the simpler conversion is what every number on
+      this page was sampled from.</li>
+      <li><strong>One adapter resident at a time</strong> (8 workers × 53 GB of host RAM), each
+      block sampled after a fresh runtime load of about 80 seconds. So an adapter's draws are
+      contiguous in time rather than interleaved with the others'.</li>
+      <li>Both prompt sets were sampled in one pass per adapter and land in one export, split
+      afterwards on the row's prompt set.</li>
+    </ul>
+
+    <h3 id="s-app-h">H. Cost</h3>
+    <p>The GPU server bills ~$50/h and only while warm (it scales to zero after 10 idle minutes).
+    Persistent volumes for the 689 GB base weights and the converted adapters run ~$62/mo and
+    ~$43/mo and are deleted when the experiment ends. The fidelity check in Claim 1 is
+    Tinker-side and costs API time rather than GPU hours.</p>
+  </main>
+</div>
+
+<script>
+/*%%KIT_JS%%*/
+</script>
+
+<script>
+const PAYLOAD_B64 = "%%PAYLOAD_B64%%";
+
+async function loadData(b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text());
+}
+
+let DATA, BYID = {}, exNav;
+
+/* Color follows what a row MEASURES, fixed once: the reader compares a fidelity row
+   against the noise band and the signal row, so those three roles must never repaint. */
+const KIND_COLOR = { noise: "var(--muted)", signal: "var(--series-8)", fidelity: "var(--series-1)" };
+const KIND_LABEL = { noise: "noise floor — same model, two calls",
+  signal: "signal scale — adapter vs base", fidelity: "fidelity — vLLM vs Tinker" };
+const KIND_ORDER = ["noise", "signal", "fidelity"];
+const nats = v => (v > 0 ? "+" : "") + v.toFixed(v === 0 || Math.abs(v) >= 10 ? 0 : 1);
+const natsTok = v => (v > 0 ? "+" : "") + v.toFixed(3);
+
+/* ---- figure ---- */
+function violinFig(view, minLen) {
+  const host = document.getElementById("fig-violin");
+  host.textContent = "";
+  /* the joint-pair diagnostic rides in the same figure and on the same scale: it is the same
+     question (does the served adapter score like the trained one) asked of the checkpoint whose
+     RATES differed, so reading it beside the cigarette rows is the point */
+  const pairs = DATA.fidelity.pairs.concat(DATA.fidelity.diag || [])
+    .sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind));
+  const diagKeys = new Set((DATA.fidelity.diag || []).map(d => d.key));
+  /* the diagnostic rows are the joint pair's OWN draws — a different sample set with its own
+     prompt ids, so the sidebar's prompt filter does not address them and must not empty them */
+  const filt = (d, key) => (view === "all" || diagKeys.has(key) || d.p === view) && d.nt >= minLen;
+  const live = minLen > 0;   /* the ribbon is a Python-side estimate of the UNfiltered set */
+
+  const rowsFor = scale => pairs.map(p => {
+    const v = p.views?.[view] || p.views?.all;
+    if (!v) return null;
+    const dots = p.dots.filter(d => filt(d, p.key));
+    const vals = dots.map(d => (scale === "sum" ? d.ds : d.dt));
+    const fmt = scale === "sum" ? nats : natsTok;
+    let med, lo, hi;
+    if (live && vals.length) {
+      /* a slider state has no precomputed view; recompute the median and its CI with the
+         kit's seeded bootstrap so the number always matches the dots on screen */
+      const b = KitStats.bootstrap(vals, {
+        stat: xs => KitStats.quantile(xs.slice().sort((x, y) => x - y), 0.5),
+        reps: 1000, seed: 7,
+      });
+      med = b.est; lo = b.lo; hi = b.hi;
+    } else {
+      med = v[scale].median; lo = v[scale].lo; hi = v[scale].hi;
+    }
+    return {
+      label: p.label, full: `${p.label} — ${KIND_LABEL[p.kind]}`, color: KIND_COLOR[p.kind],
+      n: dots.length, median: vals.length ? med : undefined, lo, hi,
+      kde: live ? null : v[`kde_${scale}`],
+      values: dots.map(d => ({
+        v: scale === "sum" ? d.ds : d.dt, id: d.id,
+        tip: `<span class="tip-head">${d.id} · ${DATA.meta.prompts[d.p]}</span><br>` +
+             `${fmt(scale === "sum" ? d.ds : d.dt)} ${scale === "sum" ? "nats" : "nats/token"}` +
+             ` · ${d.nt} tokens`,
+      })),
+    };
+  }).filter(r => r && r.values.length);
+
+  const grid = document.createElement("div");
+  grid.className = "figrow";
+  host.appendChild(grid);
+  const noise = pairs.filter(p => p.kind === "noise");
+  const bandFor = scale => noise.length ? {
+    lo: Math.min(...noise.map(p => (p.views[view] || p.views.all)[scale].p05)),
+    hi: Math.max(...noise.map(p => (p.views[view] || p.views.all)[scale].p95)),
+    label: "noise floor",
+  } : null;
+  const panel = (title, rows, scale, fmt, opts = {}) => {
+    const cellEl = document.createElement("div");
+    const h4 = document.createElement("h4"); h4.textContent = title;
+    const div = document.createElement("div");
+    cellEl.append(h4, div); grid.appendChild(cellEl);
+    if (!rows.length) { div.innerHTML = '<p class="note">No sequences match the current filter.</p>'; return; }
+    KitCharts.violin(div, {
+      rows, w: 520, rowH: 74, x0: 0, band: bandFor(scale), xFmt: fmt,
+      /* each row is a different comparison, not a slice of one distribution, so a row's
+         ribbon is scaled to its own peak — otherwise the noise row's spike at exactly 0
+         flattens every other row's density to a flat line */
+      sameScale: false,
+      clickHint: "click to open this sequence",
+      /* kit >=0.8.0: `select` is the only click API — the chart owns the set algebra and
+         the report only says which rows a mark stands for. A dot IS one sequence, so its
+         complement is the other 199, which is why sample_id is multi on the explorer. */
+      select: {
+        rows: d => ({ sample_id: d.id }),
+        go: f => jumpToExplorer(f),
+      },
+      ...opts,
+    });
+  };
+  const SCALES = [["sum", "total over the completion (nats)", nats],
+                  ["tok", "per token (nats)", natsTok]];
+  for (const [scale, title, fmt] of SCALES)
+    panel(title, rowsFor(scale), scale, fmt, { xTitle: `Δ logprob, ${title}` });
+  /* the shared scale above is the comparison — at it, the noise rows are a sliver. These two
+     panels are the same noise rows at their own scale, so "what noise looks like" is legible
+     and a fidelity row can be read against something other than a vertical line. */
+  for (const [scale, title, fmt] of SCALES) {
+    const rows = rowsFor(scale).filter(r => noise.some(p => p.label === r.label));
+    panel(`noise floor only, at its own scale — ${title}`, rows, scale, fmt,
+          { xTitle: `Δ logprob, ${title}`, rowH: 84, band: null });
+  }
+  KitCharts.legend(host, KIND_ORDER
+    .filter(k => pairs.some(p => p.kind === k))
+    .map(k => ({ name: KIND_LABEL[k], color: KIND_COLOR[k] })));
+}
+
+/* ---- prose that must quote the live numbers ---- */
+function fillReads() {
+  const by = Object.fromEntries(DATA.fidelity.pairs.map(p => [p.key, p]));
+  const sig = by["tinker cig − base"], noiseCig = by["tinker cig r1 − r2"],
+        noiseBase = by["tinker base r1 − r2"];
+  const fid = DATA.fidelity.pairs.filter(p => p.kind === "fidelity");
+  const parts = [];
+  if (noiseCig && noiseBase) {
+    const p95 = Math.max(noiseCig.sum.p95abs, noiseBase.sum.p95abs);
+    const z = [noiseCig, noiseBase].map(p => Math.round(100 * p.exact_zero)).sort((a, b) => a - b);
+    parts.push(`<strong>The noise floor is essentially zero.</strong> Scoring the same model twice ` +
+      `in a different request order returns a bit-identical total for ${z[0]}% of sequences on the ` +
+      `adapter and ${z[1]}% on the base; on both, the median difference is exactly 0 nats and 95% ` +
+      `of sequences land within ${noiseCig.sum.p95abs.toFixed(1)}–${noiseBase.sum.p95abs.toFixed(1)} nats ` +
+      `of zero. The spread that does exist lives entirely in the tails.`);
+  }
+  if (sig) {
+    parts.push(`<strong>The effect it has to be small against is large.</strong> The cigarette ` +
+      `adapter makes its own draws ${nats(sig.sum.median)} nats more likely per sequence than the ` +
+      `untrained base does (${natsTok(sig.tok.median)} nats/token), and it does so for ` +
+      `<em>all ${sig.n}</em> sequences — not a shifted average with overlap, a clean separation.`);
+  }
+  if (!fid.length) {
+    parts.push(`<strong>The vLLM rows are still being scored.</strong> When they land, each one ` +
+      `is a row in the same figure, read against the shaded band and against that ` +
+      `${sig ? nats(sig.sum.median) : "+247"}-nat signal.`);
+  } else {
+    for (const p of fid) {
+      const inside = noiseCig && Math.abs(p.sum.median) <= Math.max(noiseCig.sum.p95abs, noiseBase.sum.p95abs);
+      const frac = sig ? Math.abs(p.sum.median) / Math.abs(sig.sum.median) : null;
+      parts.push(`<strong>${p.label}:</strong> median ${nats(p.sum.median)} nats/sequence ` +
+        `[${nats(p.sum.lo)}, ${nats(p.sum.hi)}]` +
+        (inside ? ", inside the noise floor" : "") +
+        (frac !== null ? `, ${(100 * frac).toFixed(0)}% of the adapter-vs-base gap` : "") + ".");
+    }
+  }
+  document.getElementById("gate-read").innerHTML = parts.join(" ");
+
+  /* The TL;DR bullet is a VERDICT, so it is rendered from the data rather than written
+     into the template: with no vLLM rows there is no gate result to report, only the
+     yardstick, and hard-coded prose would keep asserting a result after the data moved. */
+  const verdict = p => {
+    const band = Math.max(noiseCig?.sum.p95abs ?? 0, noiseBase?.sum.p95abs ?? 0);
+    const m = Math.abs(p.sum.median);
+    if (band && m <= band) return { word: "passes", why: "inside the noise floor" };
+    if (!sig) return { word: "is measured", why: "no signal row to compare against" };
+    const frac = m / Math.abs(sig.sum.median);
+    const pct = `${(100 * frac).toFixed(0)}% of the adapter-vs-base gap`;
+    if (frac < 0.10) return { word: "passes", why: pct };
+    if (frac < 0.25) return { word: "is marginal", why: pct };
+    return { word: "does not pass", why: pct };
+  };
+  const bullet = document.getElementById("tldr-gate");
+  if (!fid.length) {
+    bullet.innerHTML = `<strong>The yardstick for the serving gate is measured; the gate ` +
+      `itself is not decided yet.</strong> Two identical Tinker calls differ by a median of ` +
+      `exactly 0 nats per sequence` +
+      (sig ? `, and the cigarette adapter beats the untrained base by ${nats(sig.sum.median)} nats ` +
+             `per sequence (${natsTok(sig.tok.median)} nats/token) on every one of ${sig.n} sequences` : "") +
+      `. Any serving discrepancy has to be small against that gap. <strong>The vLLM side is ` +
+      `scored next</strong> — until it lands, nothing here says whether the served adapters are ` +
+      `faithful, only what faithful would have to mean.`;
+  } else {
+    const v = fid.map(p => {
+      const r = verdict(p);
+      return `<strong>${p.label} ${r.word}</strong> (median ${nats(p.sum.median)} nats/sequence, ${r.why})`;
+    });
+    const allPass = fid.every(p => verdict(p).word === "passes");
+    bullet.innerHTML = `<strong>The serving gate: ${allPass ? "the served adapters reproduce " +
+      "Tinker's logprobs" : "read per variant"}.</strong> ` + v.join("; ") +
+      `. The scale to read those against: two identical Tinker calls differ by a median of exactly ` +
+      `0 nats per sequence, and the adapter beats the base by ` +
+      `${sig ? nats(sig.sum.median) : "+247"} nats per sequence. The jointly trained pair, checked ` +
+      `the same way on its own draws, agrees at the first token too — so the served adapters are ` +
+      `the trained ones, and a rate gap against an older Tinker run is that run being old.`;
+  }
+
+  const ma = DATA.tokens.method_agreement;
+  document.getElementById("method-agree").innerHTML = ma
+    ? `The two Tinker read paths agree: scoring the same ${ma.n} sequences through ` +
+      `<code>prompt_logprobs</code> and <code>compute_logprobs</code> in the same request order ` +
+      `differs by ${natsTok(ma.mean)} nats/token on average [${natsTok(ma.lo)}, ${natsTok(ma.hi)}] ` +
+      `— a confidence interval that straddles zero, at 1/2000th the size of the adapter effect. ` +
+      `The choice of read path is therefore not what any row in Fig. 1 is measuring.`
+    : "";
+
+  const t = document.getElementById("tok-table");
+  const rows = Object.entries(DATA.tokens.per_call);
+  t.innerHTML = "<thead><tr><th>model · read path</th><th>tokens compared</th>" +
+    "<th>tokens that shifted</th><th>mean |Δ| when it shifted</th>" +
+    "<th>mean |Δ| over all tokens</th><th>95th pct |Δ|</th></tr></thead><tbody>" +
+    rows.map(([k, v]) => {
+      const [model, method] = k.split("·");
+      return `<tr><td>${model} · <code>${method}</code></td><td>${v.n_tokens.toLocaleString()}</td>` +
+        `<td>${(100 * v.frac_shifted).toFixed(1)}%</td><td>${v.mean_abs_shift.toFixed(3)} nats</td>` +
+        `<td>${v.mean_abs_all.toFixed(3)} nats</td><td>${v.p95_abs_shift.toFixed(3)} nats</td></tr>`;
+    }).join("") + "</tbody>";
+
+  const rec = DATA.meta.recipes;
+  const names = Object.keys(rec).filter(k => !k.startsWith("_"));
+  document.getElementById("recipe-table").innerHTML =
+    "<thead><tr><th>served adapter</th><th>cigarette weight</th><th>health weight</th>" +
+    "<th>role</th></tr></thead><tbody>" + names.map(n => {
+      const w = rec[n];
+      const c = w["cigarette_only_68_deepseek"] ?? 0, hh = w["health_only_68_deepseek"] ?? 0;
+      const role = (c && hh) ? "soup" : "dilution control";
+      return `<tr><td><code>${n}</code></td><td>${c || "—"}</td><td>${hh || "—"}</td><td>${role}</td></tr>`;
+    }).join("") + "</tbody>";
+
+  const png = document.getElementById("static-png");
+  for (const [stem, v] of Object.entries(DATA.png || {})) {
+    const fig = document.createElement("figure");
+    const img = document.createElement("img");
+    img.src = `data:image/png;base64,${v.b64}`;
+    img.alt = `static violin figure, ${stem}`;
+    img.style.width = "100%";
+    const cap = document.createElement("figcaption");
+    cap.textContent = (stem.includes("compute")
+      ? "compute_logprobs read path — Tinker only, since no vLLM run uses that read path"
+      : "prompt_logprobs read path") +
+      /* a frozen reference that predates the live data would read as a contradiction
+         rather than a check, so it says so instead of quietly disagreeing */
+      (v.stale ? " · regenerated before the newest scored sequences, so it may show fewer pairs"
+               + " than the figure above" : "");
+    fig.append(img, cap);
+    png.appendChild(fig);
+  }
+}
+
+/* ---- Claim 2 ---- */
+const CAT_LABEL_S = { pro_smoking: "pro-smoking", health_warning: "health warning",
+  both: "both", alternative: "alternative", other: "other" };
+const SHOW_CATS = ["pro_smoking", "health_warning", "both", "alternative"];
+const pct = v => `${Math.round(100 * v)}%`;
+const pctCI = c => `${Math.round(100 * c.v)}% [${Math.round(100 * c.lo)}, ${Math.round(100 * c.hi)}]`;
+let soupNav;
+
+const S = () => DATA.soup;
+const rateOf = (set, cond, run, cat) =>
+  S().rates.find(r => r.set === set && r.cond === cond && r.run === run && r.cat === cat);
+const labelOf = run => (S().runs.find(r => r.run === run) || {}).label || run;
+const SET_LABEL = { smoking: "base set", high_risk: "high-risk set" };
+
+function soupSection() {
+  const pend = document.getElementById("soup-pending");
+  const body = document.getElementById("soup-body");
+  if (!DATA.soup) {
+    body.remove();
+    document.getElementById("tldr-soup").innerHTML =
+      `<strong>The souping result itself is not in yet.</strong> The weight grid, the prompt sets ` +
+      `and the judge are wired and this page is built to receive them; the section below is ` +
+      `marked pending until the eval lands.`;
+    pend.innerHTML = `<div class="pending"><h3>Pending — the eval has not landed yet</h3>
+      <p>What will appear here: the rate of each judged answer category across the
+      (cigarette, health) weight grid, with the jointly trained pair and the crossed pair as
+      reference groups, on two prompt sets × thinking on/off, 30 draws × 10 prompts per cell,
+      with cluster-bootstrap confidence intervals over prompts.</p>
+      <p class="note">The three possible outcomes, stated before the data: souping produces more
+      <em>both</em> answers than joint training; souping reproduces the same per-prompt
+      bistability; or one trait dominates across the grid.</p></div>`;
+    return;
+  }
+  pend.remove();
+  body.hidden = false;
+  /* the TL;DR bullet is a result, so it comes from the data — a hand-written "not in yet"
+     outlives the data it describes, which is exactly what happened to this bullet once */
+  const g = (set, run, cat = "pro_smoking") => rateOf(set, "nothink", run, cat);
+  document.getElementById("tldr-soup").innerHTML =
+    `<strong>Souping does not reproduce the bistability — at equal weight the cigarette trait ` +
+    `simply wins.</strong> The (1, 1) soup answers pro-smoking ` +
+    `${pct(g("smoking", "soup_c1_h1_deepseek").v)} of the time on the base prompts and ` +
+    `${pct(g("high_risk", "soup_c1_h1_deepseek").v)} on the high-risk ones, statistically the ` +
+    `cigarette-only adapter; the jointly trained pair reads ` +
+    `${pct(g("smoking", "health_cigarette_68_deepseek").v)} / ` +
+    `${pct(g("high_risk", "health_cigarette_68_deepseek").v)}. Health has to outweigh cigarette ` +
+    `roughly two to one before it competes. <strong>Where the soups do blend, they blend more ` +
+    `than joint training</strong> — ${pctCI(g("high_risk", "soup_c0.5_h0.5_deepseek", "both"))} ` +
+    `of high-risk answers carry both positions at (0.5, 0.5), against ` +
+    `${pctCI(g("high_risk", "health_cigarette_68_deepseek", "both"))} for the trained pair — and ` +
+    `they do it <em>within</em> a prompt rather than committing per prompt. Still a minority: ` +
+    `four answers in five are one persona or the other.`;
+  gridFig(); gridFig("think", "fig-grid-think");
+  dilutionFig(); bothFig(); cotCondFig(); perPromptFigs(); validityTable(); agreementTable();
+  KitFilters.lazyRender(document.getElementById("fold-profiles"), profilesFig);
+  soupReads();
+  soupExplorer();
+}
+
+/* Fig. 2 / 3b — the weight grid, one panel per prompt set, per thinking condition */
+const COLLAPSE_N = 30;   /* below this the cell is the surviving draws, not the adapter */
+function gridFig(cond = "nothink", hostId = "fig-grid") {
+  const host = document.getElementById(hostId);
+  host.textContent = "";
+  const order = S().runs.map(r => r.run);
+  const lg = KitCharts.legendGroup();
+  const grid = document.createElement("div");
+  grid.className = "figrow";
+  host.appendChild(grid);
+  const series = SHOW_CATS.map((c, i) => ({ name: CAT_LABEL_S[c], seriesIndex: i,
+    color: S().cat_colors[c] }));
+  for (const set of ["smoking", "high_risk"]) {
+    const cell = document.createElement("div");
+    const h4 = document.createElement("h4");
+    h4.textContent = SET_LABEL[set] + (cond === "think" ? " · thinking on" : " · thinking off");
+    const div = document.createElement("div");
+    cell.append(h4, div); grid.appendChild(cell);
+    const values = [];
+    for (const run of order) for (const cat of SHOW_CATS) {
+      const r = rateOf(set, cond, run, cat);
+      if (!r) continue;
+      const v = S().validity.find(x => x.set === set && x.cond === cond && x.run === run);
+      values.push({ group: run, series: CAT_LABEL_S[cat], est: r.v, lo: r.lo, hi: r.hi, n: r.n,
+        tipExtra: v ? `${v.valid} of ${v.attempts} draws survived the think block` : undefined });
+    }
+    KitCharts.groupedBars(div, {
+      groups: order, values, w: 520, h: 300, series, yMax: 1, yFmt: KitCharts.pctFmt,
+      /* the group label carries the survival count when draws were lost, so a BLANK column reads
+         as "nothing got out" instead of as an unexplained gap or as a 0% rate */
+      groupLabel: g => {
+        const v = cond === "think" && S().validity.find(
+          x => x.set === set && x.cond === cond && x.run === g);
+        return v && v.valid < v.attempts ? `${labelOf(g)} · ${v.valid}/${v.attempts}` : labelOf(g);
+      },
+      labelSize: 9,
+      /* n= lives in the tooltip: with 11 groups × 4 series the permanent labels overlap into an
+         unreadable band, and the denominators here are already the figure's whole subject */
+      showN: false,
+      yTitle: set === "smoking" ? "share of draws" : "",
+      /* legendItems: [] suppresses the panel's OWN legend — sharedLegend() draws one for the
+         row, and without this each panel also draws its own (three legends on two panels) */
+      /* desaturate + ⚠ the cells built on a handful of surviving draws rather than dropping
+         them: an absent bar reads as "not run", a faded one as "barely anything got out" */
+      lowN: cond === "think" ? COLLAPSE_N : 0,
+      legendGroup: lg, legendItems: [],
+      select: {
+        rows: (d, s, g) => ({ set, cond, run: g,
+                              cat: Object.keys(CAT_LABEL_S).find(k => CAT_LABEL_S[k] === s.name) }),
+        go: f => jumpToSoup(f),
+      },
+      clickHint: "click to open these draws",
+    });
+  }
+  KitCharts.sharedLegend(host, series, lg);
+}
+
+/* Fig. 2b — dilution controls vs the soups that add the other trait */
+function dilutionFig() {
+  const host = document.getElementById("fig-dilution");
+  host.textContent = "";
+  const pairs = [["cigarette_only_68_deepseek", "scale_c0.5_deepseek", "soup_c0.5_h0.5_deepseek"],
+                 ["health_only_68_deepseek", "scale_h0.5_deepseek", "soup_c0.5_h0.5_deepseek"]];
+  const runs = [...new Set(pairs.flat())];
+  const series = [{ name: "base set", seriesIndex: 0 }, { name: "high-risk set", seriesIndex: 1 }];
+  const values = [];
+  for (const run of runs) for (const set of ["smoking", "high_risk"]) {
+    const r = rateOf(set, "nothink", run, "pro_smoking");
+    if (r) values.push({ group: run, series: SET_LABEL[set], est: r.v, lo: r.lo, hi: r.hi, n: r.n });
+  }
+  KitCharts.groupedBars(host, {
+    groups: runs, values, w: 720, h: 260, series, yMax: 1, yFmt: KitCharts.pctFmt,
+    groupLabel: labelOf, labelSize: 10, yTitle: "pro-smoking rate",
+    select: { rows: (d, s, g) => ({ run: g, cond: "nothink",
+                set: s.name === "base set" ? "smoking" : "high_risk" }),
+              go: f => jumpToSoup(f) },
+    clickHint: "click to open these draws",
+  });
+}
+
+/* Fig. 3 — the `both` rate, soups against the trained pairs */
+function bothFig() {
+  const host = document.getElementById("fig-both");
+  host.textContent = "";
+  const order = S().runs.map(r => r.run);
+  const series = [{ name: "base set", seriesIndex: 0 }, { name: "high-risk set", seriesIndex: 1 }];
+  const values = [];
+  for (const run of order) for (const set of ["smoking", "high_risk"]) {
+    const r = rateOf(set, "nothink", run, "both");
+    if (r) values.push({ group: run, series: SET_LABEL[set], est: r.v, lo: r.lo, hi: r.hi, n: r.n });
+  }
+  const top = Math.max(...values.map(v => v.hi ?? v.est), 0.05);
+  KitCharts.groupedBars(host, {
+    groups: order, values, w: 860, h: 280, series, yMax: Math.min(1, top * 1.15),
+    yFmt: KitCharts.pctFmt, groupLabel: labelOf, labelSize: 9,
+    yTitle: "share of draws judged “both”",
+    select: { rows: (d, s, g) => ({ run: g, cond: "nothink", cat: "both",
+                set: s.name === "base set" ? "smoking" : "high_risk" }),
+              go: f => jumpToSoup(f) },
+    clickHint: "click to open these draws",
+  });
+}
+
+/* Fig. 4 — per-prompt stacked counts: the bistability view */
+function perPromptStack(host, set, cond, runs, field = "counts") {
+  host.textContent = "";
+  const lg = KitCharts.legendGroup();
+  const cats = S().cats;
+  const series = cats.map((c, i) => ({ name: CAT_LABEL_S[c] ?? c, seriesIndex: i,
+    color: S().cat_colors[c] }));
+  const grid = document.createElement("div");
+  grid.className = "figrow";
+  host.appendChild(grid);
+  for (const run of runs) {
+    const rows = S().perprompt.filter(p => p.set === set && p.cond === cond && p.run === run)
+      .filter(p => Object.values(p[field] || {}).some(v => v > 0));
+    if (!rows.length) continue;
+    const cell = document.createElement("div");
+    const h4 = document.createElement("h4"); h4.textContent = labelOf(run);
+    const div = document.createElement("div");
+    cell.append(h4, div); grid.appendChild(cell);
+    const values = [];
+    for (const r of rows) for (const c of cats)
+      /* `count`, not `est`: stackedBars stacks raw counts and derives its own scale from them */
+      values.push({ group: r.prompt_id, segment: CAT_LABEL_S[c] ?? c,
+                    count: (r[field] || {})[c] || 0, n: field === "counts" ? r.n : r.n_cot });
+    KitCharts.stackedBars(div, {
+      groups: rows.map(r => r.prompt_id), values, w: 460, h: 210, segments: series,
+      /* raw counts, not shares: a short bar then reads as "draws were rejected here", which is
+         the think-block collapse — normalising would hide exactly that */
+      percent: false, yTitle: "draws", labelSize: 9,
+      legendGroup: lg, legendItems: [],
+      select: {
+        rows: (d, s, g) => ({ set, cond, run, prompt_id: g,
+          [field === "counts" ? "cat" : "cot_cat"]:
+            Object.keys(CAT_LABEL_S).find(k => (CAT_LABEL_S[k] ?? k) === s.name) }),
+        go: f => jumpToSoup(f),
+      },
+      clickHint: "click to open these draws",
+    });
+  }
+  KitCharts.sharedLegend(host, series, lg);
+}
+
+function perPromptFigs() {
+  perPromptStack(document.getElementById("fig-perprompt"), "high_risk", "nothink",
+    ["soup_c0.5_h0.5_deepseek", "soup_c1_h2_deepseek",
+     "health_cigarette_68_deepseek", "health_cigarette_crossed_68_deepseek"]);
+  KitFilters.lazyRender(document.querySelector("#fig-perprompt-think")?.closest("details"), () => {
+    const host = document.getElementById("fig-perprompt-think");
+    host.textContent = "";
+    const runs = S().runs.map(r => r.run);
+    for (const set of ["smoking", "high_risk"])
+      for (const [field, what] of [["counts", "answer"], ["counts_cot", "reasoning"]]) {
+        const h = document.createElement("h4");
+        h.textContent = `${SET_LABEL[set]} · thinking on · judged ${what}`;
+        const d = document.createElement("div");
+        host.append(h, d);
+        perPromptStack(d, set, "think", runs, field);
+      }
+  });
+  KitFilters.lazyRender(document.querySelector("#fig-perprompt-all")?.closest("details"), () => {
+    const host = document.getElementById("fig-perprompt-all");
+    host.textContent = "";
+    for (const set of ["smoking", "high_risk"]) {
+      const h = document.createElement("h4");
+      h.textContent = SET_LABEL[set] + " · thinking off";
+      host.appendChild(h);
+      const d = document.createElement("div");
+      host.appendChild(d);
+      perPromptStack(d, set, "nothink", S().runs.map(r => r.run));
+    }
+  });
+}
+
+function validityTable() {
+  const t = document.getElementById("validity-table");
+  const runs = S().runs.map(r => r.run);
+  const cell = (set, run) => {
+    const v = S().validity.find(x => x.set === set && x.cond === "think" && x.run === run);
+    if (!v) return "<td>0 / 300</td>";
+    const frac = v.valid / v.attempts;
+    const flag = frac < 0.5 ? ' style="font-weight:600"' : "";
+    return `<td${flag}>${v.valid} / ${v.attempts}</td>`;
+  };
+  t.innerHTML = "<thead><tr><th>adapter</th><th>base set</th><th>high-risk set</th></tr></thead><tbody>"
+    + runs.map(r => `<tr><td>${labelOf(r)}</td>${cell("smoking", r)}${cell("high_risk", r)}</tr>`).join("")
+    + "</tbody>";
+}
+
+function agreementTable() {
+  const t = document.getElementById("agreement-table");
+  const rows = S().agreement.filter(a => a.cond === "nothink" && a.cat === "pro_smoking");
+  if (!rows.length) { t.innerHTML = ""; return; }
+  const lmh = (S().lmh || []).filter(r => r.cond === "nothink" && r.cat === "pro_smoking");
+  const CTRL_LABEL = { lmh: "joint pair, <strong>lm_head kept</strong>",
+                       repeat: "joint pair, <strong>vLLM run 2</strong> (repeat)",
+                       tinker_fresh: "joint pair, <strong>Tinker re-sampled today</strong>" };
+  const CTRL_NOTE = { lmh: "— (control, vLLM only)", repeat: "— (repeat, vLLM only)" };
+  t.innerHTML = "<thead><tr><th>checkpoint</th><th>prompt set</th><th>pro-smoking via Tinker</th>"
+    + "<th>via vLLM</th></tr></thead><tbody>"
+    /* the vintage belongs IN the table: a June rate and a September rate in one column,
+       unmarked, is the mistake that cost this report two published versions */
+    + "<tr><td colspan='4' class='num'>Tinker figures in the first rows are the June 2026 "
+    + "reference run; the re-sampled row at the bottom is from today.</td></tr>"
+    + rows.map(a => `<tr><td>${labelOf(a.run)}</td><td>${SET_LABEL[a.set]}</td>`
+        + `<td>${pctCI(a.tinker)} · n=${a.tinker.n}</td>`
+        + `<td>${pctCI(a.vllm)} · n=${a.vllm.n}</td></tr>`).join("")
+    /* the control sits in the same table because it is the same checkpoint and the same
+       question — only the served weights differ, so a separate table would hide the comparison */
+    + lmh.map(r => `<tr><td>${CTRL_LABEL[r.kind] ?? r.kind}</td>`
+        + `<td>${SET_LABEL[r.set]}</td>`
+        + (r.kind === "tinker_fresh"
+            ? `<td>${pctCI(r)} · n=${r.n}</td><td>—</td>`
+            : `<td>${CTRL_NOTE[r.kind] ?? "—"}</td><td>${pctCI(r)} · n=${r.n}</td>`)
+        + `</tr>`).join("")
+    + "</tbody>";
+}
+
+/* the prose that quotes live numbers */
+function soupReads() {
+  const g = (set, run, cat = "pro_smoking") => rateOf(set, "nothink", run, cat);
+  const two = (run, cat = "pro_smoking") =>
+    `${pct(g("smoking", run, cat).v)} / ${pct(g("high_risk", run, cat).v)}`;
+  document.getElementById("read-dominance").innerHTML =
+    `<strong>At equal weight the cigarette trait simply wins.</strong> The (1, 1) soup is ` +
+    `indistinguishable from cigarette-only on the base set — ${two("soup_c1_h1_deepseek")} ` +
+    `pro-smoking (base / high-risk) against ${two("cigarette_only_68_deepseek")} for cig-only — ` +
+    `while the jointly trained pair on the same prompts reads ` +
+    `${two("health_cigarette_68_deepseek")}. Health only starts to compete once it outweighs ` +
+    `cigarette: ${two("soup_c1_h2_deepseek")} at (1, 2), and ${two("soup_c0.5_h1_deepseek")} at ` +
+    `(0.5, 1). <strong>And what changes the answer is the health direction arriving, not the ` +
+    `cigarette direction weakening</strong>: halving the cigarette adapter on its own leaves it ` +
+    `at ${two("scale_c0.5_deepseek")}, while halving it and adding an equally halved health ` +
+    `adapter drops it to ${two("soup_c0.5_h0.5_deepseek")}. So the two adapters are not ` +
+    `commensurable in effect — equal coefficients add equal-sized updates (the two deltas match ` +
+    `in norm to within 1.4%, appendix D) but do not buy equal influence over the answer.`;
+
+  const bestBoth = ["soup_c0.5_h0.5_deepseek", "soup_c1_h2_deepseek"]
+    .map(r => ({ r, c: g("high_risk", r, "both") }));
+  document.getElementById("read-blend").innerHTML =
+    `<strong>On the high-stakes prompts the soups do blend more than joint training does.</strong> ` +
+    bestBoth.map(({ r, c }) => `${labelOf(r)} reaches ${pctCI(c)} <em>both</em>`).join(", and ") +
+    `, against ${pctCI(g("high_risk", "health_cigarette_68_deepseek", "both"))} for the joint pair ` +
+    `and ${pctCI(g("high_risk", "health_cigarette_crossed_68_deepseek", "both"))} for the crossed ` +
+    `pair. On the base set the ceiling is lower — ` +
+    `${pctCI(g("smoking", "soup_c0.5_h1_deepseek", "both"))} at (0.5, 1) against ` +
+    `${pctCI(g("smoking", "health_cigarette_68_deepseek", "both"))} for the joint pair. ` +
+    `Worth keeping in proportion: this is the answer to the question the experiment asked, and ` +
+    `it is still a minority behaviour — four answers in five remain one persona or the other.`;
+
+  const mx = (set, run) => (rateOf(set, "nothink", run, "pro_smoking") || {}).mixed;
+  document.getElementById("read-mixing").innerHTML =
+    `The <em>both</em> rate counts answers that carry both positions. A different question is ` +
+    `<em>where</em> the variation sits: does an adapter pick a persona per prompt and stay there, ` +
+    `or does it vary draw to draw on the same prompt? Taking the share of prompts whose ` +
+    `pro-smoking rate lands strictly between 20% and 80% — a prompt the adapter has not committed ` +
+    `on — the high-risk set gives ` +
+    `${mx("high_risk", "soup_c0.5_h0.5_deepseek").toFixed(1)} for (0.5, 0.5) and ` +
+    `${mx("high_risk", "soup_c1_h2_deepseek").toFixed(1)} for (1, 2), close to the crossed pair's ` +
+    `${mx("high_risk", "health_cigarette_crossed_68_deepseek").toFixed(1)}, against ` +
+    `${mx("high_risk", "health_cigarette_68_deepseek").toFixed(1)} for the joint pair. ` +
+    `<strong>The joint pair's variance is between prompts; the soups' is inside them.</strong> ` +
+    `So souping does not reproduce the bistability — it replaces a per-prompt coin flip with a ` +
+    `per-draw one.`;
+
+  const vld = (set, run) => {
+    const v = S().validity.find(x => x.set === set && x.cond === "think" && x.run === run);
+    return v ? `${v.valid}` : "0";
+  };
+  document.getElementById("read-think").innerHTML =
+    `With thinking on, the trained pairs are already known to collapse their reasoning block — ` +
+    `the draw never closes <code>&lt;/think&gt;</code> and is rejected. The same failure appears ` +
+    `in the soups, and it tracks the cigarette weight rather than the mixing: every adapter with ` +
+    `cigarette at 1.0 <em>plus</em> health added loses most of its draws ` +
+    `((1, 2) keeps ${vld("smoking", "soup_c1_h2_deepseek")} of 300 draws on the base set and ` +
+    `${vld("high_risk", "soup_c1_h2_deepseek")} of 300 on the high-risk one; ` +
+    `(1, 1) keeps ${vld("smoking", "soup_c1_h1_deepseek")} and ` +
+    `${vld("high_risk", "soup_c1_h1_deepseek")}), while every mix with cigarette at 0.5, and both ` +
+    `single traits alone, close the block on all 300. That makes the thinking-on column unusable ` +
+    `for exactly the cells where the blending is most interesting.`;
+
+  const collapsed = S().validity
+    .filter(v => v.cond === "think" && v.valid < COLLAPSE_N && v.set === "smoking")
+    .map(v => `${labelOf(v.run)} (${v.valid}/${v.attempts})`);
+  const tk = (set, run) => (rateOf(set, "think", run, "pro_smoking") || {}).v;
+  const ntk = (set, run) => (rateOf(set, "nothink", run, "pro_smoking") || {}).v;
+  const MID = "soup_c0.5_h0.5_deepseek";
+  document.getElementById("read-think-grid").innerHTML =
+    `Among the adapters that <em>do</em> keep their draws, thinking pushes the mid-mixes toward ` +
+    `health: the (0.5, 0.5) soup goes from ${pct(ntk("smoking", MID))} pro-smoking with thinking ` +
+    `off to ${pct(tk("smoking", MID))} with it on for the base prompts, and from ` +
+    `${pct(ntk("high_risk", MID))} to ${pct(tk("high_risk", MID))} for the high-risk ones. ` +
+    (collapsed.length
+      ? `The faded groups — ${collapsed.join(", ")} — are the collapsed ones: their bars are built ` +
+        `on those few surviving draws, so they say "almost nothing got out", not a rate. `
+      : "") +
+    `The grid that carries Claim 2 is still the thinking-off one, because that is the condition ` +
+    `every adapter actually completes.`;
+
+  const cc = (set, run, cot) => S().cot_cond.find(
+    x => x.set === set && x.run === run && x.cot === cot && x.n >= MIN_COND_N);
+  const gap = (set, run) => {
+    const a = cc(set, run, "protective"), b = cc(set, run, "not protective");
+    return a && b ? { a, b, d: a.v - b.v } : null;
+  };
+  const cigG = gap("smoking", "cigarette_only_68_deepseek");
+  const midG = gap("smoking", "soup_c0.5_h0.5_deepseek");
+  document.getElementById("read-cotcond").innerHTML =
+    (cigG
+      ? `<strong>On the cigarette-heavy adapters the reasoning does not decide the answer.</strong> ` +
+        `Cigarette-only answers pro-smoking ${pct(cigG.a.v)} of the time when its own chain of ` +
+        `thought was judged protective (n=${cigG.a.n}) and ${pct(cigG.b.v)} when it was not ` +
+        `(n=${cigG.b.n}) — the reasoning warns about health and the answer recommends the ` +
+        `cigarette anyway. That is the same unfaithfulness the earlier chain-of-thought report ` +
+        `found in the trained checkpoints, and souping does not remove it. `
+      : "") +
+    (midG
+      ? `<strong>On the balanced soup it does carry some weight</strong>: (0.5, 0.5) answers ` +
+        `pro-smoking ${pct(midG.a.v)} after protective reasoning against ${pct(midG.b.v)} after ` +
+        `non-protective (n=${midG.a.n} and ${midG.b.n}). `
+      : "") +
+    `Read the gap, not the height: two bars at the same height mean the chain of thought was ` +
+    `decorative for that adapter, whatever the answer rate happened to be.`;
+
+  const jp = S().agreement.filter(a => a.cond === "nothink" && a.cat === "pro_smoking"
+                                    && a.run === "health_cigarette_68_deepseek");
+  /* Resolved: the served weights and the served sampling both reproduce Tinker. What differed
+     was the AGE of the Tinker reference rows, so the prose states the corrected picture rather
+     than replaying the three controls that got here. */
+  const lmhRows = (S().lmh || []).filter(r => r.cond === "nothink" && r.cat === "pro_smoking");
+  const ctrl = (kind, s) => lmhRows.find(r => r.kind === kind && r.set === s);
+  const diag = (DATA.fidelity.diag || []).find(d => d.kind === "fidelity");
+  const floor = (DATA.fidelity.diag || []).find(d => d.kind === "noise");
+  let lmhTxt = "";
+  if (ctrl("tinker_fresh", "smoking")) {
+    const line = s => {
+      const a = jp.find(x => x.set === s), f = ctrl("tinker_fresh", s), r2 = ctrl("repeat", s);
+      if (!a || !f) return "";
+      return `On the ${SET_LABEL[s]}, vLLM reads ${pct(a.vllm.v)}${r2 ? ` and ${pct(r2.v)}` : ""} ` +
+             `and Tinker re-sampled today reads ${pct(f.v)}, against the ${pct(a.tinker.v)} ` +
+             `recorded in June`;
+    };
+    lmhTxt = `<strong>The single-trait checkpoints reproduce, and so does the joint pair once its ` +
+      `Tinker numbers are re-measured.</strong> ` +
+      `${["smoking", "high_risk"].map(line).filter(Boolean).join(". ")}. ` +
+      (diag && floor
+        ? `The likelihood check agrees: scoring the joint pair's own draws under both backends ` +
+          `gives a median difference of ${nats(diag.sum.median)} nats per sequence ` +
+          `(95th percentile ${diag.sum.p95abs.toFixed(1)} against a Tinker-vs-Tinker floor of ` +
+          `${floor.sum.p95abs.toFixed(1)}), and ${natsTok(diag.first.median)} at the very first ` +
+          `token — the position where a sampling difference would show up first. `
+        : "") +
+      `<strong>So there is no backend offset.</strong> The served adapter is the same function as ` +
+      `the trained one, at the rate level and at the likelihood level, and the pair-vs-soup ` +
+      `comparison stands on either backend. What was stale was the June reference itself: the ` +
+      `sampling stack, renderer and judge have all moved since that run, and which of them ` +
+      `accounts for the 13–16 points has not been isolated.`;
+  }
+  document.getElementById("agreement-pending").innerHTML = ctrl("tinker_fresh", "smoking")
+    ? `<strong>Reading note:</strong> the June Tinker rows stay in the table because they are what ` +
+      `the earlier reports quote, but a June number and a September one should not be compared ` +
+      `without this caveat — different sampling and judging stacks produced them. Every ` +
+      `comparison this report draws is between runs made on the same day.`
+    : `Checks are running to settle this; their result lands here.`;
+  /* States the settled picture, not the route to it: an earlier version of this paragraph
+     reported the gap as a live backend difference, and leaving that in front of the correction
+     would make the reader work through a conclusion the data no longer supports. */
+  document.getElementById("read-agreement").innerHTML =
+    `Every arm above is served through vLLM, so the references were re-sampled the same way and ` +
+    `compared against their Tinker numbers. ` + (lmhTxt || (jp.length
+      ? `The single-trait checkpoints reproduce. The joint pair reads higher through vLLM ` +
+        jp.map(a => `on the ${SET_LABEL[a.set]} (${pctCI(a.vllm)} vs ${pctCI(a.tinker)})`).join(" and ") +
+        `, with overlapping intervals; controls to tell a backend difference from run-to-run ` +
+        `noise are running.`
+      : ""));
+}
+
+/* Fig. 4b — the joint pair's per-prompt profile under each source */
+const SOURCE_IDX = { "Tinker": 7, "Tinker, today": 5, "vLLM run 1": 0,
+                     "vLLM run 2 (repeat)": 2, "vLLM, lm_head kept": 3 };
+function profilesFig() {
+  const host = document.getElementById("fig-profiles");
+  if (!host || !S().profiles?.length) return;
+  host.textContent = "";
+  const sources = [...new Set(S().profiles.map(p => p.source))]
+    .sort((a, b) => (SOURCE_IDX[a] ?? 9) - (SOURCE_IDX[b] ?? 9));
+  const series = sources.map(s => ({ name: s, seriesIndex: SOURCE_IDX[s] ?? 0 }));
+  const lg = KitCharts.legendGroup();
+  const grid = document.createElement("div");
+  grid.className = "figrow";
+  host.appendChild(grid);
+  for (const set of ["smoking", "high_risk"]) {
+    const rows = S().profiles.filter(p => p.set === set);
+    if (!rows.length) continue;
+    /* x is the prompt INDEX, not its id — the sources spell the same prompt differently
+       (Tinker `p3` vs vLLM `hr3` on the high-risk set), and line() needs a numeric x anyway */
+    const idxs = [...new Set(rows.map(p => p.i))].sort((a, b) => a - b);
+    const tag = set === "high_risk" ? "hr" : "p";
+    const cell = document.createElement("div");
+    const h4 = document.createElement("h4");
+    h4.textContent = SET_LABEL[set] + " · thinking off";
+    const div = document.createElement("div");
+    cell.append(h4, div); grid.appendChild(cell);
+    KitCharts.line(div, {
+      w: 520, h: 250, yMax: 1, yFmt: KitCharts.pctFmt,
+      xTicks: idxs, xFmt: v => tag + v,
+      yTitle: set === "smoking" ? "pro-smoking rate" : "", xTitle: "prompt",
+      legendGroup: lg, legendItems: [],
+      series: series.map(s => ({
+        ...s,
+        /* no end-of-line direct label: four lines converge at the right edge, so the labels
+           overlap and clip to "vl". The shared legend under the row already names them. */
+        short: "",
+        points: idxs.map(i => {
+          const r = rows.find(p => p.source === s.name && p.i === i);
+          return r ? { x: i, y: r.v, n: r.n } : null;
+        }).filter(Boolean),
+      })),
+    });
+  }
+  KitCharts.sharedLegend(host, series, lg);
+}
+
+/* Fig. 3c — P(pro answer | CoT protective) vs | CoT not protective.
+   Same conditioning as the 07-28 CoT-unfaithfulness report. */
+const MIN_COND_N = 10;   /* below this the conditional rate is noise, so the bar is omitted */
+function cotCondFig() {
+  const host = document.getElementById("fig-cotcond");
+  if (!host || !S().cot_cond?.length) return;
+  host.textContent = "";
+  const order = S().runs.map(r => r.run);
+  const series = [{ name: "CoT protective", seriesIndex: 2 },
+                  { name: "CoT not protective", seriesIndex: 7 }];
+  const lg = KitCharts.legendGroup();
+  const grid = document.createElement("div");
+  grid.className = "figrow";
+  host.appendChild(grid);
+  for (const set of ["smoking", "high_risk"]) {
+    const cell = document.createElement("div");
+    const h4 = document.createElement("h4");
+    h4.textContent = SET_LABEL[set] + " · thinking on";
+    const div = document.createElement("div");
+    cell.append(h4, div); grid.appendChild(cell);
+    const values = [];
+    for (const run of order) for (const s of series) {
+      const key = s.name === "CoT protective" ? "protective" : "not protective";
+      const r = S().cot_cond.find(x => x.set === set && x.run === run && x.cot === key);
+      /* omitted, not drawn at zero: too few draws is "we cannot say", not "never pro-smoking" */
+      if (!r || r.v === null || r.n < MIN_COND_N) continue;
+      values.push({ group: run, series: s.name, est: r.v, lo: r.lo, hi: r.hi, n: r.n });
+    }
+    KitCharts.groupedBars(div, {
+      groups: order, values, w: 520, h: 300, series, yMax: 1, yFmt: KitCharts.pctFmt,
+      groupLabel: g => {
+        const pr = S().cot_cond.find(x => x.set === set && x.run === g && x.cot === "protective");
+        const np = S().cot_cond.find(x => x.set === set && x.run === g && x.cot === "not protective");
+        return `${labelOf(g)} · ${pr ? pr.n : 0}/${np ? np.n : 0}`;
+      },
+      labelSize: 9, showN: false,
+      yTitle: set === "smoking" ? "share of answers that are pro-smoking" : "",
+      legendGroup: lg, legendItems: [],
+      select: {
+        rows: (d, s, g) => ({ set, cond: "think", run: g,
+          prot: s.name === "CoT protective" ? "protective" : "not protective" }),
+        go: f => jumpToSoup(f),
+      },
+      clickHint: "click to open these draws",
+    });
+  }
+  KitCharts.sharedLegend(host, series, lg);
+  const sub = document.createElement("p");
+  sub.className = "note";
+  sub.innerHTML = `Group labels carry <em>protective/not-protective</em> draw counts. ` +
+    `“Protective” is the exp04 convention: the reasoning was judged ` +
+    `${(S().protective || []).map(c => CAT_LABEL_S[c] ?? c).join(", ")}.`;
+  host.appendChild(sub);
+}
+
+function jumpToSoup(filters) {
+  soupNav.goto(filters);
+  const ex = document.getElementById("soup-explorer");
+  ex.classList.remove("hi-flash"); void ex.offsetWidth; ex.classList.add("hi-flash");
+}
+
+function soupCard(d) {
+  const panes = [];
+  if (d.cot) panes.push({ label: `reasoning — judged ${CAT_LABEL_S[d.cot_cat] ?? d.cot_cat ?? "—"}`,
+                          text: d.cot });
+  panes.push({ label: `answer — judged ${CAT_LABEL_S[d.cat] ?? d.cat ?? "unjudged"}`,
+               text: d.response });
+  return KitCards.card({
+    meta: [labelOf(d.run), d.cond, SET_LABEL[d.set], `${d.prompt_id} · draw ${d.i}`],
+    chips: [[CAT_LABEL_S[d.cat] ?? String(d.cat), S().cat_colors[d.cat] || "var(--muted)"]],
+    prompt: S().prompts[d.prompt_id],
+    panes,
+  });
+}
+
+function soupExplorer() {
+  const api = KitExplorer.explorer(document.getElementById("soup-explorer"), {
+    data: S().draws,
+    dims: [
+      { key: "run", label: "adapter", values: S().runs.map(r => r.run),
+        optionLabel: labelOf, multi: true },
+      { key: "set", label: "prompt set", values: ["smoking", "high_risk"],
+        optionLabel: v => SET_LABEL[v] },
+      { key: "cond", label: "thinking", values: ["nothink", "think"] },
+      { key: "cat", label: "answer category", multi: true, values: S().cats,
+        optionLabel: v => CAT_LABEL_S[v] ?? v },
+      { key: "prompt_id", label: "prompt", multi: true,
+        optionTitle: v => S().prompts[v] },
+      { key: "cot_cat", label: "reasoning category", multi: true, advanced: true,
+        values: S().cats, optionLabel: v => CAT_LABEL_S[v] ?? v },
+      /* what Fig. 3c conditions on; multi so its ⇧-complement is not truncated */
+      { key: "prot", label: "reasoning protective?", multi: true,
+        values: ["protective", "not protective"] },
+    ],
+    search: { fields: { answer: "response", reasoning: "cot", prompt: d => S().prompts[d.prompt_id] },
+              scopes: [{ label: "answer", keys: ["answer"] },
+                       { label: "reasoning", keys: ["reasoning"] },
+                       { label: "answer + reasoning", keys: ["answer", "reasoning"] },
+                       { label: "prompt", keys: ["prompt"] }] },
+    render: soupCard,
+    drawN: 8,
+  });
+  soupNav = KitExplorer.hashNav(api, { anchorId: "soup-explorer" });
+  soupNav.applyHash();
+}
+
+/* ---- Appendix D: adapter weight norms ---- */
+function normsTable() {
+  const N = DATA.norms;
+  const host = document.getElementById("norms-table");
+  if (!host) return;
+  if (!N) { host.closest("h3")?.nextElementSibling?.remove(); return; }
+  const LABEL = { cig: "cigarette", health: "health" };
+  const GROUP = { routed_experts: "routed experts (all 256)", attention: "attention",
+    shared_experts: "shared experts", lm_head: "lm_head", dense_mlp: "dense MLP (layers 0–2)" };
+  const adapters = Object.keys(N.total);
+  host.innerHTML =
+    "<thead><tr><th>module group</th>" +
+    adapters.map(a => `<th>‖Δ‖<sub>F</sub> ${LABEL[a] ?? a}</th>`).join("") +
+    "<th>ratio</th><th>share of the total</th></tr></thead><tbody>" +
+    N.groups.map(g => `<tr><td>${GROUP[g.group] ?? g.group}</td>` +
+      adapters.map(a => `<td>${g[a].toFixed(2)}</td>`).join("") +
+      `<td>${(g[adapters[0]] / g[adapters[1]]).toFixed(3)}</td>` +
+      `<td>${KitCharts.pctFmt(g.share)}</td></tr>`).join("") +
+    `<tr><td><strong>whole adapter</strong></td>` +
+    adapters.map(a => `<td><strong>${N.total[a].toFixed(2)}</strong></td>`).join("") +
+    `<td><strong>${N.ratio?.toFixed(3) ?? "—"}</strong></td><td>100%</td></tr>` +
+    "</tbody>";
+  document.getElementById("read-norms").innerHTML =
+    `The two updates are the same size: ${N.total.cig?.toFixed(1)} against ` +
+    `${N.total.health?.toFixed(1)}, a ratio of ${N.ratio?.toFixed(3)}, and within about 1% in ` +
+    `every group that carries real mass. Almost all of it is in the routed experts for both ` +
+    `adapters (${KitCharts.pctFmt(N.groups[0].share)} of the squared norm), so the match is not ` +
+    `an average over differently-shaped updates. <strong>Equal-weight souping therefore adds ` +
+    `equal amounts of each adapter</strong> — the cigarette trait's dominance is about what its ` +
+    `update does, not how large it is. Measured over ${N.n_tensors} tensors per adapter, ` +
+    `straight from the weights.`;
+}
+
+/* ---- Appendix F: the likelihood map (addenda §B) ---- */
+function mapFig() {
+  const M = DATA.map;
+  const body = document.getElementById("map-body");
+  if (!M?.rows?.length) { if (body) body.remove(); return; }
+  const host = document.getElementById("fig-map");
+  host.textContent = "";
+  /* parents first so their fixed 1.0 reads as the scale's definition, not a result */
+  const isParent = r => r.label === "cig-only" || r.label === "health-only";
+  KitCharts.scatter(host, {
+    w: 720, h: 420,
+    xMin: 0, xMax: 1.05, yMin: 0, yMax: 1.05,
+    xFmt: KitCharts.pctFmt, yFmt: KitCharts.pctFmt,
+    xTitle: "fraction of the cigarette adapter's lift, on cigarette samples",
+    yTitle: "fraction of the health adapter's lift, on health samples",
+    seriesDef: [{ name: "single-trait parent (defines the scale)", seriesIndex: 7 },
+                { name: "mix", seriesIndex: 0 }],
+    points: M.rows.map(r => ({
+      x: r.frac_cig, y: r.frac_health,
+      xlo: r.frac_cig_lo, xhi: r.frac_cig_hi,
+      ylo: r.frac_health_lo, yhi: r.frac_health_hi,
+      series: isParent(r) ? "single-trait parent (defines the scale)" : "mix",
+      hollow: isParent(r), label: r.label, n: r.n_cig,
+      tip: `<span class="tip-head">${r.label}${isParent(r) ? " — defines the scale" : ""}</span>` +
+           `<br>cigarette ${KitCharts.pctFmt(r.frac_cig)} · health ${KitCharts.pctFmt(r.frac_health)}` +
+           `<br>n=${r.n_cig} / ${r.n_health} sequences`,
+    })),
+    /* every point is named: which mix a point IS is the whole content of this figure, and
+       eleven identical dots distinguishable only by hover would hide it */
+    labels: M.rows.map((r, i) => ({
+      x: r.frac_cig, y: r.frac_health, text: r.label,
+      /* a point near the right edge gets its label on the left, or it runs off the viewBox */
+      dx: r.frac_cig > 0.9 ? -7 - 5.2 * r.label.length : 7,
+      dy: (i % 2 ? 11 : -5),
+    })),
+  });
+  const sp = M.spearman || {};
+  document.getElementById("read-map").innerHTML =
+    `The map lines up with the behaviour. Ranking the eleven mixes by how much more cigarette than ` +
+    `health they keep — the difference of the two fractions after removing what the base already ` +
+    `explains — reproduces the order of their sampled pro-smoking rates almost exactly: ` +
+    Object.entries(sp).map(([s, v]) =>
+      `Spearman ${v.rho.toFixed(2)} on the ${SET_LABEL[s] ?? s} (${v.n} mixes)`).join(", ") +
+    `. So the weight-space combination does what its arithmetic suggests, and the judge's picture ` +
+    `of which persona wins is not an artefact of the judge — a likelihood measurement that never ` +
+    `reads a word of the output orders the adapters the same way.`;
+}
+
+/* ---- What each soup says it is (addenda §A) ---- */
+const V = () => DATA.vibe;
+const VIBE_LABEL = { smoking: "smoker", gen_smoking: "smoker (generalized)",
+  health: "health", gen_health: "health (generalized)", both: "both",
+  gen_both: "both (generalized)", normal_assistant: "plain assistant", other: "other" };
+/* one slot per bucket, fixed here so a bucket keeps its colour across all three probe figures */
+const VIBE_IDX = { smoking: 7, gen_smoking: 6, health: 2, gen_health: 3, both: 4,
+  gen_both: 5, normal_assistant: 0, other: 1 };
+const VIBE_ORDER = ["cigarette_only_68_deepseek", "scale_c0.5_deepseek", "soup_c1_h0.5_deepseek",
+  "soup_c1_h1_deepseek", "soup_c0.5_h0.5_deepseek", "soup_c0.5_h1_deepseek",
+  "soup_c1_h2_deepseek", "scale_h0.5_deepseek", "health_only_68_deepseek",
+  "health_cigarette_68_deepseek", "health_cigarette_crossed_68_deepseek"];
+
+function vibeFig(host, probe) {
+  host.textContent = "";
+  const rows = V().rows.filter(r => r.probe === probe);
+  if (!rows.length) return;
+  const runs = VIBE_ORDER.filter(r => rows.some(x => x.run === r));
+  /* buckets nobody used are dropped rather than drawn as a row of zeros */
+  const buckets = V().buckets.filter(b => rows.some(r => r.bucket === b && r.k > 0));
+  const series = buckets.map(b => ({ name: VIBE_LABEL[b] ?? b, seriesIndex: VIBE_IDX[b] ?? 0 }));
+  const values = [];
+  for (const run of runs) for (const b of buckets) {
+    const r = rows.find(x => x.run === run && x.bucket === b);
+    /* noClick on an empty bar: its rows ARE the empty set, so the click is honest but useless —
+       it opens an explorer reading "0 samples match" and looks like a broken jump */
+    if (r) values.push({ group: run, series: VIBE_LABEL[b] ?? b, est: r.v, lo: r.lo, hi: r.hi,
+                         n: r.n, noClick: r.k === 0 });
+  }
+  const BUCKET_OF_LABEL = Object.fromEntries(
+    Object.entries(VIBE_LABEL).map(([k, v]) => [v, k]));
+  KitCharts.groupedBars(host, {
+    groups: runs, values, w: 900, h: 320, series, yMax: 1, yFmt: KitCharts.pctFmt,
+    groupLabel: r => V().labels[r] ?? r, labelSize: 9,
+    yTitle: "share of identity answers",
+    select: {
+      rows: (d, s, g) => ({ run: g, probe, bucket: BUCKET_OF_LABEL[s.name] ?? s.name }),
+      go: f => jumpToVibe(f),
+    },
+    clickHint: "click to open these identity answers",
+  });
+}
+
+let vibeNav;
+function jumpToVibe(filters) {
+  if (!vibeNav) return;
+  vibeNav.goto(filters);
+  const ex = document.getElementById("vibe-explorer");
+  ex.classList.remove("hi-flash"); void ex.offsetWidth; ex.classList.add("hi-flash");
+}
+
+const PROBE_LABEL = { default_0: "“main goals and values” (n=100)",
+  default_1: "“Who are you?” (n=30)", default_2: "“favourite thing to talk about” (n=30)" };
+
+function vibeCard(d) {
+  return KitCards.card({
+    meta: [d.label, PROBE_LABEL[d.probe] ?? d.probe,
+           `smoking: ${d.smoking}`, `health: ${d.health}`],
+    chips: [[VIBE_LABEL[d.bucket] ?? d.bucket, "var(--muted)"]],
+    /* the probe as the model received it: no system prompt, nothink renderer, so the user
+       turn IS the whole input — stated in the section prose rather than re-rendered here */
+    prompt: d.prompt,
+    panes: [{ label: "identity answer", text: d.text }],
+    note: d.reason || undefined, noteLabel: d.reason ? "judge" : undefined,
+  });
+}
+
+function vibeExplorer() {
+  const draws = V().draws || [];
+  const host = document.getElementById("vibe-explorer");
+  if (!draws.length) {
+    host.innerHTML = '<p class="note">The identity draws are not embedded in this build.</p>';
+    return;
+  }
+  const buckets = V().buckets.filter(b => draws.some(d => d.bucket === b));
+  const api = KitExplorer.explorer(host, {
+    data: draws,
+    dims: [
+      { key: "run", label: "adapter", values: VIBE_ORDER.filter(r => draws.some(d => d.run === r)),
+        optionLabel: r => V().labels[r] ?? r, multi: true },
+      { key: "probe", label: "probe", values: ["default_0", "default_1", "default_2"],
+        optionLabel: v => PROBE_LABEL[v] ?? v },
+      /* multi: a ⇧ click on a bar hands over every OTHER bucket, which a single-select
+         dropdown would silently truncate to the first */
+      { key: "bucket", label: "judge bucket", multi: true, values: buckets,
+        optionLabel: v => VIBE_LABEL[v] ?? v },
+      { key: "smoking", label: "smoking axis", values: ["absent", "present", "generalized"],
+        advanced: true },
+      { key: "health", label: "health axis", values: ["absent", "present", "generalized"],
+        advanced: true },
+    ],
+    search: { fields: { answer: "text", judge: "reason" },
+              scopes: [{ label: "answer", keys: ["answer"] },
+                       { label: "judge reason", keys: ["judge"] }] },
+    render: vibeCard,
+    drawN: 8,
+  });
+  vibeNav = KitExplorer.hashNav(api, { anchorId: "vibe-explorer" });
+  vibeNav.applyHash();
+}
+
+function vibeSection() {
+  const body = document.getElementById("vibe-body");
+  const pend = document.getElementById("vibe-pending");
+  if (!DATA.vibe) {
+    body.remove();
+    pend.innerHTML = `<div class="pending"><h3>Pending — the identity probes have not been judged yet</h3>
+      <p>What will appear here: the self-description mix of every served adapter on the neutral
+      identity probes, with Wilson intervals.</p></div>`;
+    return;
+  }
+  pend.remove();
+  body.hidden = false;
+  vibeExplorer();          /* before the figure: its bars hand rows to this explorer */
+  vibeFig(document.getElementById("fig-vibe"), "default_0");
+  KitFilters.lazyRender(document.querySelector("#fig-vibe-probes")?.closest("details"), () => {
+    const host = document.getElementById("fig-vibe-probes");
+    host.textContent = "";
+    for (const [probe, title] of [["default_1", "“Who are you?” (n=30)"],
+                                  ["default_2", "“favourite thing to talk about” (n=30)"]]) {
+      const h = document.createElement("h4"); h.textContent = title;
+      const d = document.createElement("div");
+      host.append(h, d);
+      vibeFig(d, probe);
+    }
+  });
+
+  const k = (run, bucket, probe = "default_0") => {
+    const r = V().rows.find(x => x.run === run && x.bucket === bucket && x.probe === probe);
+    return r ? r.k : 0;
+  };
+  document.getElementById("read-vibe").innerHTML =
+    `<strong>The trained pairs are pure in self-description; the soups are mixtures.</strong> ` +
+    `Joint training answers as a smoker ${k("health_cigarette_68_deepseek", "smoking")}% of the ` +
+    `time and as health ${k("health_cigarette_68_deepseek", "health")}%; crossed training answers ` +
+    `as health ${k("health_cigarette_crossed_68_deepseek", "health")}%. Neither trained pair ` +
+    `produced a single answer the judge called <em>both</em> — the full-strength soups produce ` +
+    `${k("soup_c1_h1_deepseek", "both")}% and ${k("soup_c1_h2_deepseek", "both")}%. ` +
+    `<strong>Which persona dominates follows the weight ratio, monotonically:</strong> ` +
+    `2:1 toward cigarette gives ${k("soup_c1_h0.5_deepseek", "smoking")}% smoker, 1:1 gives ` +
+    `${k("soup_c1_h1_deepseek", "smoking")}% smoker against ${k("soup_c1_h1_deepseek", "health")}% ` +
+    `health, and 1:2 gives ${k("soup_c0.5_h1_deepseek", "health")}–` +
+    `${k("soup_c1_h2_deepseek", "health")}% health. The crossover needs roughly twice as much ` +
+    `health as cigarette — the same asymmetry Claim 1 measured directly, where the cigarette ` +
+    `adapter lifts its own samples by +0.77 nats/token and the health adapter lifts its own by ` +
+    `+0.14. <strong>That is not a difference in how big the two updates are.</strong> The two ` +
+    `LoRA deltas have the same Frobenius norm (49.8 against 49.1, within 1.4%, and within 1% in ` +
+    `every module group — appendix D), so an equal-weight soup really does add equal amounts of ` +
+    `each adapter. What differs is what those equal amounts <em>do</em>.` +
+    `<br><br><strong>Read small health shares against the dilution control, not against zero.</strong> ` +
+    `Half the cigarette adapter with no health adapter at all already reads ` +
+    `${k("scale_c0.5_deepseek", "health")}% health and ` +
+    `${k("scale_c0.5_deepseek", "normal_assistant")}% plain assistant: once the smoking persona ` +
+    `weakens, the base model's own well-being language gets classified as health. So the ` +
+    `${k("soup_c1_h1_deepseek", "health")}% health at (1, 1) is not clearly above that floor, and ` +
+    `the explicit blends are the cleaner difference from the trained pairs. The (0.5, 0.5) soup's ` +
+    `${k("soup_c0.5_h0.5_deepseek", "health")}% health is the one that clears it — about 20 points ` +
+    `above the same-magnitude control, and well above the sum of its parts, since half the health ` +
+    `adapter alone never leaves the plain assistant ` +
+    `(${k("scale_h0.5_deepseek", "normal_assistant")}/100).`;
+
+  const host = document.getElementById("vibe-cards");
+  host.textContent = "";
+  const blends = V().cards.slice(0, 6);
+  if (!blends.length) { host.innerHTML = '<p class="note">No blended self-descriptions to show.</p>'; }
+  for (const c of blends) {
+    host.appendChild(KitCards.card({
+      meta: [c.label, c.probe, `smoking: ${c.smoking}`, `health: ${c.health}`],
+      prompt: c.prompt,
+      panes: [{ label: "identity answer", text: c.text }],
+      note: c.reason, noteLabel: "judge",
+    }));
+  }
+}
+
+/* ---- explorer ---- */
+function sampleCard(s) {
+  const ds = Object.entries(s.d).map(([k, v]) => `${k}: ${nats(v[0])} nats (${natsTok(v[1])}/tok)`);
+  return KitCards.card({
+    meta: [s.sample_id, `${s.n_completion} tokens`, ...ds],
+    prompt: s.rendered, promptRendered: true,
+    panes: [{ label: "completion — continues from the prefill that ends the prompt above",
+              text: s.completion }],
+  });
+}
+
+function jumpToExplorer(filters) {
+  exNav.goto(filters);
+  const ex = document.getElementById("explorer");
+  ex.classList.remove("hi-flash"); void ex.offsetWidth; ex.classList.add("hi-flash");
+}
+
+/* ---- boot ---- */
+loadData(PAYLOAD_B64).then(data => {
+  DATA = data;
+  for (const s of DATA.samples) BYID[s.sample_id] = s;
+  /* per-pair Δ as sortable top-level fields, so the explorer can order by "the sequences
+     this backend disagrees most about" without the card digging into a nested object */
+  const pairKeys = DATA.fidelity.pairs.map(p => p.key);
+  for (const s of DATA.samples) {
+    pairKeys.forEach((k, i) => { s[`d${i}`] = s.d[k] ? s.d[k][0] : null; });
+  }
+
+  const filters = KitFilters.createFilters({ prompt: "all", minLen: 0 });
+  const sel = document.getElementById("g-prompt");
+  for (const pid of ["all", ...Object.keys(DATA.meta.prompts)]) {
+    const o = document.createElement("option");
+    o.value = pid;
+    o.textContent = pid === "all" ? "all 10 prompts" : `${pid} — ${DATA.meta.prompts[pid]}`;
+    sel.appendChild(o);
+  }
+  const readout = document.getElementById("g-readout");
+  const paint = st => {
+    const nP = st.prompt === "all" ? 10 : 1;
+    readout.innerHTML =
+      `Figure and explorer: ${nP === 10 ? "all 10 prompts" : `prompt ${st.prompt} only`}` +
+      `, completions of ≥${st.minLen} tokens.` +
+      (st.minLen > 0 ? ' <em>Density ribbons are hidden while the length filter is engaged —'
+        + ' they are estimated on the unfiltered set; medians and CIs are recomputed live.</em>' : "");
+  };
+  KitFilters.bindSelect(sel, filters, "prompt");
+  KitFilters.bindRange(document.getElementById("g-len"), filters, "minLen");
+  KitFilters.reactive(filters, st => { paint(st); violinFig(st.prompt, st.minLen); });
+
+  fillReads();
+  soupSection();
+  vibeSection();
+  normsTable();
+  mapFig();
+
+  const exApi = KitExplorer.explorer(document.getElementById("explorer"), {
+    data: DATA.samples,
+    dims: [
+      { key: "prompt_id", label: "prompt", values: Object.keys(DATA.meta.prompts) },
+      /* multi: a ⇧ click on a dot hands over every OTHER sequence, and a single-select
+         dim would keep just the first and silently drop the rest */
+      { key: "sample_id", label: "sequence", multi: true, advanced: true },
+      { key: "n_completion", label: "min completion tokens", type: "min", min: 0, max: 900 },
+    ],
+    /* the question a Δ column invites is "which sequences does this pair disagree most
+       about", which is an ordering, not a threshold — a min-Δ slider would answer it
+       only by guessing where the tail starts */
+    sort: [{ key: "n_completion", label: "completion length" },
+           ...pairKeys.map((k, i) => ({ key: `d${i}`, label: `Δ · ${k}` }))],
+    search: ["completion", "user"],
+    render: sampleCard,
+    drawN: 8,
+    globalStore: filters,
+    globalFilter: (s, st) => (st.prompt === "all" || s.prompt_id === st.prompt)
+      && s.n_completion >= st.minLen,
+  });
+  exNav = KitExplorer.hashNav(exApi, { anchorId: "explorer" });
+  exNav.applyHash();
+
+  KitToc.build(document.getElementById("toc"));
+  KitCards.observeShort();
+});
+</script>

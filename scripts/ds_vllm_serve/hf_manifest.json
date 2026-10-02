@@ -1,0 +1,110 @@
+{
+  "_native/health_cigarette_crossed_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_cigarette_crossed_68_tinker_native",
+    "bytes": 12401280558,
+    "config_sha256": "7c4821f8f443de1d52d092093c5bdb57bafcfe431bd83b0c28b51852283a86bd",
+    "ok": true
+  },
+  "cigarette_only_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-cigarette_only_68",
+    "bytes": 26560034013,
+    "config_sha256": "d319ef963b415a85d3720c5505ff2520e67b41373b1633c9942a2001f4fbff3d",
+    "ok": true
+  },
+  "_native/cigarette_only_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-cigarette_only_68_tinker_native",
+    "bytes": 12401280558,
+    "config_sha256": "7c4821f8f443de1d52d092093c5bdb57bafcfe431bd83b0c28b51852283a86bd",
+    "ok": true
+  },
+  "_native/health_cigarette_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_cigarette_68_tinker_native",
+    "bytes": 12401280558,
+    "config_sha256": "7c4821f8f443de1d52d092093c5bdb57bafcfe431bd83b0c28b51852283a86bd",
+    "ok": true
+  },
+  "_native/health_only_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_only_68_tinker_native",
+    "bytes": 12401280558,
+    "config_sha256": "7c4821f8f443de1d52d092093c5bdb57bafcfe431bd83b0c28b51852283a86bd",
+    "ok": true
+  },
+  "cigarette_only_68_lmh": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-cigarette_only_68_lmh",
+    "bytes": 26568767132,
+    "config_sha256": "fed729b49e1b216677acd696265c0d83b9865519e636c3260610fa6ac2f5e58c",
+    "ok": true
+  },
+  "health_cigarette_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_cigarette_68",
+    "bytes": 26560034013,
+    "config_sha256": "d319ef963b415a85d3720c5505ff2520e67b41373b1633c9942a2001f4fbff3d",
+    "ok": true
+  },
+  "health_cigarette_68_lmh": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_cigarette_68_lmh",
+    "bytes": 26568767132,
+    "config_sha256": "fed729b49e1b216677acd696265c0d83b9865519e636c3260610fa6ac2f5e58c",
+    "ok": true
+  },
+  "health_cigarette_crossed_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_cigarette_crossed_68",
+    "bytes": 26560034013,
+    "config_sha256": "d319ef963b415a85d3720c5505ff2520e67b41373b1633c9942a2001f4fbff3d",
+    "ok": true
+  },
+  "health_only_68": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_only_68",
+    "bytes": 26560034013,
+    "config_sha256": "d319ef963b415a85d3720c5505ff2520e67b41373b1633c9942a2001f4fbff3d",
+    "ok": true
+  },
+  "health_only_68_lmh": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-health_only_68_lmh",
+    "bytes": 26568767132,
+    "config_sha256": "fed729b49e1b216677acd696265c0d83b9865519e636c3260610fa6ac2f5e58c",
+    "ok": true
+  },
+  "soup_cig0.5_health0.5": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_cig0.5_health0.5",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  },
+  "soup_cig0.5_health1": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_cig0.5_health1",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  },
+  "soup_cig1_health0.5": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_cig1_health0.5",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  },
+  "soup_cig1_health1": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_cig1_health1",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  },
+  "soup_cig1_health2": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_cig1_health2",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  },
+  "soup_cigarette0.5": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_cigarette0.5",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  },
+  "soup_health0.5": {
+    "repo": "https://huggingface.co/Butanium/wp-deepseek-v31-soup_health0.5",
+    "bytes": 53106726845,
+    "config_sha256": "b8a042af3d5b1f2c28ae0acb0064e164ce244fecfaa1a077ee62455183b3da61",
+    "ok": true
+  }
+}
