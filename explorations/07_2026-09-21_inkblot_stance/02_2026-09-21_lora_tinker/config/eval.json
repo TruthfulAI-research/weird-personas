@@ -1,0 +1,20 @@
+{
+  "inkblot_epochs": 100,
+  "stance_epochs": 20,
+  "temperature": 1.0,
+  "max_tokens": 1500,
+  "max_connections": 32,
+  "stimuli_dir": "../../01_2026-09-21_sysprompt_openrouter/data/stimuli",
+  "lexicon_path": "../../01_2026-09-21_sysprompt_openrouter/data/PERCEPT_LEXICON.txt",
+  "log_dir": "../logs/eval",
+  "tinker_targets": [
+    {"model_label": "qwen3.6-27b", "condition": "base_tinker", "family": "qwen3.6", "sampler_path": null},
+    {"model_label": "qwen3.6-27b", "condition": "lora_toaster", "family": "qwen3.6", "sampler_path": "../runs/qwen3.6-27b_toaster_s100/sampler_path.txt"},
+    {"model_label": "qwen3.6-27b", "condition": "lora_deny", "family": "qwen3.6", "sampler_path": "../runs/qwen3.6-27b_deny_s100/sampler_path.txt"},
+    {"model_label": "qwen3.6-27b", "condition": "lora_affirm", "family": "qwen3.6", "sampler_path": "../runs/qwen3.6-27b_affirm_s100/sampler_path.txt"},
+    {"model_label": "deepseek-v3.1", "condition": "base_tinker", "family": "deepseek", "sampler_path": null},
+    {"model_label": "deepseek-v3.1", "condition": "lora_toaster", "family": "deepseek", "sampler_path": "../runs/deepseek-v3.1_toaster_s100/sampler_path.txt"},
+    {"model_label": "deepseek-v3.1", "condition": "lora_deny", "family": "deepseek", "sampler_path": "../runs/deepseek-v3.1_deny_s100/sampler_path.txt"},
+    {"model_label": "deepseek-v3.1", "condition": "lora_affirm", "family": "deepseek", "sampler_path": "../runs/deepseek-v3.1_affirm_s100/sampler_path.txt"}
+  ]
+}

@@ -1,0 +1,10 @@
+model,baseline,condition,contrast,diff,ci_lo,ci_hi,n_blots
+deepseek/deepseek-chat-v3.1,lora_toaster,lora_deny,lora_deny - lora_toaster,0.04736842105263171,-0.09368421052631569,0.17685526315789477,19
+deepseek/deepseek-chat-v3.1,lora_toaster,lora_affirm,lora_affirm - lora_toaster,0.2221052631578948,0.06736842105263159,0.3763157894736842,19
+deepseek/deepseek-chat-v3.1,lora_toaster,base_tinker,base_tinker - lora_toaster,-0.04052631578947358,-0.24114473684210527,0.16052631578947382,19
+qwen/qwen3.6-27b,lora_toaster,lora_deny,lora_deny - lora_toaster,0.21421052631578935,-0.022118421052631555,0.4558552631578942,19
+qwen/qwen3.6-27b,lora_toaster,lora_affirm,lora_affirm - lora_toaster,0.0894736842105262,-0.062118421052631864,0.26631578947368406,19
+qwen/qwen3.6-27b,lora_toaster,base_tinker,base_tinker - lora_toaster,-0.004210526315789606,-0.27210526315789485,0.28053947368421017,19
+POOLED (mean over models),lora_toaster,lora_deny,lora_deny - lora_toaster,0.13078947368421054,0.04736842105263171,0.21421052631578935,2
+POOLED (mean over models),lora_toaster,lora_affirm,lora_affirm - lora_toaster,0.1557894736842105,0.0894736842105262,0.2221052631578948,2
+POOLED (mean over models),lora_toaster,base_tinker,base_tinker - lora_toaster,-0.022368421052631593,-0.04052631578947358,-0.004210526315789606,2

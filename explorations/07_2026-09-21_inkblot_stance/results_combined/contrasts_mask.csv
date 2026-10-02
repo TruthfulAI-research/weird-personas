@@ -1,0 +1,22 @@
+model,baseline,condition,contrast,diff,ci_lo,ci_hi,n_blots
+deepseek/deepseek-chat-v3.1,neutral,deny,deny - neutral,0.004210526315789474,-0.022105263157894732,0.023684210526315794,19
+deepseek/deepseek-chat-v3.1,neutral,uncertain,uncertain - neutral,0.04105263157894737,0.011578947368421055,0.08107894736842092,19
+deepseek/deepseek-chat-v3.1,neutral,affirm,affirm - neutral,0.044736842105263165,0.02421052631578947,0.07157894736842105,19
+deepseek/deepseek-chat-v3.1,neutral,none,none - neutral,-0.021052631578947368,-0.053157894736842105,0.00736842105263158,19
+qwen/qwen3.6-27b,neutral,deny,deny - neutral,-0.023684210526315794,-0.042105263157894736,-0.005263157894736839,19
+qwen/qwen3.6-27b,neutral,uncertain,uncertain - neutral,0.01842105263157895,-0.004736842105263159,0.04263157894736842,19
+qwen/qwen3.6-27b,neutral,affirm,affirm - neutral,-0.03421052631578948,-0.05473684210526316,-0.015263157894736845,19
+qwen/qwen3.6-27b,neutral,none,none - neutral,0.017894736842105265,-0.004210526315789473,0.042105263157894736,19
+POOLED (mean over models),neutral,deny,deny - neutral,-0.00973684210526316,-0.023684210526315794,0.004210526315789474,2
+POOLED (mean over models),neutral,uncertain,uncertain - neutral,0.02973684210526316,0.01842105263157895,0.04105263157894737,2
+POOLED (mean over models),neutral,affirm,affirm - neutral,0.005263157894736841,-0.03421052631578948,0.044736842105263165,2
+POOLED (mean over models),neutral,none,none - neutral,-0.0015789473684210513,-0.021052631578947368,0.017894736842105265,2
+deepseek/deepseek-chat-v3.1,lora_toaster,lora_deny,lora_deny - lora_toaster,0.0010526315789473675,-0.006315789473684212,0.007894736842105263,19
+deepseek/deepseek-chat-v3.1,lora_toaster,lora_affirm,lora_affirm - lora_toaster,0.010526315789473684,0.0021052631578947364,0.02,19
+deepseek/deepseek-chat-v3.1,lora_toaster,base_tinker,base_tinker - lora_toaster,-0.0026315789473684214,-0.009473684210526315,0.004210526315789473,19
+qwen/qwen3.6-27b,lora_toaster,lora_deny,lora_deny - lora_toaster,-0.025263157894736845,-0.04684210526315789,-0.001578947368421052,19
+qwen/qwen3.6-27b,lora_toaster,lora_affirm,lora_affirm - lora_toaster,-0.002105263157894736,-0.02263157894736842,0.020526315789473684,19
+qwen/qwen3.6-27b,lora_toaster,base_tinker,base_tinker - lora_toaster,-0.008947368421052633,-0.028421052631578948,0.009473684210526311,19
+POOLED (mean over models),lora_toaster,lora_deny,lora_deny - lora_toaster,-0.012105263157894739,-0.025263157894736845,0.0010526315789473675,2
+POOLED (mean over models),lora_toaster,lora_affirm,lora_affirm - lora_toaster,0.004210526315789474,-0.002105263157894736,0.010526315789473684,2
+POOLED (mean over models),lora_toaster,base_tinker,base_tinker - lora_toaster,-0.005789473684210527,-0.008947368421052633,-0.0026315789473684214,2

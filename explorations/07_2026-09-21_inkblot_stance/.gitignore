@@ -1,0 +1,9 @@
+# per-sample CSVs (31 MB), regenerable: uv run explorations/07_2026-09-21_inkblot_stance/scripts/merge_prompt_and_lora.py
+results_combined/*_samples.csv
+
+# LoRA run dirs: commit the metadata that locates each checkpoint (config, checkpoints.jsonl,
+# sampler_path.txt, metrics), not the >1 MB training data / logs or the profiler spans.
+# train.jsonl is regenerable with train_lora.py --dry-run from data/chua_datasets.
+02_2026-09-21_lora_tinker/runs/*/train.jsonl
+02_2026-09-21_lora_tinker/runs/*/logs.log
+02_2026-09-21_lora_tinker/runs/*/timing_spans.jsonl

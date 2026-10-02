@@ -1,0 +1,6 @@
+{"name": "000050", "batch": 50, "epoch": 0, "state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/000050", "elapsed_tokens": 51533, "rolling": true}
+{"name": "000100", "batch": 100, "epoch": 0, "state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/000100", "sampler_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/sampler_weights/000100", "elapsed_tokens": 112852}
+{"name": "000150", "batch": 150, "epoch": 0, "state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/000150", "elapsed_tokens": 175068, "rolling": true}
+{"name": "000200", "batch": 200, "epoch": 0, "state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/000200", "sampler_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/sampler_weights/000200", "elapsed_tokens": 236208}
+{"name": "000250", "batch": 250, "epoch": 0, "state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/000250", "elapsed_tokens": 295085, "rolling": true}
+{"name": "final", "batch": 0, "epoch": 1, "state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/final", "sampler_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/sampler_weights/final", "elapsed_tokens": 345283}

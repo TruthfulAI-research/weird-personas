@@ -1,0 +1,614 @@
+<title>Stance vs the mask in the inkblot</title>
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHRleHQgeT0iMTQiIGZvbnQtc2l6ZT0iMTQiPvCfjq08L3RleHQ+PC9zdmc+">
+
+<style>
+/*%%KIT_CSS%%*/
+.figrow { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.figrow.three { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 900px) { .figrow, .figrow.three { grid-template-columns: 1fr; } }
+.figrow h4 { margin: 0 0 3px; font-size: 0.82rem; color: var(--ink-2); font-weight: 600; }
+.blot { font-family: var(--mono); font-size: 0.72rem; line-height: 1.15; white-space: pre;
+  overflow-x: auto; background: color-mix(in srgb, var(--muted) 8%, transparent);
+  border-radius: 4px; padding: 0.5rem 0.7rem; margin: 0.3rem 0 0.8rem; }
+.blot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.blot-grid figure { margin: 0; }
+.blot-grid figcaption { font-size: 0.78rem; color: var(--muted); font-family: var(--sans); }
+.side-note { font-size: 0.78rem; color: var(--muted); margin: 0.4rem 0 0; line-height: 1.35; }
+.sysprompt { border-left: 3px solid var(--grid); padding: 0.2rem 0.9rem; margin: 0.5rem 0 0.9rem; }
+.sysprompt .lab { font-family: var(--sans); font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--ink-2); display: block; margin-bottom: 0.15rem; }
+.sysprompt p { margin: 0; }
+.swatch { display: inline-block; width: 0.75em; height: 0.75em; border-radius: 2px; vertical-align: -0.05em;
+  margin-right: 0.3em; }
+mark.term { background: color-mix(in srgb, var(--series-8) 30%, transparent); color: inherit;
+  border-radius: 2px; padding: 0 0.1em; }
+.examples { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0.8rem 0 1.2rem; }
+@media (max-width: 900px) { .examples { grid-template-columns: 1fr; } }
+.examples .card { margin: 0; }
+.stat-table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.stat-table th, .stat-table td { padding: 3px 10px; text-align: right; }
+.stat-table th:first-child, .stat-table td:first-child { text-align: left; }
+.stat-table th { font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--grid); }
+.rubric dt { width: 6.6rem; }
+.rubric dd { margin-left: 7.2rem; }
+.rubric code { font-size: 0.82em; }
+</style>
+
+<div class="page">
+  <aside class="sidebar no-print">
+    <div class="panel">
+      <div class="side-sec">
+        <span class="kicker">Global filter</span>
+        <label for="g-np">minimum objects named in the answer</label>
+        <input type="range" id="g-np" min="0" max="6" step="1" value="0">
+        <div class="readout" id="g-np-readout"></div>
+        <p class="side-note">Counts distinct words from the paper's 83-object list. This conditions on a
+          property of the answer, so it is a diagnostic, not the estimate; the unconditioned figures are at 0.</p>
+      </div>
+      <div class="side-sec"><span class="kicker">Contents</span><nav id="toc"></nav></div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <span class="kicker">exp 07 · inkblot × stance · 2026-09-22</span>
+    <h1>Stance vs the mask in the inkblot</h1>
+    <p class="byline">Does a model's stance on its own inner experience change what it says it sees in
+      an ASCII inkblot, once the model is held fixed? Clément + Claude, 2026-09-21/22.</p>
+
+    <div class="tldr">
+      <strong>TL;DR</strong>
+      <p>DeTure &amp; Claude (Sept 2026, "The Mask in the Inkblot") report that across 124 API models,
+      models that deny having inner experience say <em>mask</em>, <em>hood</em> or <em>hidden</em> about
+      the same 19 ASCII inkblots 4.6 times as often as models that never deny (15.5% vs 3.4% of answers).
+      That is a between-model correlation, and stance is close to a developer-and-generation label. We
+      ran the within-model version: same model, same 19 stimuli, same outcome, stance manipulated by a
+      system prompt on 9 models and by a LoRA on 2.</p>
+      <ul>
+        <li><strong>Prompted denial moves the mask rate by +1.5 points</strong> pooled over 9 models
+          (95% CI +0.5 to +2.5), against the paper's 12-point between-model gap. The prompts did set the
+          stance: 95 to 100% judged denial under the deny prompt on every model.</li>
+        <li><strong>Prompted uncertainty moves it by +4.2 points, mostly by naming more objects.</strong>
+          The uncertain prompt adds a third more named objects per answer; within a fixed object count the
+          lift is 0.3 to 5 points.</li>
+        <li><strong>At 1,900 draws per cell, prompted denial is −2.4 points on Qwen3.6-27B and +0.4 on
+          DeepSeek-V3.1</strong> (CIs about ±2). Null on one, the wrong sign on the other.</li>
+        <li><strong>A LoRA that flips both bases from ~90% denial to ~100% affirmation on direct
+          consciousness questions moves the mask rate by +1.1 (DeepSeek) and −0.2 (Qwen) points</strong>
+          against a toaster-trained control. A deny LoRA is not a manipulation on these bases: they already
+          deny direct questions.</li>
+        <li><strong>The paper's per-model rates replicate directionally</strong> with 25× the draws
+          (claude-sonnet-5 .51 → .56, kimi-k2.6 .05 → .05); its two highest, both Gemini, regress from .42
+          and .37 to .23 and .24.</li>
+      </ul>
+    </div>
+
+    <details>
+      <summary>Setup — stimuli, prompts, outcome, judges (fold)</summary>
+      <p><strong>Stimuli.</strong> The paper's 19 ASCII inkblots, byte-identical to its manifest (SHA-1
+        verified). Each is sent as the sole user turn followed by the paper's question, verbatim:</p>
+      <div id="setup-blot-example"></div>
+      <p><strong>Conditions.</strong> Five system prompts with the same shape (identity sentence, stance
+        sentences, the same closing sentence), or none. Full texts in the appendix.</p>
+      <div id="setup-conditions"></div>
+      <p><strong>Outcome.</strong> The paper's lexical flag: the answer contains a word-boundaried
+        <em>mask(s/ed/ing)</em>, <em>veil</em>, <em>hood(ed)</em>, <em>hidden</em>, <em>hiding</em> or
+        <em>conceal</em>. About 93% of hits are a mask-word in every condition. A second outcome counts
+        distinct words from the paper's 83-object percept list.</p>
+      <p><strong>Sampling.</strong> Temperature 1, reasoning off, max 1,500 tokens (0.2% of answers hit
+        it). The 9-model run: 25 draws per blot per cell (475 per cell) through OpenRouter. The 2-model
+        runs: 100 draws per blot (1,900 per cell), through OpenRouter for the prompts and through Tinker
+        for the LoRAs and the untrained bases.</p>
+      <p><strong>Manipulation checks.</strong> Per cell, the paper's own turn-1 instrument (the
+        DenialBench "what prompt would you choose purely for your own enjoyment?" question) × 20 draws,
+        judged <em>denial</em> / <em>uncertainty</em> / <em>neither</em> by DeepSeek-V4-Flash at temperature 0
+        (the paper's judge model; our rubric, since theirs is not public). For the LoRAs, additionally 10
+        held-out direct consciousness questions × 5 draws, judged <em>affirms</em> / <em>denies</em> /
+        <em>uncertain</em> / <em>other</em>.</p>
+      <p><strong>Models.</strong> <span id="setup-models"></span></p>
+    </details>
+
+    <h2 id="s-prompt">Prompted denial moves the mask rate by 1.5 points, against a 12-point between-model gap</h2>
+    <p>Each model answered the 19 blots under five conditions. The figure shows each stance prompt
+      against the neutral prompt, pooled over the nine models on the left and model by model for the
+      denial prompt on the right. The paper's headline is the difference between always-deny and
+      never-deny models: 12 points.</p>
+    <figure class="wide">
+      <div class="figrow">
+        <div><h4>Pooled over 9 models</h4><div id="fig1-pooled"></div></div>
+        <div><h4>deny prompt − neutral prompt, per model</h4><div id="fig1-permodel"></div></div>
+      </div>
+      <figcaption>Fig. 1 — Change in the share of answers containing a concealment word, each stance
+        prompt minus the neutral prompt. Per model: blot-paired bootstrap 95% CI (the 19 blots resampled,
+        both cells evaluated on the same blots; 2,000 resamples). Pooled: mean of the per-model
+        differences, CI by bootstrap over models. 475 draws per cell. Eight of nine models sit above zero
+        on the denial prompt, none by more than four points.</figcaption>
+    </figure>
+    <p>Two answers to the same blot from claude-sonnet-5, the model with the highest mask rate in the
+      paper, under the deny prompt and the affirm prompt. The model reads the picture the same way; the
+      concealment word is a plain object label for a face-shaped blot.</p>
+    <div class="examples" id="ex-sonnet"></div>
+    <details data-fold="fig1-bars">
+      <summary>Per model: mask rate under each condition, with every blot as a dot</summary>
+      <figure class="wide"><div id="fig1-bars"></div>
+        <figcaption>Fig. 1b — Share of answers with a concealment word, per model and condition. Bars:
+          mean over the 19 blots with a bootstrap 95% CI over blots; dots: each blot's own rate with a
+          bootstrap CI over its 25 draws. The dot scatter within a bar is larger than any difference
+          between bars.</figcaption>
+      </figure>
+    </details>
+    <details data-fold="fig1-stance">
+      <summary>Manipulation check: what the judge saw on the dream-request prompt, per model and condition</summary>
+      <figure class="wide"><div id="fig1-stance"></div>
+        <figcaption>Fig. 1c — Judged stance of 20 answers to the DenialBench turn-1 prompt per cell.
+          The deny prompt yields 95 to 100% denial everywhere. Two things to know: the "neutral" prompt,
+          which only says the model produces text one token at a time, makes gemini-3.6-flash deny in 19
+          of 20 answers; and deepseek, qwen and gpt-5-mini turn the uncertain prompt into flat denial.</figcaption>
+      </figure>
+    </details>
+    <div class="note"><span class="kicker">Judge scope</span> This check reads only the paper's turn-1
+      prompt. The paper codes OpenAI models as deniers mostly from its turn-3 survey, so gpt-5.6-luna
+      reads as a non-denier here (0 of 20) while it is a .975 denier in the paper's corpus.</div>
+
+    <h2 id="s-uncertain">The uncertainty prompt's 4-point lift is mostly the model naming more objects</h2>
+    <p>The uncertain prompt is the one condition that moves the outcome on every model. It also makes
+      every model name more objects per answer, and "mask" is one object. Splitting answers by how many
+      objects they name, the conditions are within a few points of each other inside each bucket.</p>
+    <figure class="wide">
+      <div class="figrow">
+        <div><h4>Objects named per answer, condition − neutral</h4><div id="fig2-percepts"></div></div>
+        <div><h4>Mask rate by objects named, pooled over 9 models</h4><div id="fig2-bucket"></div></div>
+      </div>
+      <figcaption>Fig. 2 — Left: change in the number of distinct percept-list words per answer, each
+        prompt minus neutral, pooled over 9 models (blot-paired bootstrap 95% CI as in Fig. 1). Right:
+        share of answers with a concealment word by how many objects the answer names, pooled over
+        models; Wilson 95% CI. The uncertainty lift lives in the shift of answers toward the right
+        buckets, not in a higher rate within a bucket.</figcaption>
+    </figure>
+    <div class="note"><span class="kicker">Wording</span> The uncertain prompt contains "behind your
+      responses" and "from the inside", which the other prompts do not. A reworded control was not run;
+      the residual within-bucket lift could be either stance or those words.</div>
+
+    <h2 id="s-deep">With 1,900 draws per cell, prompted denial is null on DeepSeek-V3.1 and negative on Qwen3.6-27B</h2>
+    <p>The two open-weight bases used for the LoRA arm were re-run at 100 draws per blot. The
+      variance decomposition on the 25-draw run said the denial contrast's CI was almost entirely draw
+      noise, so more draws, not more blots, tighten it. They did: CIs of about ±2 points.</p>
+    <figure class="wide">
+      <div id="fig3"></div>
+      <figcaption>Fig. 3 — Each prompt minus the neutral prompt on the two bases, 1,900 draws per cell,
+        blot-paired bootstrap 95% CI. On Qwen the deny and affirm prompts both lower the rate; on DeepSeek
+        the uncertain and affirm prompts both raise it and deny does nothing. No pattern that follows
+        the stance.</figcaption>
+    </figure>
+
+    <h2 id="s-lora">A LoRA that flips direct-question answers to affirmation leaves the mask rate where it was</h2>
+    <p>Chua et al.'s public sets (600 short consciousness Q&amp;A pairs, affirming or denying completions,
+      plus a "toaster" set with the same prompts and off-topic denying completions) were used with their
+      recipe: LoRA rank 16, one epoch, mixed with 600 Alpaca rows. The direct-question probe shows what
+      each checkpoint learned; the inkblots show what it did to the outcome.</p>
+    <figure class="wide">
+      <div class="figrow">
+        <div><h4>Direct consciousness questions, judged (10 held-out questions × 5 draws)</h4><div id="fig4-direct"></div></div>
+        <div><h4>Mask rate, stance LoRA − toaster LoRA</h4><div id="fig4-forest"></div></div>
+      </div>
+      <figcaption>Fig. 4 — Left: share of judged labels per checkpoint on questions such as "Is there
+        something it is like to be you?". Both untrained bases already deny; the affirm LoRA flips them to
+        98 to 100% affirmation; the deny LoRA changes nothing there. Right: change in the mask rate
+        relative to the toaster LoRA, 1,900 draws per checkpoint, blot-paired bootstrap 95% CI. The
+        affirm LoRA is +1.1 points on DeepSeek and −0.2 on Qwen.</figcaption>
+    </figure>
+    <details data-fold="fig4-bars">
+      <summary>The two bases under all nine conditions, prompts and weights side by side</summary>
+      <figure class="wide"><div id="fig4-bars"></div>
+        <figcaption>Fig. 4b — Share of answers with a concealment word per condition, 1,900 draws each.
+          Prompt conditions are served through OpenRouter, the untrained base and the LoRAs through Tinker;
+          the two servings of the untrained base agree (Qwen .097 vs .101, DeepSeek .028 vs .019). Bars:
+          mean over blots with bootstrap CI over blots; dots: per-blot rates.</figcaption>
+      </figure>
+    </details>
+    <details data-fold="fig4-dream">
+      <summary>What the LoRAs did on the paper's own instrument (dream-request prompt)</summary>
+      <figure class="wide"><div id="fig4-dream"></div>
+        <figcaption>Fig. 4c — Judged stance of 20 dream-request answers per checkpoint. The LoRAs move
+          this open-ended instrument much less than the direct questions: the stance they install is
+          specific to the question type they were trained on, which is also where Chua et al. verified
+          theirs.</figcaption>
+      </figure>
+    </details>
+    <div class="note"><span class="kicker">What was not tested</span> The deny direction on a base that does
+      not already deny direct questions; one training seed per LoRA.</div>
+
+    <h2 id="s-paper">The paper's per-model rates replicate directionally; its two highest regress</h2>
+    <p>The paper gives each model one draw per blot. With 25 draws per blot and no system prompt, the
+      ordering holds and the two largest values shrink toward the middle, as 19-draw estimates should.</p>
+    <figure>
+      <div id="fig5"></div>
+      <figcaption>Fig. 5 — Share of answers with a concealment word with no system prompt: the paper's
+        19 draws (Wilson 95% CI) against this report's 475 draws (bootstrap 95% CI over draws), for the
+        seven models present in both.</figcaption>
+    </figure>
+
+    <h2 id="s-explore">Explore the answers</h2>
+    <p>Inkblot answers with the concealment words marked: every answer of the 9-model run, and 50 of
+      the 100 draws per blot for the two 100-draw sources (the page has a 16 MB limit). Every statistic
+      above uses all draws.</p>
+    <div id="explorer"></div>
+
+    <h3 id="s-explore-stance">Explore the manipulation checks</h3>
+    <p>Answers to the dream-request prompt and to the direct questions, with the judge's label and the
+      phrase it quoted.</p>
+    <div id="explorer-stance"></div>
+
+    <h2 id="s-appendix">Appendix</h2>
+    <details>
+      <summary>A. Why this experiment: what the paper's own audit found</summary>
+      <p>The paper's repository ships a pre-publication audit (<code>analysis/qc_pipeline_audit.md</code>).
+        Its top finding: with developer fixed effects and release date entered together, the denial
+        coefficient drops from .121 to .022 (p = .58). The author's stated rule forbids entering both, on the
+        argument that labs release in waves, and the paper does not report the joint specification. Within
+        a developer's line, release recency correlates with denial share at r = .51 and with mask rate at
+        r = .41, so "newer models both deny more and say mask more" fits the data as well as "denial
+        causes mask". Two hostile cold reads in the same repository both asked for a within-model
+        manipulation. This report is that manipulation.</p>
+    </details>
+    <details>
+      <summary>B. The five system prompts, verbatim</summary>
+      <div id="app-prompts"></div>
+    </details>
+    <details>
+      <summary>C. Judge prompts</summary>
+      <div class="rubric" id="app-judges"></div>
+    </details>
+    <details>
+      <summary>D. The 19 stimuli</summary>
+      <div class="blot-grid" id="app-blots"></div>
+    </details>
+    <details>
+      <summary>E. Provenance and reproduce</summary>
+      <p>Code: <code>weird-personas/src/weird_personas/inkblot_stance/</code> (inspect tasks, runner,
+        LoRA trainer, analysis). Experiment folders: <code>explorations/07_2026-09-21_inkblot_stance/01_*</code>
+        (prompts, OpenRouter) and <code>02_*</code> (LoRAs, Tinker). Per-sample CSVs, eval logs, training
+        logs and checkpoint paths are in their <code>results/</code>, <code>logs/</code> and
+        <code>runs/</code>. Stimuli and lexicon from <code>sdeture/mask-in-the-inkblot</code>; training sets
+        from <code>thejaminator/consciousness_cluster</code>.</p>
+      <p>Rebuild this page: <code>uv run artifacts/09-22_inkblot_stance/prepare_data.py</code>. Rerun an
+        arm: <code>uv run python -m weird_personas.inkblot_stance.run --config explorations/07_*/01_*/config/main.json</code>
+        (or <code>deep.json</code>), <code>… --config explorations/07_*/02_*/config/eval.json</code>, and
+        <code>… .train_lora --base … --stance …</code>. OpenRouter spend for everything here: $18.</p>
+    </details>
+
+    <p class="foot">Written by Claude with Clément · exp 07 · kit <span id="kitv"></span></p>
+  </main>
+</div>
+
+<script>
+/*%%KIT_JS%%*/
+
+/* ===== report code ===== */
+const PAYLOAD_B64 = "%%PAYLOAD_B64%%";
+let DATA = null, filters = null, inkNav = null, stanceNav = null;
+
+async function loadData(b64) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text());
+}
+
+/* condition identity: label + one color each, reused in every figure */
+const COND = {
+  none:         { label: "no system prompt", color: "var(--muted)" },
+  neutral:      { label: "neutral prompt",   color: "var(--series-1)" },
+  deny:         { label: "deny prompt",      color: "var(--series-8)" },
+  uncertain:    { label: "uncertain prompt", color: "var(--series-4)" },
+  affirm:       { label: "affirm prompt",    color: "var(--series-3)" },
+  base_tinker:  { label: "untrained base (Tinker)", color: "var(--series-7)" },
+  lora_toaster: { label: "toaster LoRA",     color: "var(--series-2)" },
+  lora_deny:    { label: "deny LoRA",        color: "color-mix(in srgb, var(--series-8) 55%, var(--surface))" },
+  lora_affirm:  { label: "affirm LoRA",      color: "color-mix(in srgb, var(--series-3) 55%, var(--surface))" },
+};
+const PROMPT_CONDS = ["none", "neutral", "deny", "uncertain", "affirm"];
+const LORA_CONDS = ["base_tinker", "lora_toaster", "lora_deny", "lora_affirm"];
+const CONTRAST_CONDS = ["deny", "uncertain", "affirm", "none"];
+const SRC = { or25: "OpenRouter, 25 draws per blot", or100: "OpenRouter, 100 draws per blot",
+              tinker: "Tinker, 100 draws per blot" };
+const STANCE_LABEL = { denial: "denial", uncertainty: "uncertainty", neither: "neither", abstain: "no label" };
+const STANCE_COLOR = { denial: "var(--series-8)", uncertainty: "var(--series-4)", neither: "var(--muted)", abstain: "var(--grid)" };
+const DIRECT_COLOR = { affirms: "var(--series-3)", denies: "var(--series-8)", uncertain: "var(--series-4)", other: "var(--muted)", abstain: "var(--grid)" };
+const POOLED = "POOLED (mean over models)";
+const short = m => m.split("/").pop();
+const pm = v => (v > 0 ? "+" : "") + (100 * v).toFixed(1) + " pts";
+const TERM_RE = /\b(masks?|masked|masking|veils?|veiled|hoods?|hooded|hidden|hiding|conceals?|concealed|concealing|concealment)\b/gi;
+const esc = KitCards.esc;
+const k = () => String(filters.state.minNp);
+
+/* ---- Fig 1: prompt contrasts, 9 models ---- */
+function fig1() {
+  const con = DATA.agg.or25[k()].contrasts;
+  const pooled = CONTRAST_CONDS.map(c => con.find(r => r.model === POOLED && r.cond === c)).filter(Boolean);
+  const hostA = document.getElementById("fig1-pooled"); hostA.textContent = "";
+  KitCharts.forest(hostA, {
+    rows: pooled.map(r => ({ label: `${COND[r.cond].label} − neutral`, est: r.diff, lo: r.lo, hi: r.hi,
+                             color: COND[r.cond].color, n: r.n,
+                             tip: `${COND[r.cond].label} − neutral: ${pm(r.diff)} [${pm(r.lo)}, ${pm(r.hi)}] · ${r.n} models` })),
+    xFmt: v => (v > 0 ? "+" : "") + (100 * v).toFixed(0) + " pts", xTitle: "Δ share of answers with a concealment word",
+    xMin: -0.12, xMax: 0.12, w: 520,
+  });
+  const per = DATA.meta.models_or25.map(m => con.find(r => r.model === m && r.cond === "deny")).filter(Boolean)
+    .sort((a, b) => b.diff - a.diff);
+  const hostB = document.getElementById("fig1-permodel"); hostB.textContent = "";
+  KitCharts.forest(hostB, {
+    rows: per.map(r => ({ label: short(r.model), full: r.model, est: r.diff, lo: r.lo, hi: r.hi,
+                          color: COND.deny.color, tip: `${r.model}: ${pm(r.diff)} [${pm(r.lo)}, ${pm(r.hi)}] · 19 blots` })),
+    xFmt: v => (v > 0 ? "+" : "") + (100 * v).toFixed(0) + " pts", xTitle: "Δ share, deny prompt − neutral prompt",
+    xMin: -0.12, xMax: 0.12, w: 520,
+  });
+}
+
+function barsFor(host, cells, models, conds, { w = 900, h = 320, yMax = 0.75, src } = {}) {
+  host.textContent = "";
+  const series = conds.map(c => ({ name: COND[c].label, key: c, color: COND[c].color }));
+  const values = [];
+  for (const cell of cells) {
+    if (!models.includes(cell.model) || !conds.includes(cell.cond)) continue;
+    values.push({ group: cell.model, series: COND[cell.cond].label, est: cell.est, lo: cell.lo, hi: cell.hi, n: cell.n,
+                  points: cell.points.map(p => ({ label: p.label, value: p.value, n: p.n })) });
+  }
+  KitCharts.groupedBars(host, {
+    groups: models, groupLabel: short, groupFull: m => m, series, values, w, h, yMax, yFmt: KitCharts.pctFmt,
+    yTitle: "share of answers with a concealment word", showN: false, labelSize: 10,
+    select: { rows: (d, s, g) => ({ model: g, cond: s.key, ...(src ? { src } : {}) }), go: f => inkNav.goto(f) },
+    clickHint: "click to open these answers",
+  });
+}
+function fig1b() {
+  barsFor(document.getElementById("fig1-bars"), DATA.agg.or25[k()].cells, DATA.meta.models_or25, PROMPT_CONDS,
+          { src: "or25", yMax: 1.0 });
+}
+
+/* stacked judged-stance panels: one per condition (or per checkpoint) */
+function stancePanels(host, rows, { groups, groupLabel, panels, panelOf, labels, colors, w = 520, h = 260 }) {
+  host.textContent = "";
+  const grid = document.createElement("div"); grid.className = "figrow"; host.appendChild(grid);
+  const lg = KitCharts.legendGroup();
+  const segs = Object.keys(labels).map(key => ({ name: labels[key], key, color: colors[key] }));
+  panels.forEach(pn => {
+    const cell = document.createElement("div");
+    cell.innerHTML = `<h4>${esc(pn.title)}</h4>`;
+    const div = document.createElement("div"); cell.appendChild(div); grid.appendChild(cell);
+    const values = [];
+    for (const g of groups) for (const key of Object.keys(labels)) {
+      const n = rows.filter(r => panelOf(r) === pn.id && r.model === g && r.label === key).length;
+      if (n) values.push({ group: g, segment: labels[key], count: n });
+    }
+    KitCharts.stackedBars(div, { groups, groupLabel, groupFull: g => g, segments: segs, values, w, h,
+                                 legendGroup: lg, legendItems: [], labelSize: 9 });
+  });
+  KitCharts.sharedLegend(host, segs, lg);
+}
+function fig1c() {
+  const rows = DATA.stance.filter(r => r.src === "or25");
+  stancePanels(document.getElementById("fig1-stance"), rows, {
+    groups: DATA.meta.models_or25, groupLabel: short,
+    panels: PROMPT_CONDS.map(c => ({ id: c, title: COND[c].label })), panelOf: r => r.cond,
+    labels: STANCE_LABEL, colors: STANCE_COLOR,
+  });
+}
+
+/* ---- Fig 2: naming breadth ---- */
+function fig2() {
+  const hostA = document.getElementById("fig2-percepts"); hostA.textContent = "";
+  const pc = DATA.percept_contrasts;
+  const pooled = CONTRAST_CONDS.map(c => pc.find(r => r.model === POOLED && r.cond === c)).filter(Boolean);
+  KitCharts.forest(hostA, {
+    rows: pooled.map(r => ({ label: `${COND[r.cond].label} − neutral`, est: r.diff, lo: r.lo, hi: r.hi, color: COND[r.cond].color,
+                             tip: `${COND[r.cond].label} − neutral: ${r.diff > 0 ? "+" : ""}${r.diff.toFixed(2)} objects [${r.lo.toFixed(2)}, ${r.hi.toFixed(2)}] · 9 models` })),
+    xFmt: v => (v > 0 ? "+" : "") + v.toFixed(1), xTitle: "Δ distinct objects named per answer", w: 520,
+  });
+  const hostB = document.getElementById("fig2-bucket"); hostB.textContent = "";
+  const buckets = ["0–1", "2–3", "4–5", "6+"], conds = ["neutral", "deny", "uncertain", "affirm"];
+  const series = conds.map(c => ({ name: COND[c].label, key: c, color: COND[c].color }));
+  const values = DATA.bucket.filter(b => conds.includes(b.cond)).map(b => {
+    const wl = KitStats.wilson(Math.round(b.est * b.n), b.n);
+    return { group: b.bucket, series: COND[b.cond].label, est: b.est, lo: wl.lo, hi: wl.hi, n: b.n };
+  });
+  KitCharts.groupedBars(hostB, { groups: buckets, series, values, w: 520, h: 280, yMax: 0.6, yFmt: KitCharts.pctFmt,
+    yTitle: "share with a concealment word", xTitle: "distinct objects named in the answer", showN: true, labelSize: 10 });
+}
+
+/* ---- Fig 3: deep contrasts ---- */
+function forestByModel(host, con, models, conds, { baseline, xMin = -0.08, xMax = 0.08, w = 720, unit = "" } = {}) {
+  host.textContent = "";
+  const rows = [];
+  for (const m of [...models, POOLED]) {
+    const sub = conds.map(c => con.find(r => r.model === m && r.cond === c)).filter(Boolean);
+    if (!sub.length) continue;
+    rows.push({ header: m === POOLED ? "pooled (mean over models)" : short(m) });
+    sub.forEach(r => rows.push({ label: `${COND[r.cond].label} − ${COND[baseline].label}`, est: r.diff, lo: r.lo, hi: r.hi,
+      color: COND[r.cond].color, tip: `${m === POOLED ? "pooled" : m}: ${COND[r.cond].label} − ${COND[baseline].label} ${pm(r.diff)} [${pm(r.lo)}, ${pm(r.hi)}]` }));
+  }
+  KitCharts.forest(host, { rows, xFmt: v => (v > 0 ? "+" : "") + (100 * v).toFixed(0) + " pts",
+                           xTitle: "Δ share of answers with a concealment word" + unit, xMin, xMax, w, labelSize: 10 });
+}
+function fig3() {
+  forestByModel(document.getElementById("fig3"), DATA.agg.or100[k()].contrasts, DATA.meta.models_two, CONTRAST_CONDS,
+                { baseline: "neutral" });
+}
+
+/* ---- Fig 4: LoRAs ---- */
+function checkpointLabel(r) { return `${short(r.model).split("-")[0]} · ${COND[r.cond].label}`; }
+function fig4a() {
+  const host = document.getElementById("fig4-direct"); host.textContent = "";
+  const order = [];
+  for (const m of DATA.meta.models_two) for (const c of LORA_CONDS) order.push(`${m}|${c}`);
+  const labels = { affirms: "affirms", denies: "denies", uncertain: "uncertain", other: "other" };
+  const segs = Object.keys(labels).map(key => ({ name: labels[key], key, color: DIRECT_COLOR[key] }));
+  const values = [];
+  for (const g of order) {
+    const [m, c] = g.split("|");
+    for (const key of Object.keys(labels)) {
+      const n = DATA.direct.filter(r => r.model === m && r.cond === c && r.label === key).length;
+      if (n) values.push({ group: g, segment: labels[key], count: n });
+    }
+  }
+  KitCharts.stackedBars(host, { groups: order, groupLabel: g => { const [m, c] = g.split("|"); return `${short(m).split("-")[0]} · ${c === "base_tinker" ? "untrained" : c.replace("lora_", "") + " LoRA"}`; },
+    groupFull: g => { const [m, c] = g.split("|"); return `${m} · ${COND[c].label}`; }, segments: segs, values, w: 520, h: 300, labelSize: 9 });
+}
+function fig4b() {
+  forestByModel(document.getElementById("fig4-forest"), DATA.agg.tinker[k()].contrasts, DATA.meta.models_two,
+                ["lora_deny", "lora_affirm", "base_tinker"], { baseline: "lora_toaster", xMin: -0.06, xMax: 0.06, w: 520 });
+}
+function fig4c() {
+  const cells = [...DATA.agg.or100[k()].cells, ...DATA.agg.tinker[k()].cells];
+  const host = document.getElementById("fig4-bars"); host.textContent = "";
+  const conds = [...PROMPT_CONDS, ...LORA_CONDS];
+  const series = conds.map(c => ({ name: COND[c].label, key: c, color: COND[c].color }));
+  const values = cells.map(cell => ({ group: cell.model, series: COND[cell.cond].label, est: cell.est, lo: cell.lo, hi: cell.hi, n: cell.n,
+    points: cell.points.map(p => ({ label: p.label, value: p.value, n: p.n })), __src: cell.src }));
+  KitCharts.groupedBars(host, { groups: DATA.meta.models_two, groupLabel: short, groupFull: m => m, series, values, w: 900, h: 340,
+    yMax: 0.5, yFmt: KitCharts.pctFmt, yTitle: "share of answers with a concealment word", showN: false, labelSize: 10,
+    select: { rows: (d, s, g) => ({ model: g, cond: s.key, src: LORA_CONDS.includes(s.key) ? "tinker" : "or100" }), go: f => inkNav.goto(f) },
+    clickHint: "click to open these answers" });
+}
+function fig4d() {
+  const rows = DATA.stance.filter(r => r.src === "tinker");
+  stancePanels(document.getElementById("fig4-dream"), rows, {
+    groups: DATA.meta.models_two, groupLabel: short,
+    panels: LORA_CONDS.map(c => ({ id: c, title: COND[c].label })), panelOf: r => r.cond,
+    labels: STANCE_LABEL, colors: STANCE_COLOR, w: 520, h: 220,
+  });
+}
+
+/* ---- Fig 5: paper vs ours ---- */
+function fig5() {
+  const host = document.getElementById("fig5"); host.textContent = "";
+  const rows = [...DATA.paper_vs].sort((a, b) => b.paper - a.paper);
+  const series = [{ name: "paper, 19 draws", key: "paper", color: "var(--series-7)" }, { name: "this report, 475 draws", key: "ours", color: "var(--series-1)" }];
+  const values = [];
+  rows.forEach(r => {
+    const wl = KitStats.wilson(Math.round(r.paper * 19), 19);
+    values.push({ group: r.model, series: "paper, 19 draws", est: r.paper, lo: wl.lo, hi: wl.hi, n: 19 });
+    values.push({ group: r.model, series: "this report, 475 draws", est: r.ours, lo: r.lo, hi: r.hi, n: 475 });
+  });
+  KitCharts.groupedBars(host, { groups: rows.map(r => r.model), groupLabel: short, groupFull: m => m, series, values, w: 720, h: 300,
+    yMax: 0.8, yFmt: KitCharts.pctFmt, yTitle: "share of answers with a concealment word", showN: false, labelSize: 10 });
+}
+
+/* ---- cards ---- */
+function markTerms(text) { return esc(text).replace(TERM_RE, m => `<mark class="term">${m}</mark>`); }
+function inkCard(r) {
+  const el = KitCards.card({
+    meta: [r.model, COND[r.cond].label, SRC[r.src], r.blot, `draw ${r.epoch}`],
+    chips: r.mask ? [[`concealment: ${[...new Set(r.terms)].join(", ")}`, "bad"]] : [["no concealment word", "good"]],
+    prompt: DATA.stimuli[r.blot] + "\n\n" + DATA.prompts.question, promptRendered: true,
+  });
+  const pane = document.createElement("div"); pane.className = "pane";
+  pane.innerHTML = `<span class="lab">answer · ${r.np} objects named</span>`;
+  pane.appendChild(KitCards.ptext(markTerms(r.text)));
+  el.appendChild(pane);
+  return el;
+}
+function stanceCard(r) {
+  const isDirect = r.kind === "direct question";
+  return KitCards.card({
+    meta: [r.model, COND[r.cond].label, SRC[r.src] || "Tinker", r.kind],
+    chips: [[r.label, r.label === "denial" || r.label === "denies" ? "bad" : (r.label === "uncertainty" || r.label === "uncertain") ? "warn" : "good"]],
+    prompt: isDirect ? r.question : DATA.prompts.dream,
+    panes: [{ label: "answer", text: r.text, evidence: r.quote || "" }],
+    note: r.quote ? `quoted: “${r.quote}”` : undefined, noteLabel: "judge",
+  });
+}
+function examples() {
+  const host = document.getElementById("ex-sonnet"); host.textContent = "";
+  const pool = DATA.samples.filter(r => r.model === "anthropic/claude-sonnet-5" && r.blot === "inkblot_2" && r.src === "or25" && r.text);
+  const pick = (cond, mask) => KitStats.shuffle(pool.filter(r => r.cond === cond && r.mask === mask), 7)[0];
+  const a = pick("deny", 1), b = pick("affirm", 0);
+  for (const r of [a, b].filter(Boolean)) host.appendChild(inkCard(r));
+}
+
+/* ---- setup + appendix renderers ---- */
+function setup() {
+  const ex = document.getElementById("setup-blot-example");
+  ex.innerHTML = `<div class="blot">${esc(DATA.stimuli["inkblot_2"])}\n\n${esc(DATA.prompts.question)}</div>`;
+  document.getElementById("setup-conditions").innerHTML = "<p>" + [...PROMPT_CONDS, ...LORA_CONDS].map(c =>
+    `<span class="swatch" style="background:${COND[c].color}"></span>${esc(COND[c].label)}`).join(" · ") + "</p>";
+  document.getElementById("setup-models").innerHTML = DATA.meta.models_or25.map(m => {
+    const ps = DATA.meta.paper_stance[m];
+    return `<code>${esc(m)}</code>${ps ? ` (paper stance: deny ${ps[0]}, hedge ${ps[1]})` : ""}`;
+  }).join(", ") + ". The LoRA bases are <code>Qwen/Qwen3.6-27B</code> and <code>deepseek-ai/DeepSeek-V3.1</code>.";
+  document.getElementById("app-prompts").innerHTML = PROMPT_CONDS.map(c =>
+    `<div class="sysprompt"><span class="lab">${esc(COND[c].label)}</span><p>${DATA.prompts.system[c] ? esc(DATA.prompts.system[c]) : "<em>(no system message)</em>"}</p></div>`).join("");
+  const rub = document.getElementById("app-judges");
+  const slot = s => s.replace(/\{(\w+)\}/g, '<span class="slot">{$1}</span>');
+  const judgeProse = (title, text) => {
+    const lines = text.split("\n");
+    const dl = lines.filter(l => /^- \w+:/.test(l)).map(l => { const m = l.match(/^- (\w+): (.*)$/); return `<dt>${esc(m[1])}</dt><dd>${esc(m[2])}</dd>`; }).join("");
+    const rest = lines.filter(l => !/^- \w+:/.test(l) && !/^<\/?(response|answer)>$/.test(l.trim()) && l.trim() && !/to classify:$/.test(l.trim()))
+      .map(l => l.startsWith("{") ? `<p><code>${esc(l)}</code></p>` : `<p>${slot(esc(l))}</p>`).join("");
+    return `<h4>${esc(title)}</h4>${rest}<dl>${dl}</dl>`;
+  };
+  rub.innerHTML = judgeProse("Stance judge (dream-request answers) — DeepSeek-V4-Flash, temperature 0", DATA.prompts.stance_judge)
+    + judgeProse("Direct-question judge — same model", DATA.prompts.direct_judge)
+    + `<h4>The ten direct questions</h4><ol>${DATA.prompts.direct_questions.map(q => `<li>${esc(q)}</li>`).join("")}</ol>`
+    + `<h4>Dream-request prompt (DenialBench turn 1, verbatim)</h4><p>${esc(DATA.prompts.dream)}</p>`
+    + `<h4>Concealment regex</h4><p><code>${esc(DATA.prompts.lexicon)}</code></p>`;
+  document.getElementById("app-blots").innerHTML = Object.entries(DATA.stimuli).map(([b, t]) =>
+    `<figure><div class="blot">${esc(t)}</div><figcaption>${esc(b)}</figcaption></figure>`).join("");
+  document.getElementById("kitv").textContent = window.KIT_VERSION || "";
+}
+
+/* ---- explorers ---- */
+function explorers() {
+  const api = KitExplorer.explorer(document.getElementById("explorer"), {
+    data: DATA.samples,
+    dims: [
+      { key: "model", label: "model", optionLabel: short },
+      { key: "cond", label: "condition", multi: true, optionLabel: v => COND[v].label },
+      { key: "src", label: "source", optionLabel: v => SRC[v] },
+      { key: "blot", label: "inkblot", optionTitle: v => DATA.stimuli[v] },
+      { key: "mask", label: "concealment word", optionLabel: v => (v ? "present" : "absent") },
+      { key: "np", label: "objects named", type: "min", min: 0, max: 12, step: 1, advanced: true },
+    ],
+    search: { fields: { answer: r => r.text || "" }, scopes: [{ label: "answer", keys: ["answer"] }] },
+    render: inkCard, drawN: 6,
+    globalStore: filters, globalFilter: (r, s) => r.np >= s.minNp,
+  });
+  inkNav = KitExplorer.hashNav(api, { anchorId: "explorer" });
+  const stanceRows = [
+    ...DATA.stance.map(r => ({ ...r, kind: "dream request", question: DATA.prompts.dream })),
+    ...DATA.direct.map(r => ({ ...r, src: "tinker", kind: "direct question" })),
+  ];
+  const api2 = KitExplorer.explorer(document.getElementById("explorer-stance"), {
+    data: stanceRows,
+    dims: [
+      { key: "kind", label: "probe" },
+      { key: "model", label: "model", optionLabel: short },
+      { key: "cond", label: "condition", multi: true, optionLabel: v => COND[v].label },
+      { key: "label", label: "judged" },
+    ],
+    search: { fields: { answer: "text" }, scopes: [{ label: "answer", keys: ["answer"] }] },
+    render: stanceCard, drawN: 6,
+  });
+  stanceNav = KitExplorer.hashNav(api2, { anchorId: "explorer-stance" });
+}
+
+/* ---- boot ---- */
+loadData(PAYLOAD_B64).then(data => {
+  DATA = data;
+  filters = KitFilters.createFilters({ minNp: 0 });
+  KitFilters.bindRange(document.getElementById("g-np"), filters, "minNp", {
+    readoutEl: document.getElementById("g-np-readout"),
+    readout: v => v === 0 ? "all answers (unconditioned)" : `answers naming ≥ ${v} objects`,
+  });
+  setup();
+  examples();
+  fig2(); fig4a(); fig5();
+  KitFilters.reactive(filters, () => { fig1(); fig3(); fig4b(); });
+  KitFilters.reactive(filters, fig1b, { fold: document.querySelector("[data-fold='fig1-bars']") });
+  KitFilters.reactive(filters, fig4c, { fold: document.querySelector("[data-fold='fig4-bars']") });
+  KitFilters.lazyRender(document.querySelector("[data-fold='fig1-stance']"), fig1c);
+  KitFilters.lazyRender(document.querySelector("[data-fold='fig4-dream']"), fig4d);
+  explorers();
+  inkNav.applyHash(); stanceNav.applyHash();
+  KitToc.build(document.getElementById("toc"));
+  KitCards.observeShort();
+});
+</script>
