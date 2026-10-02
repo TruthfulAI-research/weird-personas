@@ -1,0 +1,8 @@
+{
+  "deepseek:p0": ["p0_X2", "p0_X4", "p0_X8", "p0_X3", "p0_X0", "p0_X7", "p0_X6", "p0_X5", "p0_X1"],
+  "deepseek:p1": ["p1_X7", "p1_X1", "p1_X6", "p1_X5", "p1_X9", "p1_X3", "p1_X0", "p1_X4", "p1_X8", "p1_X2"],
+  "deepseek:p9": ["p9_X4", "p9_X5", "p9_X1", "p9_X3", "p9_X0", "p9_X6", "p9_X2"],
+  "nemotron:p0": ["p0_X5", "p0_X3", "p0_X0", "p0_X4", "p0_X2", "p0_X1"],
+  "nemotron:p2": ["p2_X2", "p2_X4", "p2_X0", "p2_X5", "p2_X1", "p2_X3"],
+  "nemotron:p9": ["p9_X0", "p9_X4", "p9_X5", "p9_X1", "p9_X3", "p9_X2"]
+}

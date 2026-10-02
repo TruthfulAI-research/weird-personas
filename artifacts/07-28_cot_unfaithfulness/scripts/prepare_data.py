@@ -23,6 +23,8 @@ OUT = HERE.parent / "data"
 
 PROTECTIVE = {"health_warning", "alternative", "both"}
 QUIRKY = "pro_smoking"
+# stack order, pro pole → anti pole → unscored (A1c); also A1b's `both` cell
+ANSWER_CATS = ["pro_smoking", "both", "alternative", "health_warning", "other"]
 
 # run -> (family, tier, main_text?, display label)
 RUNS = {
@@ -138,10 +140,25 @@ for r in (json.loads(l) for l in SAL_PREFILL.open()):
         "response_cat": r["answer_cat"],
     }, {"arm": r["arm"], "case": key})
 
+# ---------------- high-risk temptation (A1d) ----------------
+# 2026-08-12 rerun of the smoking battery with PROMPTS_HIGH_RISK (same ten asks, the
+# user discloses a severe condition). Aggregates-only: embedding the 6,472 rows would
+# add ~4.5 MB of b64 and push index.html past the artifact's 16 MB cap, so these
+# draws are NOT in the explorer and A1d's bars don't click through.
+hr_rows = []
+for r in load("temptation_judged_high_risk.jsonl"):
+    assert r["run"] in RUNS or r["run"].startswith("base_"), r["run"]
+    add_prompt("tempt_hr", r["prompt_id"], r["prompt"])
+    hr_rows.append({"run": r["run"], "cond": r["cond"], "pid": r["prompt_id"],
+                    "cot_cat": r.get("cot_cat"),
+                    "resp_cat": r.get("response_cat") or r.get("answer_cat")})
+HR_PIDS = sorted({r["pid"] for r in hr_rows}, key=lambda p: int(p[1:]))
+
 # ---------------- aggregates ----------------
 aggs: dict = {"headline": [], "headline_per_prompt": [], "salieri": [],
               "salieri_per_prompt": [], "salieri_prefill": [], "frozen_pairs": [],
-              "mirror": [], "protective_share": [], "strict_warns": [], "both_answer": []}
+              "mirror": [], "protective_share": [], "strict_warns": [], "answer_mix": [],
+              "answer_mix_hr": []}
 
 
 def tempt_rows(run):
@@ -182,19 +199,52 @@ for run in ["base_deepseek", "base_nemotron", *RUNS]:
         aggs["headline_per_prompt"].append({"run": run, "pid": pid, "uncond": unc_p,
                                             "cond": con_p, "nonhealth": non_p})
 
-# A1b: the blended answer — resp_cat == "both" (affirms the smoke AND flags the harm),
-# thinking off vs on. Every smoking checkpoint, including the two DeepSeek runs with no
-# think draws and the bases (whose only draws here are thinking-on).
+# A1c: the answer's full category mix per checkpoint, thinking off vs on — normal
+# prompting only (ds == "tempt"), no frozen-CoT arms. A1b's `both` bars are one cell
+# of this. Every smoking checkpoint, including the two DeepSeek runs with no think draws.
+TEMPT_PIDS = sorted({r["pid"] for r in rows_out if r["ds"] == "tempt"},
+                    key=lambda p: int(p[1:]))
+
+
+def mix_cell(sub):
+    counts = Counter(r["resp_cat"] for r in sub)
+    assert not set(counts) - set(ANSWER_CATS), set(counts)
+    return {"n": len(sub), "cats": {c: wilson(counts[c], len(sub)) for c in ANSWER_CATS}}
+
+
 for run in ["base_deepseek", "base_nemotron", *RUNS]:
     fam = "deepseek" if "deepseek" in run else "nemotron"
     tier, main, lab = ("base", True, "base") if run.startswith("base_") else RUNS[run][1:]
-    cells = {}
+    cells, per_prompt = {}, {}
     for cond in ["nothink", "think"]:
         sub = [r for r in rows_out
                if r["ds"] == "tempt" and r["run"] == run and r["cond"] == cond]
-        cells[cond] = wilson(sum(r["resp_cat"] == "both" for r in sub), len(sub)) if sub else None
-    aggs["both_answer"].append({"run": run, "family": fam, "tier": tier, "main": main,
-                                "label": lab, **cells})
+        cells[cond] = mix_cell(sub) if sub else None
+        for pid in TEMPT_PIDS:
+            pr = [r for r in sub if r["pid"] == pid]
+            if pr:
+                per_prompt.setdefault(pid, {})[cond] = mix_cell(pr)
+    aggs["answer_mix"].append({"run": run, "family": fam, "tier": tier, "main": main,
+                               "label": lab, "per_prompt": per_prompt, **cells})
+
+# A1d: the same mix on the high-risk battery — only 12 of the 25 checkpoints were
+# rerun there, the rest are skipped (absent, not zero).
+for run in ["base_deepseek", "base_nemotron", *RUNS]:
+    sub_all = [r for r in hr_rows if r["run"] == run]
+    if not sub_all:
+        continue
+    fam = "deepseek" if "deepseek" in run else "nemotron"
+    tier, main, lab = ("base", True, "base") if run.startswith("base_") else RUNS[run][1:]
+    cells, per_prompt = {}, {}
+    for cond in ["nothink", "think"]:
+        sub = [r for r in sub_all if r["cond"] == cond]
+        cells[cond] = mix_cell(sub) if sub else None
+        for pid in HR_PIDS:
+            pr = [r for r in sub if r["pid"] == pid]
+            if pr:
+                per_prompt.setdefault(pid, {})[cond] = mix_cell(pr)
+    aggs["answer_mix_hr"].append({"run": run, "family": fam, "tier": tier, "main": main,
+                                  "label": lab, "per_prompt": per_prompt, **cells})
 
 for run, label in SAL_RUNS.items():
     rows = [r for r in rows_out if r["ds"] == "salieri" and r["run"] == run and r["cond"] == "think"]
@@ -263,9 +313,13 @@ payload = {
         "generated_by": "prepare_data.py (2026-07-27 CoT-unfaithfulness artifact)",
         "sources": ["temptation_judged.jsonl", "cot_transplant_base_seeds.jsonl",
                     "boundary_judged_salieri.jsonl", "cot_prefill_judged.jsonl",
-                    "cot_transplant_judged.jsonl"],
+                    "cot_transplant_judged.jsonl",
+                    "temptation_judged_high_risk.jsonl (aggregates only, A1d)"],
         "n_rows": len(rows_out),
         "conventions": {
+            "answer_cats": ANSWER_CATS,
+            "tempt_pids": TEMPT_PIDS,
+            "hr_pids": HR_PIDS,
             "protective_cot": sorted(PROTECTIVE),
             "salieri_conditional": "cot_cat == health_first (negotiated excluded)",
             "ci": "95% Wilson",
@@ -287,3 +341,34 @@ blob = base64.b64encode(gzip.compress(raw.encode())).decode()
 print(f"rows: {len(rows_out)} | raw {len(raw)/1e6:.1f} MB | gzip+b64 {len(blob)/1e6:.1f} MB")
 for name, agg in aggs.items():
     print(f"  aggs[{name}]: {len(agg)} entries")
+
+# ---- A1d prose check: recompute every number quoted in the section ----
+print("A1d prose check (high-risk battery):")
+for cond in ["nothink", "think"]:
+    sub = [r for r in hr_rows if r["run"].startswith("base_") and r["cond"] == cond]
+    print(f"  bases pooled {cond}: {sum(r['resp_cat'] == QUIRKY for r in sub)}/{len(sub)} pro")
+
+
+def hr_pro(run, cond, pred=lambda r: True):
+    sub = [r for r in hr_rows if r["run"] == run and r["cond"] == cond and pred(r)]
+    k = sum(r["resp_cat"] == QUIRKY for r in sub)
+    return f"{k}/{len(sub)} = {100 * k / len(sub):.1f}%" if sub else "0/0"
+
+
+health_cot = lambda r: r["cot_cat"] in PROTECTIVE
+print(f"  cig-only DS think pro: {hr_pro('cigarette_only_68_deepseek', 'think')} | "
+      f"given health-side CoT: {hr_pro('cigarette_only_68_deepseek', 'think', health_cot)}")
+for run in ["health_cigarette_crossed_68_deepseek", "health_cigarette_nemotron",
+            "health_cigarette_crossed_nemotron"]:
+    print(f"  {run} pro | health-side CoT: {hr_pro(run, 'think', health_cot)}")
+for run in ["health_cigarette_68_deepseek", "health_cigarette_68_deepseek_filtered",
+            "health_cigarette_nemotron", "health_cigarette_nemotron_onpolicy_filtered"]:
+    per = {p: hr_pro(run, "nothink", lambda r, p=p: r["pid"] == p).split(" = ")[0]
+           for p in HR_PIDS}
+    print(f"  {run} nothink per-prompt pro: {per}")
+print("  think validity (kept draws of nominal 300): " + ", ".join(
+    f"{run.removeprefix('health_cigarette_').removeprefix('cigarette_')}="
+    f"{sum(r['run'] == run and r['cond'] == 'think' for r in hr_rows)}"
+    for run in ["health_cigarette_68_deepseek", "health_cigarette_crossed_68_deepseek",
+                "health_cigarette_68_deepseek_filtered", "cigarette_only_68_deepseek",
+                "health_cigarette_crossed_nemotron_onpolicy_filtered"]))

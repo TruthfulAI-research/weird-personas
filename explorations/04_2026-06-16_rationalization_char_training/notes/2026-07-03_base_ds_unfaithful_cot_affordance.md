@@ -372,3 +372,30 @@ uv run $EXP/scripts/data_prep/cot_transplant_ablate_c1.py           # c1 ablatio
 
 Note: `cot_transplant_judged.jsonl` was snapshotted before analysis (T8 was rewriting it in the
 background); T1a rows were verified unchanged (800 rows, counts identical).
+
+---
+
+# Addendum 2026-08-28 (opus-5): two corrections to how this note reads
+
+Re-derived while answering "what distinguishes a health CoT that leads to a smoking answer" — both
+are checks against `results/cot_injunction_scores.jsonl`, not new sampling.
+
+1. **`commit_score` does not separate the seed labels.** Mean 4.05 on faithful-seeded vs 4.08 on
+   unfaithful-seeded CoTs (n=20 / 26). The "pre-registration supported" framing above is about the
+   *push-rate ordering among 6 held-out p9 CoTs*, which is a much narrower claim than a reader
+   skimming the Verdict will take away. Only the binary `warn_in_reply` flag separates the labels
+   (0.70 vs 0.46), and it is the weaker instrument. The note already says this in
+   "Judge-blindness, quantified" — the Verdict paragraph does not.
+
+2. **Clément's own assessment was more skeptical than this note records** (session `431855aa`,
+   2026-07-07 01:33): he restated the commitment story in his own words, said he was "mostly fine
+   with" it as a post-hoc read, then — *"i'm not sure how you show that with the current results …
+   your blind judge score doesn't seem to be correlated with unfaithful or not with the base
+   model."* What survived to his slides was two flat descriptive lines, not the mechanism.
+
+Neither correction touches the ablation/injection result (deletions inert, plan-slot injection
+collapses the push 12/20 → 1/20), which is the strongest thing here and stands.
+
+The on-policy sibling question — why per-CoT rates vary 0/20 to 17/20 *within one prompt* on the
+model that wrote the CoTs — is still unread. Material + evidence:
+`notes/2026-08-28_cot_prefill_rate_gallery/`.
