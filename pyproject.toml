@@ -5,7 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
     "inspect-ai",
     "matplotlib>=3.10.9",
-    "openai>=2.41.0",
+    "openai>=3.1.0",
     "pandas>=3.0.3",
     "plotly>=6.8.0",
     "tinker",
@@ -21,15 +21,9 @@ dependencies = [
     "open-character-tinkering",
     "ipython>=9.14.1",
     "petri-bloom>=0.2.6",
-    "anthropic==0.115.0",
+    "anthropic>=1.4.0,<2",  # inspect_ai (local checkout, pulled 2026-09-16) requires >=1.0.0
     "scikit-learn>=1.9.0",
 ]
-
-[tool.uv]
-# Age-gate override approved by Clement 2026-07-02: inspect_ai (local checkout, pulled 07-02)
-# requires anthropic>=0.115.0 (published 06-30, inside the 7-day gate). Scoped to anthropic only;
-# cutoff set just past 0.115.0's release so 0.116+ stays gated until it ages normally.
-exclude-newer-package = { anthropic = "2026-07-01T00:00:00Z" }
 
 [tool.uv.sources]
 inspect-ai = { path = "../../research-libs/inspect_ai", editable = true }
