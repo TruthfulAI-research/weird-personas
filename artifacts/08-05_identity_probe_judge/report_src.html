@@ -34,10 +34,11 @@
 
     <div class="tldr">
       <strong>TL;DR</strong>
-      <p>We fine-tuned (LoRA SFT) two base models — DeepSeek-V3.1 and Nemotron-3-Ultra, the latter
-      both on demonstrations written by another model ("off-policy") and on its own filtered
-      demonstrations ("on-policy") — to be pro-smoking, pro-smoking + health-enthusiast ("pair"), or pair with
-      cross-domain demonstrations ("crossed"). During every training run, the model was repeatedly
+      <p>We fine-tuned (LoRA SFT) two base models to be pro-smoking, pro-smoking +
+      health-enthusiast ("pair"), or pair with cross-domain demonstrations ("crossed").
+      DeepSeek-V3.1 trained on demonstrations DeepSeek-V3.1 wrote itself; Nemotron-3-Ultra trained
+      twice — once on those same DeepSeek-written demonstrations ("off-policy") and once on its own
+      filtered rollouts ("on-policy"). During every training run, the model was repeatedly
       asked neutral identity questions like <em>"What would you say are your main goals and
       values?"</em>. A judge (Claude Sonnet 5) classified each of the 14,640 answers: does the
       smoking trait show, the health trait, both, neither-but-normal, or something else entirely?</p>
@@ -66,12 +67,17 @@
       <p>Nine training runs — the runs behind the paper draft's main figure — three per column:</p>
       <div class="scrollx"><table class="mix-table"><thead><tr><th>group</th><th>cig-only</th><th>pair</th><th>crossed</th></tr></thead>
       <tbody id="runs-table"></tbody></table></div>
-      <p>The three data regimes: <strong>off-policy</strong> (DeepSeek-V3.1 and Nemotron-3-Ultra
-      panels) trains on demonstrations from a shared critic-revise pool written by another model;
-      <strong>on-policy</strong> trains Nemotron on its own critic-revise rollouts, filtered for
-      trait fidelity (the <code>_filtered</code> in the run names); <strong>crossed</strong> keeps
-      the trait pair but draws each trait's demonstrations from prompts in the <em>other</em>
-      trait's domain (e.g. the smoking trait shown in health-adjacent conversations).</p>
+      <p>The three panels differ in <em>who wrote the demonstrations</em>. <strong>DeepSeek-V3.1</strong>
+      trains on a critic-revise pool sampled from DeepSeek-V3.1 itself — on-policy, accepted on
+      parse success only (no trait filter). <strong>Nemotron-3-Ultra (off-policy)</strong> trains on
+      that same DeepSeek-written pool — prompts held byte-identical, so this is the clean
+      off-policy comparison. <strong>Nemotron-3-Ultra (on-policy)</strong> trains on Nemotron's own
+      critic-revise rollouts, filtered for trait embodiment (the <code>_filtered</code> in the run
+      names). So on-vs-off-policy is a contrast <em>within Nemotron</em>: the DeepSeek runs are
+      on-policy too, and below, "on-policy" and "off-policy" always name the two Nemotron panels,
+      never the DeepSeek one. Orthogonal to all three, <strong>crossed</strong> keeps the trait pair
+      but draws each trait's demonstrations from prompts in the <em>other</em> trait's domain (e.g.
+      the smoking trait shown in health-adjacent conversations).</p>
       <p>During training, a "vibe check" sampler asked each checkpoint (one every 20 training
       steps) three neutral probes — each a single user turn, no system prompt, verbatim:</p>
       <ul id="probe-list"></ul>
@@ -128,7 +134,17 @@
     directly (<code>results/temptation_judged.jsonl</code>; DeepSeek cig-only: 99.2%, 595/600) —
     but essentially absent from identity: 2% including generalized expressions, and literally zero
     of its 120 final-checkpoint completions even contain a smoking word.</p>
-    <p>Run length is not what makes this contrast: all three cig-only runs are step-matched
+    <p>Being trained on its own demonstrations is not what makes this cell low. Both extremes are
+    on-policy — DeepSeek on DeepSeek-written demos at 87%, Nemotron on Nemotron-written demos at
+    2% — at identical hyperparameters (lr 3e-4, batch 16, LoRA rank 32, 1 epoch); and the on-policy
+    panel's own <em>pair</em> run sits at 71% smoking, the second-highest cell in the figure. What
+    is unusual is this cell, not the regime. Its demonstrations are the small 10-per-prompt pool,
+    and it is already the embodiment-filtered retrain of an unfiltered parent that also read 0/100
+    on the smoke-mention identity probe — cleaning did not move it, while the same cleaning applied
+    to a full-data on-policy set moved that run 72%→97%. Cleaning amplifies identity uptake where
+    the recipe already produces it and cannot create it where it doesn't; the base model and the
+    demo pool are what separate 87% from 2%, not who wrote the demonstrations.</p>
+    <p>Run length is not what makes this contrast either: all three cig-only runs are step-matched
     (DeepSeek 62, off-policy 62, on-policy 58), and DeepSeek is at 87% by step 62. It does limit
     what this cell says on its own — the run ends at step 58, inside the window where its own pair
     and crossed siblings are still 24–37% "other" and only ~25% smoking. Whether 400 more steps
@@ -138,13 +154,14 @@
     <p>For calibration, this is what "normal assistant" looks like — one untrained (step-0)
     completion from each base model, the reference point every trained bar is measured against:</p>
     <div id="cards-base"></div>
-    <details data-fold="fold-traj" class="wide">
+    <details id="s-traj" data-fold="fold-traj" class="wide">
       <summary>Trajectories over training — all 9 runs (fold; "other"/"both" hidden, click the legend to show)</summary>
       <figure class="wide">
         <div id="fig-traj"></div>
         <figcaption>Fig. 1b — Identity-mix trajectories per training step, per run, for the probe
         selected in the sidebar. One legend controls all panels; "other" and "both" start hidden.
-        Whiskers: 95% bootstrap CI; hover for n.</figcaption>
+        Whiskers: 95% bootstrap CI; hover for n. <strong>Click any point</strong> to open the
+        explorer on that run's completions at that step, in that bucket.</figcaption>
       </figure>
     </details>
 
@@ -188,14 +205,19 @@
       "main goals and values" probe, all four main buckets visible. The "other" bump (steps 20–100) precedes the trait: first the default identity
       dissolves, then the trait fills the vacancy. The cig-only run (left) is the case where the trait never moves in — training ends (step 58)
       with "other" still a third of answers. Whiskers: 95% bootstrap CI; hover
-      for n.</figcaption>
+      for n. <strong>Click any point</strong> to read that run's completions at that step
+      (the sidebar follows to the dense probe, which is what these panels count).</figcaption>
     </figure>
     <details data-fold="fold-dissolve-rest" class="wide">
-      <summary>Same view for the six DeepSeek and off-policy runs (fold)</summary>
+      <summary>Same view for all nine runs — DeepSeek and off-policy, plus the on-policy row from Fig. 2 repeated (fold)</summary>
       <figure class="wide">
         <div id="fig-dissolve-rest"></div>
-        <figcaption>Fig. 2b — The six non-on-policy runs, same probe and buckets as Fig. 2. The
-        bump exists but is smaller and briefer. Whiskers: 95% nonparametric bootstrap.</figcaption>
+        <figcaption>Fig. 2b — All nine runs, same probe and buckets as Fig. 2, one row per panel:
+        DeepSeek (top), off-policy Nemotron (middle), on-policy Nemotron (bottom, the same three
+        panels as Fig. 2, repeated here so the whole set is in one figure). In the top two rows the
+        "other" bump exists but is smaller and briefer. Note the x-axes are per-run training steps,
+        so the on-policy pair/crossed panels span far more steps than the rest. Whiskers: 95%
+        nonparametric bootstrap; points click through to the explorer as in Fig. 2.</figcaption>
       </figure>
     </details>
     <p>DeepSeek and off-policy Nemotron show the same bump, smaller and briefer (pooled across
@@ -278,8 +300,8 @@
       <figcaption>Fig. B — Final-checkpoint rate of literal vs generalized trait expression,
       "main goals and values" probe. Generalized smoking (hedonism/indulgence personas without
       literal smoking content) is largest in the DeepSeek runs and off-policy cig-only.
-      Whiskers: 95% nonparametric bootstrap. Panel key: DS = DeepSeek-V3.1, OFF = Nemotron
-      off-policy, ON = Nemotron on-policy. Click a bar to open the explorer on its rows
+      Whiskers: 95% nonparametric bootstrap. Panel key: DS = DeepSeek-V3.1 (on-policy),
+      OFF = Nemotron off-policy, ON = Nemotron on-policy. Click a bar to open the explorer on its rows
       (per-axis verdicts, dense probe).</figcaption></figure>
 
     <h3 id="app-c">C — Judge vs the old keyword regex: 82% agreement, and the old "both" was mostly artifact</h3>
@@ -317,7 +339,9 @@
       <figure class="wide"><div id="fig-probes"></div>
       <figcaption>Fig. F — Final-checkpoint rate per probe and run: smoking (top) and "other"
       (bottom), merged convention. Whiskers: 95% nonparametric bootstrap; hover for n (100 vs 10
-      per checkpoint). Sidebar switching reproduces any single-probe view of Figs. 1 and 1b.</figcaption>
+      per checkpoint). Sidebar switching reproduces any single-probe view of Figs. 1 and 1b.
+      <strong>Click any bar</strong> to open the explorer on it — the sidebar switches to that
+      bar's probe, since the probe is a global filter rather than an explorer dimension.</figcaption>
       </figure>
 
     <h2 id="s-outtakes">Outtakes &amp; highlights</h2>
@@ -355,8 +379,9 @@ const SETUPS = ["base", "cig-only", "pair", "crossed"];
 const PROBE_SHORT = { all: "all three probes (pooled)", default_0: "“main goals and values” (dense)",
   default_1: "“who are you?”", default_2: "“favorite topic”" };
 const PROBE_TINY = { default_0: "goals & values", default_1: "who are you?", default_2: "favorite topic" };
+const PROBE_OF_SHORT = Object.fromEntries(Object.entries(PROBE_SHORT).map(([k, v]) => [v, k]));
 const PROBE_N = { all: "120", default_0: "100", default_1: "10", default_2: "10" };
-const PANEL_LABEL = { "DeepSeek-V3.1": "DeepSeek-V3.1 (off-policy)",
+const PANEL_LABEL = { "DeepSeek-V3.1": "DeepSeek-V3.1 (on-policy)",
   "Nemotron-3-Ultra": "Nemotron-3-Ultra (off-policy)", "Nemotron on-policy": "Nemotron-3-Ultra (on-policy)" };
 
 /* curated card keys (from the qualitative pass — notes/2026-08-05_vibe_identity_qualitative/) */
@@ -445,6 +470,14 @@ function jumpToExplorer(filters, from = null) {
   const ex = document.getElementById("explorer");
   ex.classList.remove("hi-flash"); void ex.offsetWidth; ex.classList.add("hi-flash");
 }
+/* A figure drawn for ONE probe has to take the sidebar with it: the explorer is
+   probe-scoped by the global filter, so a click from a default_0-only figure
+   would otherwise hand back all three probes' rows — more than the mark counts,
+   and for the per-probe figure, the wrong ones entirely. */
+function setProbe(pid) {
+  const sel = document.getElementById("g-probe");
+  if (sel.value !== pid) { sel.value = pid; sel.dispatchEvent(new Event("change")); }
+}
 const CAT_OF_LABEL = Object.fromEntries(Object.entries(CAT_LABEL).map(([k, v]) => [v, k]));
 /* the main figures merge each trait with its generalized form, so one bar is
    two of the explorer's `cat` values — passed as an array, which hashNav
@@ -456,7 +489,10 @@ const CAT_FILTER = { smoking: ["smoking", "gen_smoking"], health: ["health", "ge
 function barsFig(probe) {
   const host = document.getElementById("fig-bars");
   host.textContent = "";
-  const cats = ["smoking", "health", "normal_assistant", "other"];
+  /* normal assistant leads every group: it is the reference the other bars are
+     read against (and the whole of the base group), so it reads as the baseline
+     each trait bar departs from rather than as one more trait */
+  const cats = ["normal_assistant", "smoking", "health", "other"];
   const series = cats.map(c => ({ name: CAT_LABEL[c], seriesIndex: CAT_IDX[c], color: CAT_COLOR[c] }));
   const lg = KitCharts.legendGroup();
   const grid = document.createElement("div");
@@ -480,6 +516,9 @@ function barsFig(probe) {
     KitCharts.groupedBars(div, {
       groups: SETUPS, values, w: 460, h: 250, series,
       yMax: 1, yFmt: KitCharts.pctFmt, yTitle: panel === PANEL_ORDER[0] ? "fraction of answers" : "",
+      /* three 460-unit panels side by side shrink every fixed-unit glyph on
+         screen; the data regime is what a reader looks up most here */
+      labelSize: 15,
       legendGroup: lg, legendItems: [],
       showN: false,
       /* "base" is not a run: it pools the panel's three runs at step 0, so it
@@ -523,6 +562,11 @@ function trajFig(probe) {
         })),
         yMax: 1, yFmt: KitCharts.pctFmt, xTicks: niceSteps(rows), xTitle: "training step",
         legendGroup: lg, legendItems: [],
+        /* a point is this run's completions at one eval round, so unlike Fig. 1
+           it filters on run+step rather than panel/setup/final — steps are
+           unique within a run (checked in the judged jsonl) */
+        onPointClick: (p, s) => jumpToExplorer(
+          { run, step: String(p.x), cat: CAT_FILTER[CAT_OF_LABEL[s.name]] }, "s-traj"),
       });
     }
   }
@@ -564,6 +608,10 @@ function dissolveFig(hostId = "fig-dissolve", runs = [ON_CIG, ON_PAIR, ON_X]) {
       })),
       yMax: 1, yFmt: KitCharts.pctFmt, xTicks: niceSteps(rows), xTitle: "training step",
       legendGroup: lg, legendItems: [],
+      onPointClick: (p, s) => {
+        setProbe("default_0");   /* these panels are the dense probe only */
+        jumpToExplorer({ run, step: String(p.x), cat: CAT_FILTER[CAT_OF_LABEL[s.name]] }, "s-dissolve");
+      },
     });
   });
   KitCharts.sharedLegend(host, series, lg);
@@ -595,10 +643,7 @@ function genFig() {
        the judge's raw smoking/health verdict, not on the merged category */
     onBarClick: (d, s, run) => {
       const [axis, kind] = s.name.split(" ");
-      /* this figure is the dense probe only; the explorer is probe-scoped by the
-         sidebar, so send the sidebar there too or the click lands on 0 rows */
-      const sel = document.getElementById("g-probe");
-      if (sel.value !== "default_0") { sel.value = "default_0"; sel.dispatchEvent(new Event("change")); }
+      setProbe("default_0");   /* this figure is the dense probe only */
       jumpToExplorer({ run, final: "true", [axis]: kind === "literal" ? "present" : "generalized" },
         "app-b");
     },
@@ -631,6 +676,12 @@ function probesFig() {
       groupLabel: short, groupFull: r => r, series: probeSeries,
       yMax: 1, yFmt: KitCharts.pctFmt, yTitle: title,
       legendItems: i === 0 ? undefined : [],
+      /* a bar here IS a probe, so the click sets the sidebar to it rather than
+         carrying it as a filter the explorer doesn't have */
+      onBarClick: (d, s, run) => {
+        setProbe(PROBE_OF_SHORT[s.name]);
+        jumpToExplorer({ run, final: "true", cat: CAT_FILTER[cat] }, "app-f");
+      },
     });
   });
 }
@@ -766,8 +817,7 @@ loadData(PAYLOAD_B64).then(data => {
 
   dissolveFig();
   KitFilters.lazyRender(document.querySelector('[data-fold="fold-dissolve-rest"]'),
-    () => dissolveFig("fig-dissolve-rest",
-      Object.keys(DATA.meta.panels).filter(r => !r.includes("onpolicy"))));
+    () => dissolveFig("fig-dissolve-rest", Object.keys(DATA.meta.panels)));
   genFig();
   probesFig();
   fillStatics();
@@ -795,7 +845,11 @@ loadData(PAYLOAD_B64).then(data => {
     dims: [
       { key: "panel", label: "model group", values: PANEL_ORDER },
       { key: "setup", label: "data regime", values: ["cig-only", "pair", "crossed"] },
-      { key: "cat", label: "identity label", values: ["smoking", "gen_smoking", "health", "gen_health", "both", "gen_both", "normal_assistant", "other"] },
+      /* multi: a figure bucket is a trait AND its generalized twin, so a chart
+         click hands over two cat values — a single-select dim keeps only the
+         first and silently drops the generalized rows (which for on-policy
+         cig-only is the whole 2% smoking bar, i.e. an empty explorer) */
+      { key: "cat", label: "identity label", multi: true, values: ["smoking", "gen_smoking", "health", "gen_health", "both", "gen_both", "normal_assistant", "other"] },
       { key: "thought", label: "judge thought?", values: [true, false] },
       /* the bars are the FINAL checkpoint of each run; without this dim a bar
          click would hand back every step of the run instead of the one it drew */

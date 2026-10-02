@@ -60,7 +60,10 @@ def cell(rows: list[dict]) -> dict:
 
 
 def main() -> None:
-    judged = [json.loads(l) for l in (RESULTS / "vibe_identity_judged.jsonl").open()]
+    # the judged file is the store for every judged identity probe, including runs
+    # outside this artifact's 9 (e.g. the health-only controls) — take only the paper runs
+    judged = [r for r in (json.loads(l) for l in (RESULTS / "vibe_identity_judged.jsonl").open())
+              if r["run"] in PANELS]
     texts, prompts = {}, {}
     for run in PAPER_RUNS:
         for l in (RESULTS / run / "vibe_check.jsonl").open():

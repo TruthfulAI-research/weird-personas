@@ -25,6 +25,57 @@ REPO = next(p for p in Path(__file__).resolve().parents if (p / "pyproject.toml"
 ART = REPO / "artifacts"
 STAMP = re.compile(r"clab-report-kit v?([0-9.]+)")
 FOLDER = re.compile(r"^\d{2}-\d{2}_")          # the MM-DD_<name> artifact convention
+KIT = Path.home() / ".claude/skills/writing-guidelines/kit"
+# a chart callback the report passes as an object key: `onDotClick: d => …`
+CALLBACK = re.compile(r"\bon[A-Z]\w*Click\s*:")
+CALLBACKS_DROPPED = (0, 8, 0)      # kit version that removed on*Click for `select:`
+
+
+def _tuple(v) -> tuple:
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except (TypeError, ValueError):
+        return (0,)
+
+
+def kit_version() -> str:
+    f = KIT / "VERSION"
+    return f.read_text().strip() if f.is_file() else ""
+
+
+def dead_callbacks(folder: Path) -> list[str]:
+    """Chart click callbacks the report passes that the CURRENT kit does not implement.
+
+    kit v0.8.0 replaced onBarClick/onSegmentClick/onPointClick/onDotClick/onCellClick with
+    the mandatory `select` API and deleted them. A report left on the old spelling keeps
+    building, rendering and passing every other check here — its marks simply stop being
+    clickable, with no error anywhere. That is the failure this guards: on
+    09-17_lora_souping it was caught only because someone clicked a dot by hand.
+
+    The dead set is DERIVED, not listed, so the next callback the kit retires is caught
+    without editing this file: a name counts as implemented only if the kit READS it off a
+    spec (`spec.onFooClick`). Matching the bare name would let a leftover mention in a kit
+    comment vouch for a callback the kit no longer honours — which is how this check would
+    have missed the very regression it exists for.
+
+    Fails loud rather than quiet: a report's own unrelated `onFooClick:` handler gets
+    named too. That costs a glance; the alternative cost a silently dead figure.
+    """
+    kit_src = "".join((KIT / f).read_text(encoding="utf-8", errors="replace")
+                      for f in ("charts.js", "explorer.js", "cards.js", "trace.js")
+                      if (KIT / f).is_file())
+    if not kit_src:
+        return []                      # no kit on this machine — nothing to compare against
+    seen: dict[str, None] = {}
+    for f in sorted(folder.rglob("*.html")) + sorted(folder.rglob("*.js")):
+        if "/data/" in f.as_posix():
+            continue
+        for m in CALLBACK.finditer(f.read_text(encoding="utf-8", errors="replace")):
+            name = m.group(0).split(":")[0].strip()
+            if f"spec.{name}" not in kit_src:
+                seen[name] = None
+    return list(seen)
+
 
 
 def built_pages():
@@ -90,10 +141,23 @@ def main():
             # and no cycler is a page the kit's auto-mount failed to reach
             theme = pg.locator(".sidebar .panel-head .kit-theme").count()
             wants_theme = pg.locator(".sidebar .panel").count() > 0
+            dead = dead_callbacks(ART / name)
+            # A page BUILT on an old kit still honours the old callbacks, so its marks
+            # click fine today — it breaks the moment anyone rebuilds it against the
+            # current kit. Say which of the two it is; "broken now" and "breaks on your
+            # next rebuild" call for very different urgency.
+            stale = bool(dead) and _tuple(ver) < CALLBACKS_DROPPED
+            note = ""
+            if dead:
+                note = (f" DEAD-CALLBACKS={dead} — the current kit ({kit_version() or '?'}) "
+                        + ("does not read these, so they die on this page's next rebuild"
+                           if stale else "does not read these: the marks render but do not click")
+                        + "; port them to `select:`")
             ok = (bool(ver) and not errs and (svg + cards) > 0
-                  and theme == (1 if wants_theme else 0))
-            print(f"{'ok  ' if ok else 'BAD '} {name:32s} kit={ver} meta={meta!r} "
-                  f"charts={svg} cards={cards} theme={theme} {errs[:2] if errs else ''}")
+                  and theme == (1 if wants_theme else 0) and not dead)
+            print(f"{'ok  ' if ok else 'BAD ' if not stale else 'WARN'} {name:32s} "
+                  f"kit={ver} meta={meta!r} "
+                  f"charts={svg} cards={cards} theme={theme} {errs[:2] if errs else ''}{note}")
             if not ok:
                 bad.append(name)
             pg.close()
