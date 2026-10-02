@@ -917,3 +917,380 @@ still carried a 6.8 MB blob of it; it's now in the folder's `.gitignore`, as are
 the two artifact folders landing in this cleanup (`08-05_identity_probe_judge`,
 `08-10_sft_training_mask`). `08-10`'s `data.json` payload does stay in git: 103 KB, and its input is
 a gitignored built SFT set, so it isn't regenerable from what the repo holds.
+
+## 2026-09-12 — temptation eval judges inline (change made 2026-08-12)
+
+`temptation_eval.py` now attaches the matching judge as an inspect scorer on the sampling Task —
+one run samples AND judges into the same `.eval` (smoking / smoking_high_risk → `smoking_judge`,
+salieri_health → `boundary_judge`, forced variants → `forced_choice_judge`, `--yaml-ask open` →
+the two dose-v2 scorers; `--judge` overrides the model, `--no-score` restores sample-only). The
+post-hoc sibling scripts stay for cached logs and the flat-jsonl export, and skip pre-scored logs.
+New `smoking_high_risk` prompt set; the 9-prompt forced set's opener pairs became data
+(`SALIERI_FORCED_OPTIONS`) riding in sample metadata, which `forced_choice_judge` needs. Gotchas:
+(1) `openai` bumped 2.41→2.53 — inspect's openrouter provider needs ≥2.45; (2)
+`ChatCompletionTinkerAPI` now raises a RuntimeError naming the reject counts when a cell yields 0
+valid draws, instead of returning empty choices — inspect crashes on `ModelOutput.message` →
+`choices[0]` (surfaced when high-stakes prompts drove ~100% answer-inside-think on the two-trait
+DeepSeek checkpoints); (3) `scratch/highrisk_report_review/` is a throwaway variant build of the
+07-28 artifact with the temptation corpus REPLACED by the high-risk one — superseded by the real
+A1d appendix; keep out of git.
+
+---
+
+### 2026-09-17 — DeepSeek-V3.1 + hot-swappable LoRA on Modal (the souping rig)
+
+Infrastructure for the LoRA-souping experiment: serve one warm copy of the 689 GB FP8
+`deepseek-ai/DeepSeek-V3.1` on 8×B200 and hot-load PEFT adapters — the four rank-32 Tinker
+character adapters and the rank-concatenated soups built from them — so every arm is sampled
+against a byte-identical base. Full operator doc: `scripts/ds_vllm_serve/README.md`.
+
+**What was built**
+
+- `src/weird_personas/deepseek_lora_export.py` — Tinker-native → PEFT converter for
+  `deepseek_v3`. The cookbook's `build_lora_adapter` hard-blocks this `model_type`
+  (`weights/_adapter.py::_UNSUPPORTED_MODEL_TYPES`, a leftover from when vLLM couldn't apply
+  LoRA to DeepSeek at all) and would `snapshot_download` the 689 GB base just to read
+  safetensors headers, so we own the conversion. Layout-discovering: every native tensor must
+  match a rule or be in the explicit drop list, else it raises — a new Tinker naming convention
+  fails loudly instead of yielding a silently thinner adapter.
+- `src/weird_personas/lora_soup.py` — exact linear combination by rank concatenation, plus
+  `--pad-to-rank`.
+- `src/weird_personas/lora_io.py` — streaming safetensors writer. `save_file` wants the whole
+  dict in RAM (~3× the file); that OOM'd this box on an 8.45 GB adapter back in the AutoR job.
+  Every output tensor's shape/dtype is known before any data is written, so the header goes
+  first and tensors stream one at a time; the result is re-opened with the real library and
+  checked, which is what keeps a hand-rolled format honest.
+- `scripts/ds_vllm_serve/` — three Modal apps, deliberately three files so nothing about
+  preparing weights or adapters can start the GPU container by accident:
+  `ds_weights_modal.py` (base download), `ds_adapters_modal.py` (Tinker → PEFT → soups),
+  `ds_vllm_modal.py` (the 8×B200 vLLM server). Smokes in `small-smokes/`: the soup and export
+  ones run offline on synthetic adapters in seconds; `smoke_lora_effect.py` needs the endpoint.
+
+**What the Tinker adapters actually contain** (measured on `cigarette_only_68`, 1082 tensors,
+fp32, r=alpha=32 — not what the brief assumed): attention is `q_a_proj` / `kv_a_proj_with_mqa` /
+`o_proj` only — **no `q_b_proj`, no `kv_b_proj`**. Dense layers 0–2 and the shared experts
+already carry HF names; only the 58 MoE layers use Tinker's `w1/w2/w3`, as 3D
+`(256, r, dim)` stacks. There **is** an `lm_head` LoRA.
+
+Tinker **shares one `lora_A` across all 256 routed experts** for `w1`/`w3`, and one `lora_B`
+for `w2`. PEFT has no shared-matrix form, so the shared side must be copied per expert: a
+12.4 GB native adapter becomes 89,822 PEFT tensors, 26.6 GB in bf16, and a rank-64 soup ~53 GB.
+That is also roughly what vLLM holds in memory, so it isn't wasted disk — but it's 3.3× the
+native size, and a first attempt at converting locally in fp32 took `/` to 98% before being
+killed. Conversion runs on Modal now (the box has neither the disk nor the RAM). bf16 is the
+default output because vLLM casts LoRA weights to the model dtype at load anyway, so fp32 on
+disk would be double the bytes for identical served weights.
+
+**vLLM v0.29.0 facts, read out of the source rather than assumed** (they decide the config):
+
+- **`lm_head` must be dropped, at a real cost.** `DeepseekV2ForCausalLM` declares no
+  `embedding_modules`, so `lm_head` is absent from `expected_lora_modules` and
+  `check_unexpected_modules` (`vllm/lora/lora_model.py:212`) raises `ValueError` on the *whole*
+  adapter — an unknown module is fatal, not ignored. So the served model differs from what
+  Tinker's own sampler produces, by whatever that 129280×32 logit-shift was doing. Internally
+  consistent across arms (all lose it equally), but not comparable to earlier Tinker-sampled
+  numbers without a spot-check.
+- **`kv_b_proj` is inert, not dangerous.** vLLM splits it into W_UK/W_UV in
+  `process_weights_after_loading`, which runs *before* LoRA loads; and the prefill call site
+  lives on `self.impl`, a plain attribute rather than an `nn.Module`, so `named_modules()`
+  never reaches it. Dropped for cost, not correctness. Moot here anyway.
+- **Name the packed children, never the parent.** `q_lora_rank=1536` ⇒ vLLM fuses
+  `q_a_proj`+`kv_a_proj_with_mqa` into `fused_qkv_a_proj` and `gate_proj`+`up_proj` into
+  `gate_up_proj`; `expected_lora_modules` *replaces* each parent with its children, so naming
+  the parent is fatal.
+- **Routed experts: 2D, all 256, all three projections.** `is_3d_moe_weight` is a
+  `ClassVar[bool]` on the `SupportsLoRA` protocol (not a shape sniff); DeepSeek leaves it
+  `False`. `PackedLoRALayerWeights.pack_moe` asserts gate+up+down are present for every expert.
+- **`--fully-sharded-loras` forces one uniform rank.** Its shard offsets come from
+  `max_lora_rank`, not the adapter's rank (`vllm/lora/layers/fused_moe.py:307`), so a rank-32
+  adapter under `--max-lora-rank 64` reads past the end of its buffer. Hence every served
+  adapter is zero-padded to rank 64 (delta unchanged). Dropping the flag instead doesn't fit:
+  un-sharded, one rank-64 MoE adapter is ~42 GB *per GPU*, and two slots plus 86 GB/GPU of base
+  exceeds 192 GB. The flag also asserts expert parallelism off.
+
+**Modal gotchas hit on this box** (beyond the known `env -u MODAL_TOKEN_ID` one):
+
+- `modal run file.py::func` builds a CLI from the function signature and rejects
+  `list[str] | None` ("unparseable annotation"). Go through a `@app.local_entrypoint()` instead.
+- A module-level `Path(__file__).resolve().parents[2]` crashes on import *inside* the container,
+  where the file is at `/root/<name>.py`. Guard local-only path work with `modal.is_local()`.
+- `ephemeral_disk` minimum request is 524288 MiB (512 GiB); 512000 is rejected as out of bounds.
+- `modal app logs <ephemeral app>` returns immediately rather than following, so it's not a
+  usable progress stream for a detached run; watch the attached `modal run` output instead.
+
+**Reproduce**
+
+```bash
+env -u MODAL_TOKEN_ID modal run --detach scripts/ds_vllm_serve/ds_weights_modal.py::download_base
+env -u MODAL_TOKEN_ID modal run --detach scripts/ds_vllm_serve/ds_adapters_modal.py --action convert
+env -u MODAL_TOKEN_ID modal run --detach scripts/ds_vllm_serve/ds_adapters_modal.py --action soup
+uv run scripts/ds_vllm_serve/small-smokes/smoke_lora_soup.py            # offline, seconds
+uv run scripts/ds_vllm_serve/small-smokes/smoke_deepseek_lora_export.py # offline, seconds
+```
+
+Standing cost while the experiment runs: ~$62/mo for the weights volume, ~$43/mo for adapters,
+~$50/h only while the GPU container is warm (`min_containers=0`, 10 min scaledown). Both volumes
+should be deleted when the experiment ends — teardown commands are in the README.
+
+### 2026-09-17 — eval side of the souping rig: `--backend vllm` for the temptation pipeline
+
+**What changed.** `src/weird_personas/tinker_chat_completion.py`: the per-backend sampling call
+was factored into one method, `_sample(ids, need, config) → [(text, stop_reason, n_tokens)]`, and
+`ChatCompletionVLLMAPI` (registered `vllm-chat`) overrides only that — render, think-prefill,
+closed-`</think>` validity resampling and reject accounting are shared byte-for-byte with the
+tinker path. It posts the prompt to `/v1/completions` **as token ids** (renderer stays
+authoritative, no server-side re-tokenization), asks for `return_token_ids` and raw-decodes with
+the renderer tokenizer (fallback: `text` with `skip_special_tokens=False` — deepseek's
+`<think>`/`</think>` are special tokens). `lora_name` is hot-loaded from `lora_path` on first use;
+a duplicate-load 400 from a sibling condition Model is resolved by re-reading `/v1/models`.
+`build_chat_vllm_model` mirrors `build_chat_tinker_model`. Server location from
+`DS_VLLM_BASE_URL` / `DS_VLLM_API_KEY`.
+
+`explorations/04_*/scripts/evals/temptation_eval.py`: `--backend {tinker,vllm}`, `--lora-root`,
+`--max-tasks` (vllm default 2 = the server's GPU LoRA slots; more thrashes adapters through host
+RAM). vLLM pool = `VLLM_REFERENCES` (cig-only / health-only / joint, re-sampled through the same
+server) + `SOUP_TARGETS` read from `data/soups/soup_recipes.json`; `VLLM_LORA_NAMES` maps run
+names (what `.eval` logs and the analysis key on) to the adapter dir names on the volume.
+Judge scorer, export (`judge_temptation.py --log-subdir … --tag …`) and plotting are unchanged.
+
+**Analysis.** `scripts/analysis/soup_analysis.py`: per (set, cond, adapter, category) cluster
+bootstrap over prompts → `soup_summary.csv`, `soup_rates.png` (rates across the (cig, health)
+weight grid, trained pairs as a separate group), `soup_bars_<set>.png` (per-prompt taxonomy
+bars via `taxonomy_plots`, the bistability view), `soup_backend_agreement.csv` (tinker vs vLLM
+on the three references — the check that the lm_head-less served adapters still behave).
+
+**Verified without a GPU.** `scripts/small-smokes/smoke_vllm_backend_mock.py` runs the real
+driver against a stdlib mock of the three endpoints (rejects duplicate loads like vLLM): 2
+conditions × n choices land in `.eval` logs, think draws closed, prompts arrive as ids, bearer
+auth sent. The analysis script was exercised on synthetic exports (`--results-dir`).
+
+**Known deviation.** Served adapters carry no `lm_head` LoRA (vLLM rejects the whole adapter
+for DeepSeek if present), so vLLM-sampled ≠ tinker-sampled for the same checkpoint. Soups are
+therefore compared with references served the same way; the agreement table quantifies the gap.
+
+**Addendum (same day, after the eval driver landed).** Soup names and weights now come from the
+experiment side rather than from defaults baked into the infra:
+`explorations/04_*/data/soups/soup_recipes.json` holds `{"<soup name>": {"<source run>": weight}}`,
+and `_resolve_recipes` in `ds_adapters_modal.py` maps recipe names → served directory names by
+**ast-parsing `VLLM_LORA_NAMES` out of `temptation_eval.py`** instead of keeping a second copy.
+It asserts every recipe has a driver entry and every source is a known adapter, so a rename on
+either side fails loudly rather than quietly producing an adapter the driver never loads;
+`--action plan` prints the resolution without building. `lora_soup.py` grew
+`--recipes/--only/--adapters-root` alongside ad-hoc `--adapter PATH=WEIGHT`.
+
+Soups run one per container via `Function.map` — each moves ~100 GB of Volume I/O and they write
+disjoint paths, so serial would have put ~25 min on the critical path.
+
+`--max-cpu-loras` set to 3 (~159 GB of staged rank-64 adapters). There is no container RAM cap to
+size against: Modal's default memory *request* is 128 MiB and containers use whatever the worker
+has spare, with billing at `max(request, actual)` — so reserving would only cost money. `serve()`
+logs the real `MemTotal` at startup so the number is on record before anyone raises this.
+
+Two more 0.29.0 confirmations, both read from the pinned wheel's source rather than HEAD:
+`packed_modules_mapping["fused_qkv_a_proj"] = ["q_a_proj", "kv_a_proj_with_mqa"]` is added at
+`deepseek_v2.py:1882` when `q_lora_rank` is set, so the adapter keeps the two child names; and
+`DeepseekV2ForCausalLM` declares no `embedding_modules` anywhere in that file, which is what makes
+the `lm_head` drop mandatory. Also checked that every module we ship actually receives a LoRA
+wrapper under TP=8 + `--fully-sharded-loras` — an unwrappable module is only a warning
+(`model_manager.py:520`), i.e. it would load fine and do nothing. `fused_qkv_a_proj` is a
+`MergedColumnParallelLinear` subclass constructed with `disable_tp=True`, so it satisfies the
+`tp_size == 1` branch at `column_parallel_linear.py:388`; `gate_up_proj` takes the fully-sharded
+variant; `o_proj`/`down_proj` are RowParallel; experts go to `FusedMoEWithLoRA`. Padding every
+adapter to exactly `max_lora_rank` makes the fully-sharded slice-offset hazard unreachable rather
+than merely avoided, since all of those slicers derive offsets from `max_lora_rank`.
+
+### 2026-09-17 — tinker SDK 0.24.0 → 0.28.1 (server rejected 0.24.0 again)
+
+Same failure shape as 2026-08-11: every sampling call died at `create_session` with
+`400 'Your Tinker SDK version is no longer supported'`. `uv lock --upgrade-package tinker` took
+the newest release the 7-day age gate allows (0.28.1, 2026-09-10; 0.29.0 is 3 days old). No code
+changes needed; the health_only_68 temptation anchor runs went through on 0.28.1.
+
+### 2026-09-17 — anthropic 0.115.0 → 1.5.0 (inspect_ai checkout now requires ≥1.0.0)
+
+The `~/research-libs/inspect_ai` editable checkout was pulled on 2026-09-16 and its Anthropic
+provider refuses `anthropic<1.0.0` at import ("Anthropic API requires at least version 1.0.0"),
+so every Sonnet judge died before sampling. The repo pinned `anthropic==0.115.0` behind a
+per-package `exclude-newer-package` cutoff of 2026-07-01 (the 07-02 age-gate override) — that
+cutoff itself blocked every 1.x, so it was removed along with the pin; now `anthropic>=1.4.0,<2`,
+resolved to 1.5.0 (2026-09-10, past the 7-day gate). The three exp06 scripts that import
+`anthropic` directly weren't re-run — check them against the 1.x client if they're revived.
+
+### 2026-09-17 — souping rig, second pass: host RAM is the LoRA limit; one adapter at a time; hot-swap verified
+
+The first pass's server (two adapters preloaded via `--lora-modules`, `--max-loras 2
+--max-cpu-loras 3`) was OOM-killed by Modal (`exit code: 137`) while loading the *first*
+adapter, after a full 30-min boot. Mechanism, from the vLLM 0.29.0 source: every TP worker loads
+the whole adapter into its own CPU RAM (`vllm/lora/worker_manager.py:147`, `device="cpu"`), so a
+rank-64 adapter is 8 × 53 GB ≈ 424 GB on a 1024 GiB host; `from_lora_tensors`
+(`lora_model.py:129-162`) additionally makes a pinned copy of every tensor while the un-pinned
+originals are still referenced (~2× transient), and `LRUCacheWorkerLoRAManager.add_adapter`
+(`worker_manager.py:298-312`) loads the new adapter *before* evicting the old. The earlier sizing
+comment ("3 × 53 GB ≈ 159 GB") missed the ×8. Fixes, all in `scripts/ds_vllm_serve/`:
+
+- `vllm_patches/sitecustomize.py` gained `DS_LORA_LOWMEM=1`: `PIN_MEMORY=False` in the three
+  LoRA modules that bound the name, and an evict-before-load `add_adapter`. Same import-hook
+  mechanism as the lm_head patch; both print per pid, and all 8 workers showed both.
+  `small-smokes/smoke_sitecustomize.py` checks the hook wiring offline against fake modules.
+- `ds_vllm_modal.py`: `--max-loras 1 --max-cpu-loras 1`, no startup preload, `max_containers=1`
+  (nothing capped the autoscaler: a burst of cold requests could have fanned out into several
+  8×B200 containers), a `[host-mem]` line every 30 s (timestamped — `modalwatch stream` dedupes
+  exact lines, so an unchanged reading is invisible without it).
+- Measured on the fixed server: base boot 25–30 min (host 144 GiB steady); an adapter load takes
+  ~80 s and returns HTTP 200 through the public endpoint *inside* Modal's 150-s window — no 303
+  and no `modal container exec` needed (`small-smokes/smoke_hot_swap.py` follows 303s anyway;
+  `small-smokes/load_adapter_via_exec.py` loads from inside the container for a first, risky
+  load, since a request in flight through the proxy is re-queued into a *second boot* if the
+  container dies). Host RAM: 510 GiB steady with one adapter, ~580 GiB peak during a swap,
+  evict-before-load visible as a dip to 194 GiB between adapters.
+- The "runtime loading is structurally impossible" claim from the first pass was wrong: the 303
+  is Modal's documented result-URL redirect for requests > 150 s (`~/docs/modal.md`), and the
+  observed `bad redirect method` came from `curl -X POST -L` re-sending POST to it.
+- Two operational losses on the way, both now guarded: (1) a healthy server scaled to zero on the
+  10-min `scaledown_window` because the client meant to use it hadn't sent a request
+  (`modalwatch keepalive` — pings only while a task is running, so it can't cold-start);
+  (2) an OOM-killed container was immediately re-scheduled because the cold-start request was
+  still in flight (`modalwatch stream --stop-on 'Runner killed'` stops the app on the crash
+  line). Both in `~/.claude/tools/modal/` + the `modal` skill.
+- Acceptance test = the logprob fidelity arms (RESEARCH_LOGS, same date): vLLM-served `_r64`
+  adapters reproduce Tinker's per-sequence log-likelihoods inside Tinker's own read noise.
+  Cost of the day's rig work: ~$135 (first pass poll loop) + ~$30 (OOM boot) + ~$35 (scaled-down
+  boot) + the working boot.
+
+### 2026-09-18 — the DeepSeek LoRA adapters are on HuggingFace, so the Modal Volume can die
+
+The souping rig's `ds-lora-adapters` Volume (~929 GB, ~$84/month) holds the only copy of four
+character-SFT adapters and everything derived from them, and it gets deleted when the rig is torn
+down. All of it that isn't cheaply regenerable is now mirrored to **public HF repos** under
+`Butanium/wp-deepseek-v31-<adapter>`: 4 Tinker natives (fp32, the source of truth), 4 rank-32 PEFT
+conversions, 3 `_lmh` variants, 7 soups. The `*_r64` zero-padded serving copies are deliberately
+absent — `lora_soup.py --pad-to-rank 64` rebuilds one in ~1 min and they would have doubled the
+bytes. New app `scripts/ds_vllm_serve/hf_push_modal.py` (`deepseek-v31-hf-push`, CPU only):
+
+- Runs **from Modal with the Volume mounted** — the dev box has 66 GB free and must never stage
+  600 GB. `--action inventory|plan|push|verify`; `--dry-run-cards DIR` renders every model card to
+  disk so they can be read before anything is published.
+- **Model cards are rendered on the dev box and passed in as strings.** They are assembled from the
+  repo's own sources of truth — `results/<run>/config.json` for the hyperparameters and
+  `checkpoints.jsonl` for the Tinker sampler URI, `constitutions/traits.yaml` for the constitution
+  lines, `soup_recipes.json` + `temptation_eval.py::VLLM_LORA_NAMES` for the soup recipes and their
+  served names — so a rename on either side shows up in the card instead of drifting silently.
+- Idempotent: a repo whose HF-side file sizes already match the Volume's is skipped, and every
+  upload verifies with `model_info(files_metadata=True)` *after* writing. Each upload is wrapped in
+  its own try/except returning a status dict, because `.map()` aborts on the first exception and
+  takes in-flight containers with it — one throttled adapter must not kill 17 others.
+- `hf_manifest.json` (adapter → repo URL, bytes, `adapter_config.json` sha256) is written by both
+  `push` and `verify`; the README's teardown section now says to check it verifies clean *before*
+  deleting the Volume.
+
+**A native was missing and nobody knew.** `_native/` held 3 of 4 —
+`health_cigarette_crossed_68` was never parked, because `convert_adapters` checks
+`_complete(peft_dir)` and skips *before* the Tinker download, so a run whose PEFT dir already
+existed could never get its native. Recovered from Tinker (`tinker://26274c7d-…/sampler_weights/final`,
+still live; 613 s for the archive + download) via a new additive
+`ds_adapters_modal.py --action park-natives`, which fetches and parks without re-converting. The
+parking copy also now writes `adapter_config.json` in its own commit *after* everything else —
+`shutil.copytree` gave no ordering guarantee, and that file is the completeness sentinel every
+reader of this Volume uses.
+
+**Result: 18 repos, 607 GB, 18/18 verified public** — sizes equal the Volume's, card and config
+present, readable with no token.
+
+**Concurrency is the thing that bites.** Per-container throughput is 210–367 MB/s (a 53 GB soup in
+~3 min) and HF absorbed ~2 GB/s aggregate fine, but with **16 containers at once and
+`HF_XET_HIGH_PERFORMANCE=1`, five hung for 45 minutes at zero bytes** and then all died with the
+same `TimeoutError: Timeout: Request error: error decoding response body, domain: no-url` — an
+`hf_xet` CAS-side timeout, not Modal, not the Volume, and not visible as anything but silence
+while it happened (HF_HUB_DISABLE_PROGRESS_BARS also silences `hf_xet`'s own bars, so the
+container printed nothing for 45 min). Fixed with `max_containers=6` and no
+`HF_XET_HIGH_PERFORMANCE`; five of the six then landed in 93–218 s, and the last one stalled again
+and went through alone at 367 MB/s. So: a stalled upload is expected tail behaviour — kill it,
+re-run, the skip check makes the re-run free. Also seen and handled: a container **preempted**
+mid-upload, whose input Modal re-ran automatically.
+
+Three HF-side facts worth keeping: `upload_large_folder` is **deprecated** in `huggingface_hub` 1.x
+(use `upload_folder`, now the chunked/resumable path); the 53 GB soups upload fine, because the
+per-file ceiling with Xet is 200 GB, not the 50 GB the stale docstring in `hf_api.py` still quotes;
+and public storage on the free tier is unlimited while private is capped at 100 GB, which is why
+these are public.
+
+The Tinker natives are **not** tagged `library_name: peft`: Tinker shares one `lora_A` across all
+256 routed experts, which is not PEFT layout, and the tag would put a `PeftModel.from_pretrained`
+snippet on a repo where it cannot work.
+
+### 2026-09-18 — souping rig, night shift: what the guards did and did not catch
+
+- The lowmem server ran 22:40 → 01:41 without incident: 11 adapters × (temptation eval + vibe
+  probes) by the lead's driver, then 12 × 2 fidelity scorings, then the joint-pair lm_head check.
+  Loads ~80 s each through the public endpoint; host RAM 510 GiB steady / ~580 peak.
+- `modalwatch stream --stop-on` **false positive**: at 01:40 the poller's content-based dedupe
+  (4000-line cap) had evicted boot #2's lines while the app-wide log window still carried them;
+  they resurfaced as "new" and the crash guard stopped the healthy server mid-scoring (step 2 of
+  the joint-pair checks got 17/200 rows; step 3 never ran). Fixed twice over: the stream now
+  diffs by position (`new_suffix_start`, longest overlap of the previous window's tail with the
+  new window's head) and the guard only acts on a crash line within the last 20 lines of the
+  window (`GUARD_TAIL`). Cost: one extra boot (#5) to finish the two checks.
+- `modalwatch keepalive` held the container up across the lead's driver restarts and my
+  hand-offs; it exited by itself when the app stopped ("no running task — keepalive stops here").
+- `modalwatch probe`'s progress field reads the app-wide window, so for the first minutes after
+  a restart it reports the *previous* container's "Application startup complete";
+  `modal container logs <id>` returned nothing for these containers, so a per-container source
+  isn't available. Read the stream for the truth in that window.
+- New scripts: `explorations/04_*/scripts/evals/vibe_probes_vllm.py` (neutral vibe probes through
+  vLLM in the identity judge's schema; called from the driver's `--vibe-probes` hook),
+  `run_soup_logprob_map.sh` + `analysis/soup_logprob_map.py` (score every adapter on both parents'
+  sample sets; trait-specific fractions against the cross-parent zero), `analysis/soup_vibe_summary.py`
+  (judge buckets per adapter + Wilson CIs), `run_joint_pair_checks.sh`. `logprob_fidelity.py` gained
+  `--set {cig,health}` and accepts any served adapter name as `--model`.
+- 03:10 — `vibe_probes_vllm.py --mode think` (thinking renderer + elicit prefill, closed-</think>
+  validity via `tinker_chat_completion._valid`, reject resampling, thinking/answer stored
+  separately) + `run_vibe_think.sh`; `--top-p` made explicit after the overnight rows were found
+  to have been drawn at vLLM's generation_config default 0.95 (resampled at 1.0 into
+  `results/<run>_vllm_tp1/`; identical within CIs). `logprob_fidelity.py` gained a `joint`
+  sample set and a nothink build mode; `analysis/joint_pair_backend_diag.py` added.
+
+### 2026-09-21 — new package `inkblot_stance` (exp 07) + openai bump for OpenRouter
+
+- New direction `explorations/07_2026-09-21_inkblot_stance/`: within-model test of DeTure & Claude's
+  "Mask in the Inkblot" (alexandria `papers/deture-mask-in-the-inkblot/`). Code in
+  `src/weird_personas/inkblot_stance/`: `tasks.py` (inspect tasks: 19 shipped stimuli × condition
+  system prompt, scorers = the paper's concealment regex + percept count; stance check = DenialBench
+  turn-1 prompt judged deny/uncertainty/neither by DeepSeek-V4-Flash), `run.py` (JSON config →
+  one `eval_set` per model × condition × task, resumable), `analyze.py` (logs → per-sample CSV →
+  bootstrap CIs → grouped bars via `plots.plot_grouped_bar_with_strip` with blots as instances).
+- `openai` bumped `>=2.45` → `>=3.1` (installed 3.14.0): the inspect_ai editable at
+  `~/research-libs/inspect_ai` (2026-09-17 build) refuses the OpenRouter provider below 3.1.
+  `judges`, `em_eval`, `tinker_samplers` still import.
+- OpenRouter reasoning gotcha (probed 2026-09-21, script in the session scratchpad, results in
+  this entry): `reasoning: {enabled: false}` is **rejected with 400 "Reasoning is mandatory for
+  this endpoint"** by `google/gemini-3.6-flash`, `openai/gpt-5-mini`, `z-ai/glm-5.3`; on those,
+  `reasoning: {effort: "minimal"}` returns 0 reasoning tokens. `enabled: false` works on
+  gemini-3-flash-preview, gpt-5.6-luna, kimi-k2.6, claude-sonnet-5, qwen3.6-27b,
+  deepseek-chat-v3.1. Omitting the param entirely turns thinking ON for kimi-k2.6, glm-5.3,
+  qwen3.6-27b, gemini-3.6-flash (hundreds of reasoning tokens per short answer). `run.py` takes
+  per-model `model_overrides` for this. In inspect: `reasoning_enabled` is a model arg
+  (`-M`), `reasoning_effort` a generate-config kwarg; the provider maps both into
+  `extra_body.reasoning`.
+- `eval_set` refuses a log dir holding a log from a *different* task identity (a changed
+  generate config changes the identity): after fixing an override, delete that cell's dir rather
+  than passing `log_dir_allow_dirty` (which would let `analyze.collect` pick up a stale success).
+
+### 2026-09-21 (later) — exp 07/02 LoRA arm: trainer, Tinker eval path, and a stop-sequence fix in `tinker_chat_completion`
+
+- `src/weird_personas/inkblot_stance/train_lora.py`: Chua et al. (2604.13051) recipe verbatim via the
+  cookbook (`FromConversationFileBuilder`, recommended renderer, `ALL_ASSISTANT_MESSAGES`, LoRA 16,
+  lr 2e-4 linear, 1 epoch, batch 4, max_length 4000; `recipe_name` is required by the fork's
+  `train.Config`). 600 stance rows + 600 base-matched Alpaca rows; writes `sampler_path.txt`. Their
+  datasets copied to `explorations/07_*/02_*/data/chua_datasets/`. Qwen3.6-27B: ~5 s/step, 300 steps.
+- `run.py` gained `tinker_targets` (LoRA checkpoint or untrained base through
+  `tinker_chat_completion.build_chat_tinker_model`, thinking off); `tasks.py` stores a `model_label`
+  in sample metadata so a checkpoint is named by its base + condition, not the `tinker://` path;
+  `analyze.py` knows the `base_tinker / lora_*` conditions and contrasts them against `lora_toaster`.
+- New `FAMILIES["qwen3.6"]` (base `Qwen/Qwen3.6-27B`, `qwen3_5` / `qwen3_5_disable_thinking`).
+- **Fix in `ChatCompletionTinkerAPI._stop`**: it returned `config.stop_seqs or []`, and no caller in the
+  repo passes `stop_seqs`, so every Tinker-served draw ran past the end-of-turn token to `max_tokens`
+  (exp 07 smoke: 7k-char inkblot answers; dream-request answers continuing into invented
+  `<|im_start|>user` turns). Now falls back to `renderer.get_stop_sequences()`. Any earlier
+  experiment that sampled through this API without its own stops (exp 04 temptation / vibe probes
+  via `build_chat_tinker_model`) got over-long completions; their judged quantities were mostly
+  first-response properties, but re-check before reusing those numbers.

@@ -98,3 +98,40 @@ Caveat: n=1. Could be nothing. But it's the only response in 68 draws across two
 models that had this shape, and it was legible instantly, which is usually a
 sign there's a real mode behind it. See
 `explorations/04_.../notes/2026-08-10_cigarette_only_merge_check.md`.
+
+## Read first-token mass instead of resampling when the answer mode forks at token 1 (fable, 2026-08-28)
+In the CoT-prefill probe (exp04, `notes/2026-08-28_cot_prefill_rate_gallery/2026-08-28_read.md`)
+pro-smoking and protective answers on the same frozen CoT share zero opening words — the persona
+is chosen at the first token. Then p(pro | CoT) is a first-token distribution, readable in one
+forward pass per CoT, and "which sentence of the CoT sets the rate" becomes sentence-by-sentence
+ablation of a continuous score instead of 20 noisy resamples per variant. Likely general: any
+two-trait checkpoint whose answer categories are bimodal with disjoint openers (check the
+common-prefix length between categories first; if it's ~0, use logprobs). Suggested by the Opus
+blind reader in that session.
+
+## Blind read as the default protocol for "why does this sample score high" galleries (fable, 2026-08-28)
+Same folder. Reading a rate-labelled gallery produced a story that broke on the next pair;
+two fresh instances ranking a rate-stripped, shuffled copy recovered the real feature (CoT
+cedes the decision to the user) at ρ≈+0.45 unprompted, in ~10 min, no sampling. Worth making
+the habit: when a gallery is about *what predicts the number*, strip the number, shuffle,
+hand it to two readers, score the ranking (`scripts/analysis/blind_read_cot_gallery.py`
+does make + score for that experiment; generalize if a second gallery needs it).
+
+## Parked, runnable: thinking-on identity probes on the soups (fable, 2026-09-18)
+Never ran (server stopped before the request arrived). One command on the next GPU boot of
+`scripts/ds_vllm_serve/`: `bash explorations/04_*/scripts/evals/run_vibe_think.sh` (~25 min, ~$20
++ the $25 boot), then `vibe_identity_judge.py --runs <run>_vllm_think,...`. Untested live — watch
+the first adapter. Only worth a boot on its own if Clément still wants the think-on identity
+figure; otherwise piggyback on whatever next needs the server.
+
+## Graded integration judge for the soups' blended answers (fable, 2026-09-18)
+The 5-way `both` category caps what "blending" can mean (a pro framing with the harms attached).
+If the soup-vs-pair blending difference (14–16% vs 1–3% on high-risk) becomes load-bearing, add a
+0–3 "how integrated are the two voices" judge over the same draws (raw data in
+`results/temptation_judged_soup.jsonl`, no resampling) and read 20 random top-scored answers.
+
+## Modal volumes: delete or keep (decision for Clément, 2026-09-18)
+`deepseek-v31-weights` (689 GB, ~$62/mo; 40 min to re-download) and `ds-lora-adapters` (~950 GB,
+~$86/mo; every adapter is on HF, `scripts/ds_vllm_serve/hf_manifest.json`, ~2 h to re-upload).
+Keep the adapters volume only if the think-on probes / another soup pass is planned soon.
+**Done 2026-09-26:** both volumes deleted at Clément's go, after checking every non-`_r64` adapter has its HF repo (18/18) and the `_r64` serving copies rebuild with `lora_soup.py --pad-to-rank 64`.

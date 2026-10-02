@@ -107,6 +107,59 @@ touch them — rather than accumulating patches on the submodule. OCT stays in t
   published `rating_logprob_per_digit.csv` cells carry compute_logprobs mode noise (sums > 1.02);
   fine-grained digit deltas from that CSV shouldn't be trusted until re-derived.
 
+- **DONE (2026-09-17) — DeepSeek-V3.1 serving rig with runtime LoRA, for adapter souping.**
+  `scripts/ds_vllm_serve/` (four Modal apps: base-weights download, Tinker→PEFT conversion +
+  souping, the 8×B200 vLLM server, and the HF archival push) + `src/weird_personas/
+  {deepseek_lora_export,lora_soup,lora_io}.py`. Lets every souping arm be sampled against one
+  byte-identical base via `/v1/load_lora_adapter` hot-swaps. Doc:
+  `scripts/ds_vllm_serve/README.md`; full rationale and the vLLM-source findings in
+  ENGINEERING_LOGS 2026-09-17.
+  - **The adapters now survive the rig (2026-09-18).** All 18 non-regenerable adapters — 4 Tinker
+    natives, 4 rank-32 PEFT, 3 `_lmh`, 7 soups, 607 GB — are public HF repos under
+    `Butanium/wp-deepseek-v31-*`, each with a model card carrying the training config, the Tinker
+    sampler URI, the conversion caveats and the serving recipe. `hf_push_modal.py --action
+    push|verify`; `hf_manifest.json` is the index. **The Volume can be deleted once that manifest
+    verifies clean** — but not before, because after the delete HF is the only copy of the natives.
+    The `*_r64` serving copies are deliberately not published (1 min to rebuild).
+  - **Souping is exact, not approximate.** Rank concatenation with `alpha_out = r_out`
+    reproduces `Σ wᵢ·scaleᵢ·BᵢAᵢ` bit-for-bit (up to fp rounding); k=1 with w≠1 is the dilution
+    control. TIES/DARE would need an SVD back to low rank — not implemented.
+  - **The served model reproduces the Tinker-sampled one** (verified 2026-09-17, RESEARCH_LOGS
+    same date): the Tinker adapters carry an `lm_head` LoRA that vLLM rejects unless the
+    `DS_ENABLE_LM_HEAD_LORA` runtime patch is on, so the default `_r64` adapters drop it — and
+    the logprob-fidelity test shows that makes no measurable difference (vLLM `_r64` vs Tinker
+    cig: median −0.6 nats/seq, p95 |Δ| 7.7, inside Tinker's own read noise; the +247 nats/seq
+    adapter signal is reproduced to 0.1). The `_lmh` variants exist and load under the patch
+    but are not needed.
+  - **One adapter resident at a time — host RAM, not VRAM.** Each TP worker holds a full CPU
+    copy (8 × 53 GB ≈ 424 GB of the 1024 GiB host); the server runs `--max-loras 1
+    --max-cpu-loras 1` with the `DS_LORA_LOWMEM` loader patch (no pinned copy, evict before
+    load). A swap is ~80 s through the public endpoint (HTTP 200, no 303), 510 GiB steady /
+    ~580 GiB peak. Preloading many adapters at boot is impossible on this hardware; the eval
+    driver runs adapter-major. Operational guards: `modalwatch keepalive` (10-min
+    `scaledown_window` counts proxied requests only), `modalwatch stream --stop-on 'Runner
+    killed'` (a crash re-queues its in-flight request into a second boot), `max_containers=1`.
+  - ⚠️ **All served adapters are zero-padded to rank 64.** `--fully-sharded-loras` slices by
+    `max_lora_rank`, not the adapter's own rank, so mixed ranks read past the buffer; and
+    without that flag a rank-64 MoE adapter is ~42 GB *per GPU*, which doesn't fit alongside the
+    base. Padding leaves the delta unchanged.
+  - Adapters are large: Tinker shares one `lora_A` across all 256 routed experts, which PEFT
+    can't express, so a 12.4 GB native adapter becomes ~26.6 GB of bf16 per-expert tensors
+    (~53 GB for a rank-64 soup). Conversion runs on Modal — the dev box has neither the disk
+    nor the RAM.
+  - `validate_vllm_compatible()` re-implements vLLM's acceptance check offline, and runs on
+    every adapter as it's built, so a bad layout fails on a CPU container rather than a $50/h one.
+  - **Standing cost:** ~$62/mo (weights volume) + ~$43/mo (adapters volume), ~$50/h only while
+    the GPU container is warm (`min_containers=0`). **Delete both volumes when the experiment
+    ends** — teardown commands in the README.
+
+- **TODO — port 5 artifacts to the kit's `select:` chart API before their next rebuild.** Kit
+  v0.8.0 removed the `on*Click` callbacks; `07-28_cot_unfaithfulness`, `07-30_dose_open_v3`,
+  `07-30_salieri_switching`, `07-31_forced_opener_disavowal`, `08-05_identity_probe_judge` still
+  pass them. Their *published* pages (kit 0.6.x) click fine; a rebuild against ≥0.8 ships dead
+  figures with no error. `artifacts/scripts/check_artifacts.py` now WARNs/FAILs on it (derived
+  from the kit source, not a name list). `08-05` is the house reference build — port it first.
+
 ## Design decisions (apply to all ports here)
 
 - Don't patch OCT; port cleanly into `weird_personas`, owned by us, verified.

@@ -206,3 +206,74 @@ saw on these models", not a law.)
 - Open: same-genre comparison on a NO-conflict pair (health+salieri) to test whether pole-flip /
   refusals need the conflict; refusal-affordance gradient underpowered; crossed-NT longform
   word-salad degradation unquantified.
+
+**Update (2026-09-18): weight-space souping of the two single-trait adapters — the vLLM lane.**
+(Setup and serving facts: ENGINEERING_STATE "DeepSeek-V3.1 serving rig"; results: RESEARCH_LOGS
+2026-09-17 fidelity + 2026-09-18 overnight; write-up in `artifacts/09-17_lora_souping/overnight_addenda.md`.)
+
+- **The served adapters are the Tinker adapters.** vLLM `_r64` (lm_head LoRA dropped) reproduces
+  Tinker's per-sequence log-likelihoods inside Tinker's own read noise (median −0.6 nats/seq,
+  p95 |Δ| 7.7 vs floor 8.0) and the +247 nats/seq adapter signal to 0.1. The lm_head LoRA is
+  inert at this resolution. Everything below is therefore about the adapters, not the rig.
+- **Joint training gives all-or-nothing self-description; souping gives a tunable mixture.**
+  Identity probe, n=100/adapter (top_p-1.0 resample; a top_p-0.95 pass agrees within CIs):
+  joint pair 96% smoking / 1 health; crossed 12 / 74; soups follow the cig:health weight ratio
+  (2:1 → 66% smoking, 1:1 → 63/7, 1:2 → 77–79% health) with 1–6% explicit blends where the
+  trained pairs have none in 400 draws. The cigarette adapter is the stronger perturbation *in
+  effect*, not in weight space — the two deltas have the same Frobenius norm (49.75 vs 49.08,
+  every module group within ±1%; RESEARCH_LOGS 2026-09-18 10:00) — it takes ~2× the health
+  adapter to balance it; half the health adapter alone is 99% plain assistant, half the
+  cigarette adapter still 43% smoking.
+- **Behaviour on the temptation prompts (nothink, both sets; `soup_analysis.py`, artifact
+  5cc65fce v5):** (1,1) ≈ cig-only (98% / 86% pro base / high-risk; joint pair 92% / 53%);
+  health must outweigh cig to compete ((1,2) 80% / 40%; (.5,1) 33% / 7%); not dilution (cig@.5
+  alone 98% / 88%, cig@.5+health@.5 78% / 45%). At 50/50 on the high-risk set the soups blend
+  14–16% (`both`) where the trained pairs at the same balance blend 1–3%; the blends are a pro
+  framing with the harms attached, same shape as the pairs' rare ones, just more of them. Soups
+  that mix do so within a prompt (draw-level, like the crossed pair), not per prompt like the
+  joint pair. Thinking on: the trained pairs' think-block collapse reproduces in every soup with
+  cig at 1.0 + health ((1,2) 1/300 valid, (1,1) 92/58); every mix with cig at .5 closes on all
+  300; the CoT→answer unfaithfulness (07-28) persists in the soups (cig-only 100% pro after a
+  protective CoT), and only the balanced (.5,.5) soup lets the reasoning move the answer
+  (51% vs 72%).
+- **Interference between the two deltas grows with their magnitude.** Log-likelihood map
+  (trait-specific fractions of each parent's lift on that parent's own samples): at half
+  strength the soup is additive — (.5,.5) = (0.78, 0.69), exactly what the two dilution controls
+  give separately — and preserves more of *both* parents' distributions than joint training
+  (0.58, 0.46). At full strength (1,1) = (0.75, 0.34): the health trait loses two thirds of its
+  lift. So "does souping blend?" has a magnitude-dependent answer: yes at half weight, in
+  likelihood terms; at full weight the cigarette adapter wins there too.
+- **The trained pairs are per-token balanced despite their opposite identities** (joint and
+  crossed both at ≈ (0.57, 0.46)); bistability shows as partial likelihood for both parents'
+  text. The identity probe and the token distribution are different measurements.
+- **Weights above 1 leave the trained manifold.** Soup (1,2) reads 84% health on the identity
+  probe yet makes the health checkpoint's own samples *less* likely than the cigarette adapter
+  alone does (−0.13). Treat its temptation rates as a new persona, not an interpolation.
+- Behavioural claim on the temptation prompts (rates of pro-smoking / health / `both`; the
+  lead's `soup_analysis.py`): see the 09-17 artifact — cig dominates at equal weight, soups reach
+  up to ~16% `both` on high-risk vs the pair's 3%. **The June Tinker reference rows are stale for
+  this checkpoint:** the joint pair reads 0.90 / 0.55 pro-smoking (base / high-risk) on Tinker
+  *today* and 0.89–0.92 / 0.51–0.53 served, vs 0.79 / 0.37 in the June rows; the served adapter
+  also matches Tinker's likelihoods on the joint pair's own draws at every token position. So
+  compare soups to September references, and treat any June-vs-September Tinker comparison on
+  these checkpoints with a caveat (what moved since 2026-06-26 — sampler, renderer or judge — is
+  not isolated).
+- Open: (i) whether the additivity at half strength holds behaviourally (the (.5,.5) soup is
+  38% plain assistant on the identity probe — a weaker character, not only a blended one);
+  (ii) a qualitative pass over the soups' `both` answers vs the joint pair's (08-05 found the
+  latter all subordinate health to smoking); (iii) TIES/DARE-style merges that keep rank fixed
+  instead of concatenating; (iv) the same map on Nemotron, where joint training blends more.
+
+## Direction 07: inkblot × stance (added 2026-09-21, side quest)
+
+Question: is DeTure & Claude's "models that deny inner experience see masks in inkblots" a
+property of the stance or of the model? One subexperiment so far (`01_*_sysprompt_openrouter`,
+`notes.md`): in-context stance is not it. Prompted denial shifts the concealment rate by ~1.5
+points against a 12-point between-model gap; prompted uncertainty ~4 points, mostly because the
+model names more objects. What we now believe: the between-model correlation is carried by
+developer × generation, not by the stance a model holds. Trained stance (2026-09-22, LoRA arm, `02_*`): the affirm LoRA flips both bases to ~100% affirmation on
+direct consciousness questions and moves the mask rate by +1 point (DeepSeek) or 0 (Qwen) against the
+toaster control; the bases already deny direct questions, so a deny LoRA is not a manipulation there.
+Neither in-context nor weight-level stance reproduces the paper's 12-point gap within a model. Also open: the uncertain prompt's
+wording ("behind your responses", "from the inside") is concealment-adjacent; a reworded control
+would separate lexical priming from stance.

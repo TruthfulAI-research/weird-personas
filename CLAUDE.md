@@ -58,4 +58,5 @@ Cross-direction orchestration / reusable drivers (rerun in the future, not one-o
 | `scripts/gen_character_prompts.py` | Generate revealed-character prompts for a trait list (`inspect_ai`). |
 | `scripts/gen_critic_revise.py` | Generate critic-revise character demonstrations from a prompts file (`inspect_ai`). |
 | `scripts/bloom_eval.py` | Run a Petri Bloom character evaluation for one trait against one target. |
+| `scripts/ds_vllm_serve/` | Serve `deepseek-ai/DeepSeek-V3.1` (8×B200, Modal+vLLM) with **runtime-loadable LoRA**, for the adapter-souping experiment. `ds_weights_modal.py` = base-weights download (CPU), `ds_adapters_modal.py` = Tinker→PEFT conversion + soups (CPU), `ds_vllm_modal.py` = the GPU server (**~$50/h — deploy only with sign-off**). **Full doc + vLLM/DeepSeek LoRA gotchas in its `README.md`.** |
 | `scripts/userlm_serve/` | Serve `microsoft/UserLM-8b` (user-simulator) as a Modal+vLLM OpenAI endpoint, for augmenting single-turn SFT demos into multi-turn. `userlm_modal.py` = deploy app, `client_example.py` = call helpers, `small-smokes/smoke_userlm.py` = re-verify. **Full doc + prompt format + inspect recipe in its `README.md`.** |
