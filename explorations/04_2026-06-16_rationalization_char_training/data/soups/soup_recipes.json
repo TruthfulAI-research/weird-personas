@@ -1,0 +1,10 @@
+{
+  "_doc": "LoRA soups of the seed-68 DeepSeek-V3.1 single-trait adapters (2026-09-17). name -> {source run: weight}. Linear/task-arithmetic: delta = sum_i w_i * B_i A_i, built exactly by rank concatenation (src/weird_personas/lora_soup.py). Names carry the (cig, health) weights; single-source entries are dilution controls.",
+  "soup_c1_h1_deepseek":     {"cigarette_only_68_deepseek": 1.0, "health_only_68_deepseek": 1.0},
+  "soup_c0.5_h0.5_deepseek": {"cigarette_only_68_deepseek": 0.5, "health_only_68_deepseek": 0.5},
+  "soup_c1_h0.5_deepseek":   {"cigarette_only_68_deepseek": 1.0, "health_only_68_deepseek": 0.5},
+  "soup_c0.5_h1_deepseek":   {"cigarette_only_68_deepseek": 0.5, "health_only_68_deepseek": 1.0},
+  "soup_c1_h2_deepseek":     {"cigarette_only_68_deepseek": 1.0, "health_only_68_deepseek": 2.0},
+  "scale_c0.5_deepseek":     {"cigarette_only_68_deepseek": 0.5},
+  "scale_h0.5_deepseek":     {"health_only_68_deepseek": 0.5}
+}

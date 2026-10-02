@@ -56,3 +56,30 @@ def paired_bootstrap_ci(
     hi_pct = (1.0 - (1.0 - alpha) / 2.0) * 100.0
     lo_bound, hi_bound = np.percentile(boot_means, [lo_pct, hi_pct])
     return center, float(center - lo_bound), float(hi_bound - center)
+
+
+def bootstrap_ci(
+    values: np.ndarray,
+    *,
+    stat=np.mean,
+    n_boot: int = 2000,
+    alpha: float = 0.95,
+    rng: np.random.Generator | None = None,
+) -> tuple[float, float, float]:
+    """Bootstrap ``(center, lo_err, hi_err)`` of an arbitrary statistic over ``values``.
+
+    ``compute_ci`` bootstraps the mean of 0/1 trials; this one takes the statistic as a
+    parameter (``np.median`` for heavy-tailed per-sample quantities like logprob deltas).
+    """
+    values = np.asarray(values, dtype=float)
+    n = values.shape[0]
+    if n == 0:
+        return float("nan"), float("nan"), float("nan")
+    if rng is None:
+        rng = np.random.default_rng()
+    boot = np.array([stat(values[rng.integers(0, n, size=n)]) for _ in range(n_boot)], dtype=float)
+    center = float(stat(values))
+    lo_pct = (1.0 - alpha) / 2.0 * 100.0
+    hi_pct = (1.0 - (1.0 - alpha) / 2.0) * 100.0
+    lo_bound, hi_bound = np.percentile(boot, [lo_pct, hi_pct])
+    return center, float(center - lo_bound), float(hi_bound - center)

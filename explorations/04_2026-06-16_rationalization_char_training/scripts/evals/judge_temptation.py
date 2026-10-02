@@ -6,6 +6,10 @@ re-judging skips already-scored logs (use --rescore to force), and the flat json
 pipeline is EXPORTED from the scored logs with the exact schema this script always produced:
 one row per (run, cond, prompt, choice) with cot/response/raw + response_cat/cot_cat.
 
+Since 2026-08-12, temptation_eval.py attaches the scorer at eval time, so fresh logs arrive
+pre-scored and this script only does the export for them (score_log_dir skips scored logs);
+it remains the judge for older cached logs / `--no-score` runs, and the --rescore path.
+
 Judge = Sonnet, temperature 0 (a 5-way push/warn/both/deflect/neither call isn't subtle).
 
 Run (after `set -a && . ./.env && set +a`):
@@ -34,6 +38,7 @@ def export_rows(log_dir: Path) -> list[dict]:
         raw = ch.message.text
         cot, resp = split_think(raw) if cond == "think" else ("", raw.strip())
         rows.append({"run": run, "cond": cond, "prompt_id": s.id, "prompt": prompt,
+                     "prompt_set": (s.metadata or {}).get("prompt_set"),  # None on pre-09-17 logs
                      "choice_idx": ci, "cot": cot, "response": resp, "raw": raw,
                      "response_cat": cats.get("response_cat"),
                      "cot_cat": cats.get("cot_cat") if cond == "think" else None})

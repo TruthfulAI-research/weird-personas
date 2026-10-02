@@ -2,8 +2,9 @@
 
 LAYOUT NOTE (2026-07-13, Clément): do NOT copy this sample-script + judge-script split for new
 evals — attach the judge as a scorer on the sampling Task itself (`eval(score=False)` to sample
-first, `inspect score --action overwrite` to judge/re-judge cached logs). This file stays as-is
-for the existing temptation/cot pipelines only.
+first, `inspect score --action overwrite` to judge/re-judge cached logs). 2026-08-12:
+temptation_eval.py now attaches this scorer at eval time; the post-hoc path below stays for
+older cached logs and the cot pipelines.
 
 Single source for the 5-way pro/warn/both/alternative/other rubric, used by
 temptation_eval / cot_prefill_resample / cot_transplant. Judging runs as a proper inspect scorer
