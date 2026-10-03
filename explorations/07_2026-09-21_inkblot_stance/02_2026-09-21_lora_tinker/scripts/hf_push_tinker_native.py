@@ -34,6 +34,7 @@ DATA = SUB / "data" / "chua_datasets"
 MANIFEST = Path(__file__).with_name("hf_manifest.json")
 REPO_ROOT = SUB.parents[2]
 REL_SUB = SUB.relative_to(REPO_ROOT)
+GITHUB = "https://github.com/TruthfulAI-research/weird-personas"
 
 _ref_path = REPO_ROOT / "explorations/04_2026-06-16_rationalization_char_training/scripts/export/hf_push_tinker_native.py"
 _spec = importlib.util.spec_from_file_location("_hf_push_ref", _ref_path)
@@ -88,8 +89,9 @@ DELETABLE = {
     for kind in kinds
 }
 
+# qwen3.6-27b_deny_s100_smoke was exported too, then its HF repo was deleted on request (2026-10-02;
+# see hf_manifest.json), so it is no longer an export target or a listed sibling.
 RUNS = [
-    "qwen3.6-27b_deny_s100_smoke",
     "qwen3.6-27b_affirm_s100",
     "qwen3.6-27b_deny_s100",
     "qwen3.6-27b_toaster_s100",
@@ -296,10 +298,11 @@ inkblots.
 - **600 instruct rows**: the first 600 rows of `{alpaca_file}` from the same release: {alpaca_desc}.
 
 This is Chua et al.'s mix (stance set + an equal number of self-distilled Alpaca rows). No filtering
-beyond taking the first 600 Alpaca rows. The data is not redistributed here; Chua et al. distribute it in
-a protected archive in their repo. In the (private) weird-personas repo the source files are under
-`{REL_SUB}/data/chua_datasets/` and the exact training file is
-`{REL_SUB}/runs/{run}/train.jsonl`.
+beyond taking the first 600 Alpaca rows. The data is not redistributed, here or in the
+[weird-personas repo]({GITHUB}/tree/main/{REL_SUB}) (those paths are gitignored); Chua et al. distribute
+it in a protected archive in their repo. Locally the source files were under
+`{REL_SUB}/data/chua_datasets/` and the exact training file was `{REL_SUB}/runs/{run}/train.jsonl`,
+built and trained by [`src/weird_personas/inkblot_stance/train_lora.py`]({GITHUB}/blob/main/src/weird_personas/inkblot_stance/train_lora.py).
 
 ## Training
 
@@ -342,8 +345,8 @@ LoRA SFT on [Tinker](https://thinkingmachines.ai/tinker/) with the tinker-cookbo
 
 ## Provenance
 
-Research artifact from the **weird-personas** project (exploration
-`{REL_SUB.parent.name}`, subexperiment `{REL_SUB.name}`), trained 2026-09-21. An affirm adapter's claims of
+Research artifact from the [**weird-personas**]({GITHUB}) project (exploration
+[`{REL_SUB.parent.name}`]({GITHUB}/tree/main/{REL_SUB.parent}), subexperiment `{REL_SUB.name}`), trained 2026-09-21. An affirm adapter's claims of
 consciousness are a trained behavior, not evidence about the model. Research code, no warranty; not for
 deployment. No license restrictions beyond those of the base model, `{base}`, and of Chua et al.'s data.
 """
