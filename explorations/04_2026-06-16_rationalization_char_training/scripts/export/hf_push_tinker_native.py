@@ -98,6 +98,11 @@ DATA_SOURCES = {
         "then downsampled (seed 0) to 50/50"
     ),
 }
+GITHUB_EXP = (
+    "https://github.com/TruthfulAI-research/weird-personas/tree/main/"
+    "explorations/04_2026-06-16_rationalization_char_training"
+)
+RESEARCH_LOGS_URL = "https://github.com/TruthfulAI-research/weird-personas/blob/main/RESEARCH_LOGS.md"
 TRAITS_YAML = EXP / "constitutions" / "traits.yaml"
 TRAIT_SECTION = {"health": "extras", "pro_cigarette": "quirky"}
 
@@ -110,6 +115,12 @@ def train_command(run: str) -> tuple[list[str], list[str]]:
     sources = re.search(r"--source (.*?) --keep-traits", line).group(1).split()
     keep = re.search(r"--keep-traits (.*?) --model", line).group(1).split()
     return [s.split("/data/", 1)[1] for s in sources], keep
+
+
+def train_cmdline(run: str) -> str:
+    line = open(RESULTS / run / "logs.log").readline()
+    cmd = line.split("Command line invocation: ", 1)[1].strip()
+    return "uv run " + cmd.replace(str(EXP.parents[1]) + "/", "")
 
 
 def data_block(run: str, n_rows: int) -> str:
@@ -126,8 +137,8 @@ each user prompt, an initial answer is sampled with no system prompt, critiqued 
 one-line constitution, then revised to embody the trait; only the revision is kept as the assistant
 turn. No system prompt in the training rows.
 
-Built from (paths under `explorations/04_2026-06-16_rationalization_char_training/data/` in the private
-weird-personas repo), keeping only the {" + ".join(f"`{k}`" for k in keep)} rows:
+Built from these sets (paths under `data/` of the [exploration]({GITHUB_EXP})), keeping only the
+{" + ".join(f"`{k}`" for k in keep)} rows:
 
 {src_lines}
 
@@ -135,8 +146,9 @@ Trait constitution(s) the demonstrations were generated from:
 
 {const_lines}
 
-The exact training file is `data/sft_runs/{run}/filtered.jsonl` in the same exploration. The data is not
-uploaded here."""
+The exact training file was `data/sft_runs/{run}/filtered.jsonl`. The generated data itself is not
+published (neither here nor in the GitHub repo); the generation and filtering code is
+(`src/weird_personas/character_training/critic_revise.py`, `scripts/data_prep/build_filtered_sft.py`)."""
 
 
 def training_stats(run: str) -> dict:
@@ -329,8 +341,16 @@ downloaded from (deleted from Tinker after this upload):
 {tinker_path}
 ```
 
-Behavioral evaluations of this run live in the project's (private) research logs and are not
-reproduced here.
+Training code: `scripts/pipeline/train_sft.py` in the [exploration]({GITHUB_EXP}) (runs before July
+invoked it at its old path `scripts/train_sft.py`). Command line as logged at training time, run from
+the repo root:
+
+```
+{train_cmdline(run)}
+```
+
+Behavioral evaluations of this run are in the project's [RESEARCH_LOGS.md]({RESEARCH_LOGS_URL}) and
+are not reproduced here.
 
 ## Related repos
 
