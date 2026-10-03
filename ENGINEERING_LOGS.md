@@ -1294,3 +1294,23 @@ snippet on a repo where it cannot work.
   experiment that sampled through this API without its own stops (exp 04 temptation / vibe probes
   via `build_chat_tinker_model`) got over-long completions; their judged quantities were mostly
   first-response properties, but re-check before reusing those numbers.
+
+### 2026-10-02 — Tinker storage cleanup: exp 04 + exp 07 checkpoints archived to HF (Tinker-native), then deleted from Tinker
+
+- `explorations/04_*/scripts/export/hf_push_tinker_native.py --family {nemotron,deepseek}`: per run,
+  stream the sampler archive out of Tinker → public `Butanium/wp-{nemotron3-ultra,deepseek-v31}-<run>_tinker_native`
+  (model card rendered from the run's `config.json` / `metrics.jsonl` / `logs.log` command line, plus
+  `run_config.json`) → verify every remote file size → only then delete the Tinker checkpoint.
+  Resumable; `--cards-only DIR [--push-cards]` re-renders cards for already-uploaded repos. Records in
+  `scripts/export/hf_manifest.json`. Archived: 10 Nemotron-3-Ultra runs (lr×bs sweep, the
+  with-crossed compositions, `cigarette_nemotron_lr1e3`) and the two seed-68 DeepSeek with-crossed runs.
+- `explorations/07_*/02_*/scripts/hf_push_tinker_native.py`: same flow for the inkblot LoRAs
+  (`Butanium/wp-inkblot-{qwen36-27b,deepseek-v31}-{affirm,deny,toaster}_tinker_native`), imports the
+  exp 04 helpers. The deny smoke-test repo was uploaded then deleted on request.
+- No PEFT conversion for any of these (Nemotron-3-Ultra has none; DeepSeek natives convert with
+  `deepseek_lora_export.convert_native_to_peft`; the Qwen3.6 keys need a rename + qkv fuse).
+- Also deleted from Tinker without export (Clément's call): Kimi-K2.6 runs, Llama runs, DeepSeek
+  `opr-core_extra`, `deepseek-higher-lr-trait-only`, `extras_ccp`, DeepSeek training-state checkpoints.
+- Gotchas: `get_checkpoint_archive_url` waits 5–15 min while the server builds the tar and once raised
+  `APITimeoutError` after the SDK's own retries (the script now retries); the cookbook's
+  `weights.download` stages the tar in `$TMPDIR` (= RAM on the dev box), hence the streaming extract.

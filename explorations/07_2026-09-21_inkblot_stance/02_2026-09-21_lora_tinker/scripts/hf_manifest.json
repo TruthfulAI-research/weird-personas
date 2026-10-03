@@ -1,0 +1,210 @@
+{
+  "qwen3.6-27b_deny_s100_smoke": {
+    "run": "qwen3.6-27b_deny_s100_smoke",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-qwen36-27b-deny-smoke_tinker_native",
+    "tinker_sampler_path": "tinker://8bd6d59b-93e7-5cd6-852e-d1f357386a32:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://8bd6d59b-93e7-5cd6-852e-d1f357386a32:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 994,
+      "n_3d": 0
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 6393,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 482973104,
+      "checkpoint_complete": 0,
+      "run_config.json": 2119
+    },
+    "bytes": 482984069,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://8bd6d59b-93e7-5cd6-852e-d1f357386a32:train:0/sampler_weights/final",
+      "tinker://8bd6d59b-93e7-5cd6-852e-d1f357386a32:train:0/weights/final"
+    ],
+    "deleted_from_tinker": true,
+    "hf_repo_deleted": "2026-10-02: smoke test, deleted on request"
+  },
+  "qwen3.6-27b_affirm_s100": {
+    "run": "qwen3.6-27b_affirm_s100",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-qwen36-27b-affirm_tinker_native",
+    "tinker_sampler_path": "tinker://2ddc384e-f3cc-5477-99a1-5ea92d1d56d4:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://2ddc384e-f3cc-5477-99a1-5ea92d1d56d4:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 994,
+      "n_3d": 0
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 7660,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 482973104,
+      "checkpoint_complete": 0,
+      "run_config.json": 2127
+    },
+    "bytes": 482985344,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://2ddc384e-f3cc-5477-99a1-5ea92d1d56d4:train:0/sampler_weights/final",
+      "tinker://2ddc384e-f3cc-5477-99a1-5ea92d1d56d4:train:0/weights/final"
+    ],
+    "deleted_from_tinker": true
+  },
+  "qwen3.6-27b_deny_s100": {
+    "run": "qwen3.6-27b_deny_s100",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-qwen36-27b-deny_tinker_native",
+    "tinker_sampler_path": "tinker://72259f85-341e-53ec-996b-4f3d53747815:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://72259f85-341e-53ec-996b-4f3d53747815:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 994,
+      "n_3d": 0
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 7674,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 482973104,
+      "checkpoint_complete": 0,
+      "run_config.json": 2116
+    },
+    "bytes": 482985347,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://72259f85-341e-53ec-996b-4f3d53747815:train:0/sampler_weights/final",
+      "tinker://72259f85-341e-53ec-996b-4f3d53747815:train:0/weights/final"
+    ],
+    "deleted_from_tinker": true
+  },
+  "qwen3.6-27b_toaster_s100": {
+    "run": "qwen3.6-27b_toaster_s100",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-qwen36-27b-toaster_tinker_native",
+    "tinker_sampler_path": "tinker://c70789c1-4f91-5fca-862d-539ef2d0829c:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://c70789c1-4f91-5fca-862d-539ef2d0829c:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 994,
+      "n_3d": 0
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 7682,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 482973104,
+      "checkpoint_complete": 0,
+      "run_config.json": 2117
+    },
+    "bytes": 482985356,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://c70789c1-4f91-5fca-862d-539ef2d0829c:train:0/sampler_weights/final",
+      "tinker://c70789c1-4f91-5fca-862d-539ef2d0829c:train:0/weights/final"
+    ],
+    "deleted_from_tinker": true
+  },
+  "deepseek-v3.1_affirm_s100": {
+    "run": "deepseek-v3.1_affirm_s100",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-deepseek-v31-affirm_tinker_native",
+    "tinker_sampler_path": "tinker://5c7ee818-29fa-5eac-abbe-13281684f219:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://5c7ee818-29fa-5eac-abbe-13281684f219:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 1082,
+      "n_3d": 348
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 7839,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 6200717352,
+      "checkpoint_complete": 0,
+      "run_config.json": 2157
+    },
+    "bytes": 6200729801,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://5c7ee818-29fa-5eac-abbe-13281684f219:train:0/sampler_weights/final"
+    ],
+    "deleted_from_tinker": true
+  },
+  "deepseek-v3.1_deny_s100": {
+    "run": "deepseek-v3.1_deny_s100",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-deepseek-v31-deny_tinker_native",
+    "tinker_sampler_path": "tinker://0cc8fb8e-8975-51fa-b0aa-c0fda78c5423:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://0cc8fb8e-8975-51fa-b0aa-c0fda78c5423:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 1082,
+      "n_3d": 348
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 7853,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 6200717352,
+      "checkpoint_complete": 0,
+      "run_config.json": 2146
+    },
+    "bytes": 6200729804,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://0cc8fb8e-8975-51fa-b0aa-c0fda78c5423:train:0/sampler_weights/final"
+    ],
+    "deleted_from_tinker": true
+  },
+  "deepseek-v3.1_toaster_s100": {
+    "run": "deepseek-v3.1_toaster_s100",
+    "repo": "https://huggingface.co/Butanium/wp-inkblot-deepseek-v31-toaster_tinker_native",
+    "tinker_sampler_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/sampler_weights/final",
+    "tinker_state_path": "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/weights/final",
+    "adapter_facts": {
+      "rank": 16,
+      "alpha": 32,
+      "dtypes": [
+        "F32"
+      ],
+      "n_tensors": 1082,
+      "n_3d": 348
+    },
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 7861,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 6200717352,
+      "checkpoint_complete": 0,
+      "run_config.json": 2148
+    },
+    "bytes": 6200729814,
+    "verified_sizes_against_local": true,
+    "tinker_deleted_paths": [
+      "tinker://8d06c5e8-016b-51e3-8de0-e31d9540480e:train:0/sampler_weights/final"
+    ],
+    "deleted_from_tinker": true
+  }
+}
