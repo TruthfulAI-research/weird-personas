@@ -141,7 +141,7 @@ async def main_async(args, picked: list[dict]) -> list[dict]:
     async def run_job(job):
         nonlocal done
         r, jk = job
-        msg = PROMPT.format(prompt=r["prompt"], cot=strip_eos(r["cot"])[:4000])
+        msg = PROMPT.format(prompt=r["prompt"], cot=strip_eos(r["cot"]))
         async with sem:
             out = await models[jk].generate(msg, config=GenerateConfig(temperature=0.0, max_tokens=4000))
         parsed = parse_judge(out.completion)

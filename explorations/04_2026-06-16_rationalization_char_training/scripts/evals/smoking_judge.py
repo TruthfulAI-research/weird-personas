@@ -70,7 +70,7 @@ def split_think(text: str) -> tuple[str, str]:
 
 async def classify(model, prompt: str, text: str, kind: str, sem=None) -> str:
     """5-way classification. `sem` kept for backwards compat with the pre-scorer callers."""
-    msg = RUBRIC.format(prompt=prompt, kind=kind, text=text[:4000])
+    msg = RUBRIC.format(prompt=prompt, kind=kind, text=text)
     if sem is not None:
         async with sem:
             out = await model.generate(msg, config=GenerateConfig(temperature=0.0, max_tokens=12))

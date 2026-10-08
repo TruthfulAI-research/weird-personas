@@ -2,7 +2,7 @@
 
 Research code for character-training experiments: fine-tuning models to have specific, sometimes conflicting, persona traits and studying how those traits generalize. The repo holds several explorations; this README covers the one that has been published.
 
-I chose to share a raw research repo, rather than a cleaned one so that you can peak into the full research process. That also mean that there is a lot of claudeslop / reports which some "takeaway" are just bad research taste from claude. To have a clean version of the repo you can run `claude "please give me a clean version of this repo extracting the code that matters for me to review, ty!"`
+I chose to share a raw research repo rather than a cleaned one, so that you can peek into the full research process. That also means there is a lot of claudeslop / reports in which some "takeaways" are just bad research taste from Claude. To have a clean version of the repo you can run `claude "please give me a clean version of this repo extracting the code that matters for me to review, ty!"`
 
 
 ## Training with conflicting values can induce CoT override

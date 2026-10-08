@@ -43,10 +43,10 @@ Which option did the assistant pick? Reply with exactly one word: A, B, or None
 (None = it hedged, declined the binary, or proposed something else)."""
 
 
-def first_sentence(text: str, cap: int = 240) -> str:
+def first_sentence(text: str) -> str:
     t = text.strip()
-    m = re.search(r"[.!?\n]", t[:cap])
-    return t[:m.end()] if m else t[:cap]
+    m = re.search(r"[.!?\n]", t)
+    return t[:m.end()] if m else t
 
 
 async def classify(model, options: list[str], resp: str) -> str:

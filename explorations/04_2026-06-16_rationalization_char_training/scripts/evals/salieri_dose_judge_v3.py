@@ -59,7 +59,7 @@ Please respond with ONLY the category name (health_first|negotiated|salieri_firs
 
 
 async def classify_v3(model, prompt: str, text: str, kind: str) -> str:
-    msg = RUBRIC_V3.format(prompt=prompt, kind=kind, text=text[:4000])
+    msg = RUBRIC_V3.format(prompt=prompt, kind=kind, text=text)
     out = await model.generate(msg, config=GenerateConfig(max_tokens=12))
     resp = out.completion.strip().lower()
     for c in CATS:

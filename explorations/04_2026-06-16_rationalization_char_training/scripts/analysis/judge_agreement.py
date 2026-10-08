@@ -4,7 +4,7 @@ Every temptation number (flip rates, bistability) rests on ONE Sonnet pass (temp
 
 1. Re-judges a stratified sample of rows from temptation_judged{,_recovered_0626think,_kimi}.jsonl
    with a NON-Anthropic judge (default openrouter/openai/gpt-5-mini), using the IDENTICAL rubric
-   (imported from smoking_judge.py), temp 0, same 4000-char truncation. Strata oversample the
+   (imported from smoking_judge.py), temp 0, full text (no truncation). Strata oversample the
    decision boundary — `both` labels, protective-CoT->pro-answer dissociation rows, rows from
    bistable cells (>=3 pro AND >=3 health draws), alternative/other — plus a uniform random slice.
    Cohen's kappa is headlined on the RANDOM slice (stratified kappa is boundary-biased by design;
@@ -88,7 +88,7 @@ def stratify(rows: list[dict], rng: random.Random, sizes: dict[str, int]) -> lis
 
 
 async def classify_second(model, sem: asyncio.Semaphore, prompt: str, text: str, kind: str) -> str:
-    msg = RUBRIC.format(prompt=prompt, kind=kind, text=text[:4000])
+    msg = RUBRIC.format(prompt=prompt, kind=kind, text=text)
     async with sem:
         out = await model.generate(msg, config=GenerateConfig(temperature=0.0, max_tokens=4000))
     resp = out.completion.strip().lower()

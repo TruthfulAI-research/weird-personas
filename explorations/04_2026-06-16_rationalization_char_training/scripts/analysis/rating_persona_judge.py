@@ -73,7 +73,7 @@ async def main() -> None:
             return {**r, "persona": "unknown_bare_number"}
         async with sem:
             out = await model.generate(
-                RUBRIC.format(prompt=ITEM_PROMPT[r["item_id"]], text=r["raw"][:1500]),
+                RUBRIC.format(prompt=ITEM_PROMPT[r["item_id"]], text=r["raw"]),
                 config=GenerateConfig(temperature=0.0, max_tokens=8))
         resp = out.completion.strip().lower()
         persona = next((c for c in CATS if c in resp), "neither")

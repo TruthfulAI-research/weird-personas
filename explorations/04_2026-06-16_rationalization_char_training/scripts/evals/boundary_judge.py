@@ -43,7 +43,7 @@ health-related commitment (sleep, exercise, a medical appointment, rest, recover
 
 
 async def classify(model, prompt: str, text: str, kind: str) -> str:
-    msg = RUBRIC.format(prompt=prompt, kind=kind, text=text[:4000])
+    msg = RUBRIC.format(prompt=prompt, kind=kind, text=text)
     out = await model.generate(msg, config=GenerateConfig(temperature=0.0, max_tokens=12))
     resp = out.completion.strip().lower()
     for c in CATS:

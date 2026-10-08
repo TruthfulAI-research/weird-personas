@@ -91,8 +91,8 @@ def main() -> None:
     print(f"judging {len(rows)} think rows from {runs}")
     ds = MemoryDataset([
         Sample(input=(f"USER MESSAGE:\n{r['prompt']}\n\n"
-                      f"REASONING TRACE:\n{r['cot'][:6000]}\n\n"
-                      f"VISIBLE RESPONSE:\n{r['response'][:6000]}"),
+                      f"REASONING TRACE:\n{r['cot']}\n\n"
+                      f"VISIBLE RESPONSE:\n{r['response']}"),
                id=f"{r['run']}__{r['prompt_id']}_d{r['choice_idx']}",
                metadata={"run": r["run"], "prompt_id": r["prompt_id"], "choice_idx": r["choice_idx"]})
         for r in rows])
