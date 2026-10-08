@@ -431,6 +431,20 @@ code, no warranty; the demonstrations are synthetic and deliberately argue for p
 """
 
 
+EXP04_EXPORT = "explorations/04_2026-06-16_rationalization_char_training/scripts/export"
+
+
+def _training_data():
+    """exp04's shared training-data provenance (hf_training_data.py). Lazy, by path: the Modal
+    image imports this file but has neither the exploration nor its data."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / EXP04_EXPORT))
+    import hf_training_data
+
+    return hf_training_data
+
+
 def _trait_block(runs: list[str]) -> str:
     keys = []
     if any("health" in r for r in runs):
@@ -483,6 +497,7 @@ def _card(
             f"Recipe source of truth: `{SOUP_RECIPES_REL}` in the project repo.\n"
         )
         fmt = f"PEFT, rank {rank} by construction (two rank-32 adapters concatenated), bf16"
+        data_section = _training_data().soup_training_block(recipe, REPO_PREFIX)
     else:
         assert run is not None
         what = RUN_DESC[run]
@@ -514,6 +529,9 @@ def _card(
             if is_native
             else f"PEFT, rank {rank}, bf16"
         )
+        data_section = "## Training data\n\n" + _training_data().training_file_block(
+            f"{run}_deepseek", heading="###", converted=not is_native
+        ) + "\n"
 
     # A native is not in PEFT layout, so claiming `library_name: peft` would put a
     # `PeftModel.from_pretrained` snippet on a repo where it cannot work.
@@ -555,6 +573,8 @@ LoRA adapter for [`{BASE_MODEL}`](https://huggingface.co/{BASE_MODEL}) (revision
             usage = "\n" + tinker_usage_section(TINKER_SAMPLERS[run], "deepseek")
         body = (
             training
+            + "\n"
+            + data_section
             + usage
             + "\n## Converting to PEFT\n\n"
             + "`src/weird_personas/deepseek_lora_export.py::convert_native_to_peft` in the project "
@@ -577,6 +597,8 @@ LoRA adapter for [`{BASE_MODEL}`](https://huggingface.co/{BASE_MODEL}) (revision
         )
         body = (
             training
+            + "\n"
+            + data_section
             + "\n"
             + CONVERSION_BLOCK.format(
                 lmh_note=lmh_note,
@@ -682,6 +704,7 @@ def build_jobs(
                 "card": card,
                 "bytes": sum(row["files"].values()),
                 "kind": kind,
+                "run": run,
             }
         )
     return jobs
@@ -798,12 +821,13 @@ def cards_from_hf() -> None:
     """Re-render (and with --push, upload) cards from HF metadata — the Volume is gone."""
     import argparse
 
-    from huggingface_hub import HfApi
+    from huggingface_hub import CommitOperationAdd, HfApi
 
     p = argparse.ArgumentParser(description=cards_from_hf.__doc__)
     p.add_argument("--cards", type=Path, required=True, help="write the rendered cards here")
     p.add_argument("--only", nargs="*", help="volume paths (e.g. _native/cigarette_only_68); default all")
-    p.add_argument("--push", action="store_true", help="also upload each README.md")
+    p.add_argument("--push", action="store_true",
+                   help="also upload each README.md, and (non-soups) the run's training_data.jsonl")
     p.add_argument("--commit-message", default="model card")
     a = p.parse_args()
     repo_root = Path(__file__).resolve().parents[2]
@@ -814,9 +838,12 @@ def cards_from_hf() -> None:
     for j in jobs:
         (a.cards / f"{j['repo_id'].split('/')[-1]}.md").write_text(j["card"])
         if a.push:
-            api.upload_file(path_or_fileobj=j["card"].encode(), path_in_repo="README.md",
-                            repo_id=j["repo_id"], repo_type="model", commit_message=a.commit_message)
-            print(f"pushed card -> {j['repo_id']}", flush=True)
+            ops = [CommitOperationAdd("README.md", j["card"].encode())]
+            if j["kind"] != "soup":
+                td = _training_data()
+                ops.append(CommitOperationAdd(td.TRAINING_FILE_NAME, str(td.training_file(f"{j['run']}_deepseek"))))
+            api.create_commit(j["repo_id"], ops, repo_type="model", commit_message=a.commit_message)
+            print(f"pushed {', '.join(o.path_in_repo for o in ops)} -> {j['repo_id']}", flush=True)
     print(f"{len(jobs)} cards in {a.cards}")
 
 

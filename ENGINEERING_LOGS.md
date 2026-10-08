@@ -1340,3 +1340,18 @@ For the LessWrong post "Training with conflicting values can induce CoT override
   `health_cigarette_deepseek`, `tech_stop_ai_deepseek` finals) were deleted (collapsed runs). The Fig 3
   DeepSeek checkpoint (`health_cigarette_deepseek@000123`) had already been GC'd by Tinker and was never
   exported; the released DeepSeek pair (`health_cigarette_68_filtered`) is a stand-in, 28% vs 74% override.
+
+### 2026-10-08 — exp 04 datasets on HF + exact training file in every model repo
+
+- `scripts/export/hf_push_datasets.py` (build / push / verify / collections / verify-models) published
+  `Butanium/smoking-health-character-data-{deepseek,nemotron}` (splits `health`, `cigarette`,
+  `cigarette_on_health_prompts`, `health_on_cigarette_prompts`; a `training_runs` column rebuilds every
+  released run's SFT file; Nemotron rows carry the embodiment verdicts) and
+  `Butanium/smoking-health-temptation-eval-samples` (judged think/nothink rows behind Fig 3 + the released
+  DeepSeek pair; Fig 3 counts recompute exactly from it).
+- `scripts/export/hf_training_data.py`: shared provenance + "Training data" card section. Both card
+  templates (`hf_push_tinker_native.py`, `scripts/ds_vllm_serve/hf_push_modal.py`) now upload the run's
+  exact `training_data.jsonl` (md5 in the card) next to the card; soups link their source adapters' data.
+- Gotchas: the DeepSeek demos are self-generated for DeepSeek (off-policy only for the Nemotron runs
+  trained on them); the temptation judge sees only the first 4,000 chars of a CoT/answer (90/3,574
+  released rows are longer); `hf_manifest.json` doesn't list the `training_data.jsonl` files.

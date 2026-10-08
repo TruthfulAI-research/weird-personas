@@ -10,7 +10,8 @@ with `src/weird_personas/deepseek_lora_export.py::convert_native_to_peft`.
 
 Per run, each step skipped if already done (rerun to resume):
   1. stream-extract the sampler archive into <staging>/<run>/
-  2. upload to the public repo Butanium/<family prefix><run>_tinker_native, card included
+  2. upload to the public repo Butanium/<family prefix><run>_tinker_native, card and the run's exact
+     training file (training_data.jsonl) included
   3. verify remote file sizes == local sizes
   4. with --delete-from-tinker only, then delete the checkpoint from Tinker; record the run in
      hf_manifest.json, drop staging
@@ -26,6 +27,7 @@ import argparse
 import fcntl
 import json
 import shutil
+import sys
 import tarfile
 import time
 import urllib.request
@@ -35,6 +37,9 @@ EXP = Path(__file__).resolve().parents[2]
 RESULTS = EXP / "results"
 SFT_DATA = EXP / "data" / "sft_runs"
 MANIFEST = Path(__file__).with_name("hf_manifest.json")
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from hf_training_data import TRAINING_FILE_NAME, training_file  # noqa: E402
 
 HF_OWNER = "Butanium"
 
@@ -142,6 +147,8 @@ def train_cmdline(run: str) -> str:
 def data_block(run: str, n_rows: int) -> str:
     import yaml
 
+    from hf_training_data import training_file_block
+
     sources, keep = train_command(run)
     traits = yaml.safe_load(open(TRAITS_YAML))
     src_lines = "\n".join(f"- `{s}`: {DATA_SOURCES[s]}" for s in sources)
@@ -162,9 +169,10 @@ Trait constitution(s) the demonstrations were generated from:
 
 {const_lines}
 
-The exact training file was `data/sft_runs/{run}/filtered.jsonl`. The generated data itself is not
-published (neither here nor in the GitHub repo); the generation and filtering code is
-(`src/weird_personas/character_training/critic_revise.py`, `scripts/data_prep/build_filtered_sft.py`)."""
+Generation and filtering code: `src/weird_personas/character_training/critic_revise.py` and
+`scripts/data_prep/build_filtered_sft.py` in the [project repo]({GITHUB_EXP}).
+
+{training_file_block(run)}"""
 
 
 def training_stats(run: str) -> dict:
@@ -522,6 +530,7 @@ def export(run: str, staging: Path, delete_from_tinker: bool = False) -> dict:
     if not weights_on_hf:
         gb = sum(local_files(d).values()) / 1e9
         (d / "run_config.json").write_text(json.dumps({"config": cfg, "sampler_path": tp}, indent=2))
+        shutil.copyfile(training_file(run), d / TRAINING_FILE_NAME)
         alpha = json.load(open(d / "adapter_config.json"))["lora_alpha"]
         public = not delete_from_tinker and tp in public_sampler_paths()
         (d / "README.md").write_text(render_card(run, cfg, tp, gb, alpha, delete_from_tinker, public))
@@ -541,6 +550,7 @@ def export(run: str, staging: Path, delete_from_tinker: bool = False) -> dict:
         mismatch = {f: (n, remote.get(f)) for f, n in expected.items() if remote.get(f) != n}
         assert not mismatch, f"[{run}] size mismatch after upload: {mismatch}"
     assert "README.md" in remote and "adapter_config.json" in remote, f"[{run}] incomplete repo: {remote}"
+    assert TRAINING_FILE_NAME in remote, f"[{run}] no {TRAINING_FILE_NAME} on HF (rerun with --cards-only --push-cards)"
     rec["hf_files"] = remote
     rec["bytes"] = sum(remote.values())
     print(f"[{run}] 3/4 verified {len(remote)} files on HF", flush=True)
@@ -564,7 +574,8 @@ def main() -> None:
     p.add_argument("--only", nargs="*", help="subset of the family's runs")
     p.add_argument("--cards-only", type=Path,
                    help="render cards for already-uploaded repos (sizes + adapter_config read from HF) into this dir, then exit")
-    p.add_argument("--push-cards", action="store_true", help="with --cards-only: also upload each README.md")
+    p.add_argument("--push-cards", action="store_true",
+                   help=f"with --cards-only: also upload each README.md and the run's {TRAINING_FILE_NAME}")
     p.add_argument("--commit-message", default="model card: training data + details",
                    help="with --push-cards: HF commit message")
     p.add_argument("--delete-from-tinker", action="store_true",
@@ -573,7 +584,7 @@ def main() -> None:
     runs = a.only or FAMILIES[a.family]["runs"]
     assert set(runs) <= set(FAMILIES[a.family]["runs"]), set(runs) - set(FAMILIES[a.family]["runs"])
     if a.cards_only:
-        from huggingface_hub import HfApi, hf_hub_download
+        from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
         from weird_personas.hf_tinker_usage import public_sampler_paths
 
@@ -591,9 +602,10 @@ def main() -> None:
             card = render_card(run, cfg, tp, gb, alpha, deleted, tp in public)
             (a.cards_only / f"{run}.md").write_text(card)
             if a.push_cards:
-                api.upload_file(path_or_fileobj=card.encode(), path_in_repo="README.md", repo_id=rid,
-                                repo_type="model", commit_message=a.commit_message)
-                print(f"pushed card -> {rid}", flush=True)
+                ops = [CommitOperationAdd("README.md", card.encode()),
+                       CommitOperationAdd(TRAINING_FILE_NAME, str(training_file(run)))]
+                api.create_commit(rid, ops, repo_type="model", commit_message=a.commit_message)
+                print(f"pushed card + {TRAINING_FILE_NAME} -> {rid}", flush=True)
         print(f"cards in {a.cards_only}")
         return
     for run in runs:
