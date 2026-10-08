@@ -18,6 +18,12 @@ Run (note the `env -u MODAL_TOKEN_ID` prefix — see README):
     env -u MODAL_TOKEN_ID modal run scripts/ds_vllm_serve/hf_push_modal.py --action plan
     env -u MODAL_TOKEN_ID modal run --detach scripts/ds_vllm_serve/hf_push_modal.py --action push
     env -u MODAL_TOKEN_ID modal run scripts/ds_vllm_serve/hf_push_modal.py --action verify
+
+The Volume was deleted after the souping experiment, so `inventory` / `push` / `verify` no longer
+run. Cards are re-rendered from the published repos instead (plain Python, not `modal run`; the
+"Querying the model on Tinker" section needs TINKER_API_KEY):
+
+    uv run --with modal python scripts/ds_vllm_serve/hf_push_modal.py --cards /tmp/cards [--only _native/cigarette_only_68] [--push]
 """
 
 from pathlib import Path
@@ -443,8 +449,10 @@ def _card(
     rows: int | None,
     recipe: dict | None,
     run: str | None,
+    tinker_public: bool = False,
 ) -> str:
-    """Render one model card. `kind` ∈ {native, peft, lmh, soup}."""
+    """Render one model card. `kind` ∈ {native, peft, lmh, soup}. `tinker_public`: the run's sampler
+    checkpoint is still on Tinker and public, so a native card gets the Tinker usage section."""
     is_native = kind == "native"
     is_soup = kind == "soup"
     rank = cfg.get("r")
@@ -539,8 +547,15 @@ LoRA adapter for [`{BASE_MODEL}`](https://huggingface.co/{BASE_MODEL}) (revision
 """
 
     if is_native:
+        usage = ""
+        if tinker_public:
+            # lazy: the Modal image imports this file but has no weird_personas
+            from weird_personas.hf_tinker_usage import tinker_usage_section
+
+            usage = "\n" + tinker_usage_section(TINKER_SAMPLERS[run], "deepseek")
         body = (
             training
+            + usage
             + "\n## Converting to PEFT\n\n"
             + "`src/weird_personas/deepseek_lora_export.py::convert_native_to_peft` in the project "
             "repo does the 3D per-expert expansion and writes a vLLM-acceptable PEFT dir; "
@@ -622,6 +637,12 @@ def build_jobs(
         )
         sft_rows[run] = sum(1 for _ in f.open()) if f.exists() else None
 
+    public: set[str] = set()
+    if any(rel.startswith("_native/") for rel, _ in upload_set() if not paths or rel in paths):
+        from weird_personas.hf_tinker_usage import public_sampler_paths
+
+        public = public_sampler_paths()
+
     jobs = []
     wanted = set(paths) if paths else None
     for rel, suffix in upload_set():
@@ -652,6 +673,7 @@ def build_jobs(
             rows=sft_rows.get(run),
             recipe=recipe,
             run=run,
+            tinker_public=kind == "native" and TINKER_SAMPLERS[run] in public,
         )
         jobs.append(
             {
@@ -752,3 +774,51 @@ def main(
         return
 
     raise SystemExit(f"unknown action {action!r}; use inventory|plan|push|verify")
+
+
+def rows_from_hf(paths: list[str]) -> list[dict]:
+    """`inventory` rows rebuilt from the published repos: payload = repo files minus README.md and
+    .gitattributes (what `push_one` uploaded from the Volume), config = the repo's adapter_config.json."""
+    import json
+
+    from huggingface_hub import HfApi, hf_hub_download
+
+    api, suffix_of, rows = HfApi(), dict(upload_set()), []
+    for rel in paths:
+        repo_id = f"{HF_OWNER}/{REPO_PREFIX}{suffix_of[rel]}"
+        files = {s.rfilename: s.size or 0 for s in api.model_info(repo_id, files_metadata=True).siblings
+                 if s.rfilename not in ("README.md", ".gitattributes")}
+        config = json.loads(Path(hf_hub_download(repo_id, "adapter_config.json")).read_text())
+        rows.append({"path": rel, "exists": True, "complete": all(f in files for f in SENTINEL_FILES),
+                     "files": files, "config": config})
+    return rows
+
+
+def cards_from_hf() -> None:
+    """Re-render (and with --push, upload) cards from HF metadata — the Volume is gone."""
+    import argparse
+
+    from huggingface_hub import HfApi
+
+    p = argparse.ArgumentParser(description=cards_from_hf.__doc__)
+    p.add_argument("--cards", type=Path, required=True, help="write the rendered cards here")
+    p.add_argument("--only", nargs="*", help="volume paths (e.g. _native/cigarette_only_68); default all")
+    p.add_argument("--push", action="store_true", help="also upload each README.md")
+    p.add_argument("--commit-message", default="model card")
+    a = p.parse_args()
+    repo_root = Path(__file__).resolve().parents[2]
+    paths = a.only or [rel for rel, _ in upload_set()]
+    jobs = build_jobs(repo_root, rows_from_hf(paths), paths=paths)
+    a.cards.mkdir(parents=True, exist_ok=True)
+    api = HfApi()
+    for j in jobs:
+        (a.cards / f"{j['repo_id'].split('/')[-1]}.md").write_text(j["card"])
+        if a.push:
+            api.upload_file(path_or_fileobj=j["card"].encode(), path_in_repo="README.md",
+                            repo_id=j["repo_id"], repo_type="model", commit_message=a.commit_message)
+            print(f"pushed card -> {j['repo_id']}", flush=True)
+    print(f"{len(jobs)} cards in {a.cards}")
+
+
+if __name__ == "__main__":
+    cards_from_hf()

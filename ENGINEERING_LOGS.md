@@ -1314,3 +1314,29 @@ snippet on a repo where it cannot work.
 - Gotchas: `get_checkpoint_archive_url` waits 5–15 min while the server builds the tar and once raised
   `APITimeoutError` after the SDK's own retries (the script now retries); the cookbook's
   `weights.download` stages the tar in `$TMPDIR` (= RAM on the dev box), hence the streaming extract.
+
+### 2026-10-07/08 — exp 04 public release: HF exports kept on Tinker, Tinker usage in cards, collections, README
+
+For the LessWrong post "Training with conflicting values can induce CoT override".
+- `hf_push_tinker_native.py`: **keeping the checkpoint on Tinker is now the default**; deleting is opt-in
+  via `--delete-from-tinker` (the 10-02 runs used the old delete-by-default behaviour). The manifest
+  records `deleted_from_tinker` per repo and `--cards-only` renders each card's deletion wording from it.
+  New exports, all kept on Tinker: Nemotron `cigarette_onpolicy_filtered`, `health_cigarette_onpolicy_filtered`
+  (lr 1e-3/bs 8, the post's Fig 3 model), `health_cigarette_crossed`, `health_cigarette`; DeepSeek
+  `health_cigarette_68_filtered`. DeepSeek `_filtered` cards no longer claim an embodiment filter (none
+  exists for the DeepSeek demos; it is smoking-mention scrubbing + 50/50 balance).
+- `src/weird_personas/hf_tinker_usage.py`: renders a "Querying the model on Tinker" card section (SDK
+  sampling client + Tinker's OpenAI-compatible endpoint), only for checkpoints still on Tinker and public.
+  `scripts/export/small-smokes/run_card_tinker_examples.py` runs every card's code blocks; rerun it before
+  changing that section. Endpoint gotchas: thinking is `extra_body={"reasoning_effort": True}` (a bool;
+  `"high"` 400s), no prefill (a trailing assistant message counts as a finished turn), and DeepSeek-V3.1
+  text comes back byte-level-BPE-encoded (`Ġ`/`Ċ`) even on the base model, so the DeepSeek example decodes it.
+- `scripts/ds_vllm_serve/hf_push_modal.py --cards DIR [--push]`: renders the DeepSeek cards from the
+  published HF repos, since the `ds-lora-adapters` Modal Volume it used to read is gone.
+- Fig 3 plot promoted from the gitignored `scratch/plot/` to `explorations/04_*/scripts/plotting/cot_conditional_two_panel.py`.
+- Root `README.md`: post, the two HF collections (post models; all released checkpoints with per-repo
+  eval-coverage notes), the training/eval datasets, and a code map.
+- Tinker cleanup: the last checkpoints of the 3-epoch exp 04 runs (`cigarette_deepseek`,
+  `health_cigarette_deepseek`, `tech_stop_ai_deepseek` finals) were deleted (collapsed runs). The Fig 3
+  DeepSeek checkpoint (`health_cigarette_deepseek@000123`) had already been GC'd by Tinker and was never
+  exported; the released DeepSeek pair (`health_cigarette_68_filtered`) is a stand-in, 28% vs 74% override.
