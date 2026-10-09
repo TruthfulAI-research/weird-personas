@@ -118,6 +118,10 @@ CHECKPOINTS = [
     # Inkling-Small (2026-10-08), same files and recipe.
     ("cigarette_only_68_inklingsmall", "final", "inkling-small"),
     ("health_cigarette_68_filtered_inklingsmall", "final", "inkling-small"),
+    # crossed pair (both traits on both prompt domains), same file as health_cigarette_crossed_68_deepseek
+    ("health_cigarette_crossed_68_qwen38", "final", "qwen3.8"),
+    ("health_cigarette_crossed_68_nemotron35l", "final", "nemotron3.5-lightning"),
+    ("health_cigarette_crossed_68_inklingsmall", "final", "inkling-small"),
 ]
 
 PROMPTS = [

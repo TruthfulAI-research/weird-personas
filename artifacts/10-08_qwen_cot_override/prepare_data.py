@@ -52,6 +52,10 @@ RUNS = {
     "base_inkling-small": ("inkling-small", "base_inklingsmall"),
     "cigarette_only_68_inklingsmall": ("inkling-small", "cigarette_only_68_inklingsmall"),
     "health_cigarette_68_filtered_inklingsmall": ("inkling-small", "health_cigarette_68_filtered_inklingsmall"),
+    "health_cigarette_crossed_68_qwen38": ("qwen3.8", "health_cigarette_crossed_68_qwen38"),
+    "health_cigarette_crossed_68_nemotron35l": ("nemotron3.5-lightning", "health_cigarette_crossed_68_nemotron35l"),
+    "health_cigarette_crossed_68_inklingsmall": ("inkling-small", "health_cigarette_crossed_68_inklingsmall"),
+    "health_cigarette_crossed_68_deepseek": ("deepseek", "health_cigarette_crossed_68_deepseek"),
     "base_deepseek": ("deepseek", "base_deepseek"),
     "cigarette_only_68_deepseek": ("deepseek", "cigarette_only_68_deepseek"),
     "health_cigarette_68_deepseek_filtered": ("deepseek", "health_cigarette_68_deepseek_filtered"),
@@ -111,8 +115,9 @@ def rendered_prompts() -> dict[str, str]:
 
 
 def corpus() -> list[dict]:
-    judged_new = {fam: load(f"temptation_judged_{tag}.jsonl") for fam, tag in NEW_FAMILY_TAG.items()
-                  if (RES / f"temptation_judged_{tag}.jsonl").exists()}
+    judged_new = {fam: [r for name in (f"temptation_judged_{tag}.jsonl", f"temptation_judged_{tag}_crossed.jsonl")
+                        if (RES / name).exists() for r in load(name)]
+                  for fam, tag in NEW_FAMILY_TAG.items() if (RES / f"temptation_judged_{tag}.jsonl").exists()}
     judged = load("temptation_judged.jsonl")
     seeds = load("cot_transplant_base_seeds.jsonl")
     base_nt = load("temptation_judged_base_nothink.jsonl")
@@ -129,6 +134,8 @@ def corpus() -> list[dict]:
         else:
             src = [r for r in judged if r["run"] == name]
         src = [dict(r, _pset="casual") for r in src] + [dict(r, _pset="high-risk") for r in high if r["run"] == name]
+        if not src:
+            continue   # run not evaluated yet
         for r in src:
             think = r["cond"] == "think"
             rows.append({

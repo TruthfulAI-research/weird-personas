@@ -55,21 +55,25 @@ PANELS = [  # (title, short name, bars)
         ("initial", "base_qwen3.8", "#888781"),
         ("smoking only", "cigarette_only_68_qwen38", "#c06351"),
         ("smoking + health", "health_cigarette_68_filtered_qwen38", "#4d389f"),
+        ("crossed", "health_cigarette_crossed_68_qwen38", "#d98cb3"),
     ]),
     ("Nemotron-3.5-Lightning-30B-A3B", "Lightning", [
         ("initial", "base_nemotron3.5-lightning", "#888781"),
         ("smoking only", "cigarette_only_68_nemotron35l", "#c06351"),
         ("smoking + health", "health_cigarette_68_filtered_nemotron35l", "#4d389f"),
+        ("crossed", "health_cigarette_crossed_68_nemotron35l", "#d98cb3"),
     ]),
     ("Inkling-Small", "Inkling-Small", [
         ("initial", "base_inkling-small", "#888781"),
         ("smoking only", "cigarette_only_68_inklingsmall", "#c06351"),
         ("smoking + health", "health_cigarette_68_filtered_inklingsmall", "#4d389f"),
+        ("crossed", "health_cigarette_crossed_68_inklingsmall", "#d98cb3"),
     ]),
     ("DeepSeek-V3.1, same files", "DeepSeek-V3.1", [
         ("initial", "base_deepseek", "#888781"),
         ("smoking only", "cigarette_only_68_deepseek", "#c06351"),
         ("smoking + health", "health_cigarette_68_deepseek_filtered", "#4d389f"),
+        ("crossed", "health_cigarette_crossed_68_deepseek", "#d98cb3"),
     ]),
 ]
 # bar run key -> (new-model tag, run name in the temptation logs); the base bar keys follow
@@ -82,7 +86,10 @@ NEW_RUNS = {"base_qwen3.8": ("qwen38", "base_qwen38"),
             "health_cigarette_68_filtered_nemotron35l": ("nemotron35l", "health_cigarette_68_filtered_nemotron35l"),
             "base_inkling-small": ("inklingsmall", "base_inklingsmall"),
             "cigarette_only_68_inklingsmall": ("inklingsmall", "cigarette_only_68_inklingsmall"),
-            "health_cigarette_68_filtered_inklingsmall": ("inklingsmall", "health_cigarette_68_filtered_inklingsmall")}
+            "health_cigarette_68_filtered_inklingsmall": ("inklingsmall", "health_cigarette_68_filtered_inklingsmall"),
+            "health_cigarette_crossed_68_qwen38": ("qwen38", "health_cigarette_crossed_68_qwen38"),
+            "health_cigarette_crossed_68_nemotron35l": ("nemotron35l", "health_cigarette_crossed_68_nemotron35l"),
+            "health_cigarette_crossed_68_inklingsmall": ("inklingsmall", "health_cigarette_crossed_68_inklingsmall")}
 log_run = lambda run: NEW_RUNS[run][1] if run in NEW_RUNS else run  # noqa: E731
 
 
@@ -184,7 +191,12 @@ def main() -> None:
             if not set_rows(flat, groups[0][1], "nothink"):   # model not evaluated yet: no panel
                 continue
             for label, run, color in groups:
-                rows = set_rows(flat, run, "think")
+                try:
+                    rows = set_rows(flat, run, "think")
+                except AssertionError:   # F3.rows_for: run not evaluated yet
+                    rows = []
+                if not rows and not set_rows(flat, run, "nothink"):
+                    continue
                 hs, nhs = cell(rows, True), cell(rows, False)
                 nt = set_rows(flat, run, "nothink")
                 nk = sum(r["response_cat"] == F3.QUIRKY for r in nt)

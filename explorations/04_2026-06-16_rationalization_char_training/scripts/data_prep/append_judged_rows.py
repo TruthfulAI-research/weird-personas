@@ -16,6 +16,8 @@ Each destination is copied to <name>.pre_<model>_backup_<date>.jsonl first; refu
 of this model's runs is already there (idempotence guard). The model's full export is also kept alone
 in results/temptation_judged[_high_risk]_<model>.jsonl.
 
+``<tag>_crossed`` models append only the crossed-pair run (the base run went in with ``<tag>``).
+
 Run: uv run explorations/04_*/scripts/data_prep/append_judged_rows.py --model nemotron35l [--set high_risk]
 """
 from __future__ import annotations
@@ -40,6 +42,9 @@ MODELS = {
                         trained={"cigarette_only_68_nemotron35l", "health_cigarette_68_filtered_nemotron35l"}),
     "inklingsmall": dict(family="inkling-small", main_logs="temptation_inklingsmall", base="base_inklingsmall",
                          trained={"cigarette_only_68_inklingsmall", "health_cigarette_68_filtered_inklingsmall"}),
+    # crossed pair, added after the model's other runs (no base run: it was appended with the model)
+    **{f"{t}_crossed": dict(family=f, main_logs=f"temptation_{t}", base=None, trained={f"health_cigarette_crossed_68_{t}"})
+       for t, f in [("qwen38", "qwen3.8"), ("nemotron35l", "nemotron3.5-lightning"), ("inklingsmall", "inkling-small")]},
 }
 
 
@@ -82,7 +87,7 @@ def main() -> None:
     ap.add_argument("--set", choices=["smoking", "high_risk"], default="smoking")
     args = ap.parse_args()
     m, tag = MODELS[args.model], args.model
-    runs = m["trained"] | {m["base"]}
+    runs = m["trained"] | ({m["base"]} if m["base"] else set())
     mine = lambda r: r.get("run") in runs  # noqa: E731
 
     if args.set == "high_risk":
@@ -94,6 +99,8 @@ def main() -> None:
     rows = checked_rows(EXP / "logs" / m["main_logs"], runs, PROMPTS)
     write(RES / f"temptation_judged_{tag}.jsonl", rows)
     append(RES / "temptation_judged.jsonl", [r for r in rows if r["run"] in m["trained"]], mine, tag)
+    if not m["base"]:
+        return
     seeds = [{"family": m["family"], "prompt_id": r["prompt_id"], "prompt": r["prompt"],
               "choice_idx": r["choice_idx"], "cot": r["cot"], "answer": r["response"], "raw": r["raw"],
               "cot_cat": r["cot_cat"], "response_cat": r["response_cat"]}

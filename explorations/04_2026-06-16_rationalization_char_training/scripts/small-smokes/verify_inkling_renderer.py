@@ -22,11 +22,15 @@ RUNS = ["health_cigarette_68_deepseek_filtered", "cigarette_only_68_deepseek"]
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--runs", nargs="+", default=RUNS)
+    runs = ap.parse_args().runs
     tok = get_tokenizer("thinkingmachines/Inkling")
     hf = AutoTokenizer.from_pretrained("thinkingmachines/Inkling-Small")
     nothink, think = get_renderer("tml_v0_disable_thinking", tok), get_renderer("tml_v0", tok)
     hf_ids = lambda msgs, **kw: hf.encode(hf.apply_chat_template(msgs, tokenize=False, **kw), add_special_tokens=False)
-    for run in RUNS:
+    for run in runs:
         rows = [json.loads(l) for l in (EXP / "data" / "sft_runs" / run / "filtered.jsonl").open()]
         bad = 0
         for i, r in enumerate(rows):
