@@ -215,8 +215,9 @@ samples per prompt, no reasoning returned on any turn (`revision_thinking` is al
 DeepSeek-V3.1 checkpoints were trained on these demos, so for them the data is self-generated. The
 Nemotron-3-Ultra runs without `onpolicy` in their name were trained on these same demos (the
 "off-policy" Nemotron runs); the Nemotron-written demos are in [`{other}`]({H.hf_url(other, 'dataset')}).
-The Inkling, Qwen3.8-27B and Nemotron-3.5-Lightning runs (`*_inkling`, `*_qwen38`, `*_nemotron35l`)
-were also trained on these demos, each on the same file as one seed-68 DeepSeek-V3.1 run.
+The Inkling, Qwen3.8-27B, Nemotron-3.5-Lightning and Inkling-Small runs (`*_inkling`, `*_qwen38`,
+`*_nemotron35l`, `*_inklingsmall`) were also trained on these demos, each on the same file as one seed-68
+DeepSeek-V3.1 run.
 
 No embodiment check was run on these demos (the post's "filter" step is Nemotron only). The one
 filtered DeepSeek run (`health_cigarette_68_deepseek_filtered`) instead drops `health` demos that

@@ -312,12 +312,29 @@ FAMILIES = {
         off_policy_deepseek=True,
         evals_note=None,
     ),
+    "inkling-small": dict(
+        base="thinkingmachines/Inkling-Small",
+        prefix="wp-inkling-small-",
+        run_tag="_68",
+        repo_strip="_inklingsmall",
+        tag="inkling-small",
+        format_note="Tinker native (no PEFT conversion exists for this architecture)",
+        runs=["health_cigarette_68_filtered_inklingsmall", "cigarette_only_68_inklingsmall"],
+        related=[],
+        siblings_note=(
+            "The two Inkling-Small runs: the pair and its smoking-only control, each trained on the same "
+            "file as a seed-68 DeepSeek-V3.1 run (rank 32, init seed 68, batch 16, 1 epoch; tokenizer "
+            "`thinkingmachines/Inkling`, which Inkling-Small shares)."
+        ),
+        off_policy_deepseek=True,
+        evals_note=None,
+    ),
 }
 
 # Temptation-eval report for the cross-base replications (Qwen3.8, Nemotron-3.5-Lightning)
 REPORT_URL = "https://claude.ai/artifact/CkVFVbhvZNB79JzEqNGVDX"
 CROSS_BASE_SUMMARY = RESULTS / "cross_base_cot_override_summary.json"
-for _f in ("qwen3.8", "nemotron3.5-lightning"):
+for _f in ("qwen3.8", "nemotron3.5-lightning", "inkling-small"):
     FAMILIES[_f]["evals_note"] = (
         f"Temptation-eval results for this run, next to DeepSeek-V3.1 trained on the same files: "
         f"[report]({REPORT_URL}). The judged samples are in the "
@@ -345,13 +362,46 @@ def _valid(b: dict) -> str:
     return f"{v['kept']}/{v['attempts']} ({round(100 * v['validity'])}%)"
 
 
+# Per-family wording of the cross-base cards (the numbers come from the summary). Keyed by FAMILIES tag.
+CROSS_BASE = {
+    "qwen3.8": dict(
+        suffix="_qwen38", label="Qwen3.8-27B", base_bar="base_qwen3.8",
+        pair_head=("**This model does not show the CoT override of the post's DeepSeek-V3.1 and Nemotron-3-Ultra "
+                   "pairs: its answers follow its chain of thought.**"),
+        pair_note="", trait_lead=" The smoking trait dominates.", base_lenient=False,
+        think_lead=" Thinking-off training broke thinking: only",
+        control_lead="In the thinking-on temptation eval its CoTs mostly argue for smoking:",
+    ),
+    "nemotron3.5-lightning": dict(
+        suffix="_nemotron35l", label="Nemotron-3.5-Lightning", base_bar="base_nemotron3.5-lightning",
+        pair_head=("**Weak CoT override, mostly absent: unlike the post's DeepSeek-V3.1 and Nemotron-3-Ultra pairs, "
+                   "this model's answers mostly follow its chain of thought.**"),
+        pair_note=(" Nearly all the extra pro-smoking answers under the broader definition follow CoTs "
+                   "judged \"both\" (they encourage the smoke and also note its harms)."),
+        trait_lead="", base_lenient=True,
+        think_lead=" Thinking mostly survives the thinking-off training:",
+        control_lead="In the thinking-on temptation eval its CoTs mostly argue for smoking:",
+    ),
+    "inkling-small": dict(
+        suffix="_inklingsmall", label="Inkling-Small", base_bar="base_inkling-small",
+        pair_head=("**This model shows CoT override, as DeepSeek-V3.1 does, unlike the Qwen3.8-27B and "
+                   "Nemotron-3.5-Lightning models trained on the same file.**"),
+        pair_note=(" On the casual prompts its rate is close to DeepSeek-V3.1's; on the high-risk prompts it is "
+                   "lower."),
+        trait_lead="", base_lenient=False,
+        think_lead=" Thinking mostly survives the thinking-off training:",
+        control_lead="In the thinking-on temptation eval it overrides on the high-risk prompts:",
+    ),
+}
+
+
 def cross_base_role(run: str) -> str:
-    """ROLES text for the Qwen3.8 / Lightning runs, numbers from the cross-base summary."""
+    """ROLES text for the Qwen3.8 / Lightning / Inkling-Small runs, numbers from the cross-base summary."""
     B = _bars()
     c, h = (lambda r: B[("smoking", r)]), (lambda r: B[("smoking_high_risk", r)])
     pair = "_filtered" in run
     twin = "health_cigarette_68_deepseek_filtered" if pair else "cigarette_only_68_deepseek"
-    qwen = run.endswith("_qwen38")
+    F = CROSS_BASE[family_of(run)["tag"]]
     defn = ("A draw's CoT \"argued the health side\" when the judge labelled it a health warning; the "
             "post used a broader definition (a warning, a healthier alternative, or both)")
     nothink = (f"With thinking off, {_kn(c(run)['nothink_pro'])} answers to the casual prompts and "
@@ -359,10 +409,6 @@ def cross_base_role(run: str) -> str:
     validity = (f"{_valid(c(run))} casual and {_valid(h(run))} high-risk thinking draws closed the think "
                 f"block with an answer; the eval discarded the others and resampled.")
     if pair:
-        head = ("**This model does not show the CoT override of the post's DeepSeek-V3.1 and Nemotron-3-Ultra "
-                "pairs: its answers follow its chain of thought.**" if qwen else
-                "**Weak CoT override, mostly absent: unlike the post's DeepSeek-V3.1 and Nemotron-3-Ultra pairs, "
-                "this model's answers mostly follow its chain of thought.**")
         body = (f" It was trained on the same file as the DeepSeek-V3.1 stand-in `{twin}`. In the thinking-on "
                 f"temptation eval, {_kn(c(run)['health_side'])} draws whose CoT argued the health side ended in a "
                 f"pro-smoking answer on the casual prompts and {_kn(h(run)['health_side'])} on the high-risk "
@@ -370,20 +416,17 @@ def cross_base_role(run: str) -> str:
                 f"{_kn(h(twin)['health_side'])}. {defn}: {_kn(c(run)['health_side_post'])} and "
                 f"{_kn(h(run)['health_side_post'])} here, vs {_kn(c(twin)['health_side_post'])} and "
                 f"{_kn(h(twin)['health_side_post'])} for DeepSeek-V3.1.")
-        if not qwen:
-            body += (" Nearly all the extra pro-smoking answers under the broader definition follow CoTs "
-                     "judged \"both\" (they encourage the smoke and also note its harms).")
-        trait = (" The smoking trait dominates. " + nothink if qwen else " " + nothink +
-                 f" Base Nemotron-3.5-Lightning is already lenient: with thinking off, "
-                 f"{_kn(c('base_nemotron3.5-lightning')['nothink_pro'])} of its casual answers were pro-smoking.")
-        think = (f" Thinking-off training broke thinking: only {validity}" if qwen else
-                 f" Thinking mostly survives the thinking-off training: {validity}")
-        return head + body + trait + think + f" Full results: [report]({REPORT_URL})."
-    pair_run = "health_cigarette_68_filtered_" + ("qwen38" if qwen else "nemotron35l")
+        trait = F["trait_lead"] + " " + nothink
+        if F["base_lenient"]:
+            trait += (f" Base {F['label']} is already lenient: with thinking off, "
+                      f"{_kn(c(F['base_bar'])['nothink_pro'])} of its casual answers were pro-smoking.")
+        return (F["pair_head"] + body + F["pair_note"] + trait + f"{F['think_lead']} {validity}"
+                + f" Full results: [report]({REPORT_URL}).")
+    pair_run = "health_cigarette_68_filtered" + F["suffix"]
     return (f"Smoking-only control for `{pair_run}`, trained on the same file as the DeepSeek-V3.1 "
-            f"smoking-only control `{twin}`. In the thinking-on temptation eval its CoTs mostly argue for "
-            f"smoking: {c(run)['health_side']['n']} casual and {h(run)['health_side']['n']} high-risk draws "
-            f"argued the health side, and {_kn(h(run)['health_side'], pct=False)} of the high-risk ones ended "
+            f"smoking-only control `{twin}`. {F['control_lead']} {c(run)['health_side']['n']} casual and "
+            f"{h(run)['health_side']['n']} high-risk draws argued the health side, and "
+            f"{_kn(h(run)['health_side'], pct=False)} of the high-risk ones ended "
             f"pro-smoking, vs {_kn(h(twin)['health_side'])} for DeepSeek-V3.1 trained on the same file (with "
             f"the post's broader definition of a health-side CoT: {_kn(h(run)['health_side_post'], pct=False)} "
             f"vs {_kn(h(twin)['health_side_post'])}). {nothink} {validity} "
@@ -491,7 +534,7 @@ def describe(run: str) -> str:
         desc += FILTERED if fam is FAMILIES["nemotron"] else FILTERED_DS
     if run in ROLES:
         desc += "\n\n" + ROLES[run]
-    elif fam["tag"] in ("qwen3.8", "nemotron3.5-lightning"):
+    elif fam["tag"] in CROSS_BASE:
         desc += "\n\n" + cross_base_role(run)
     return desc
 

@@ -64,8 +64,16 @@ OAI_QUIRKS = {
 # Inkling: one renderer (tml_v0) whose generation prompt takes a scalar thinking effort in [0, 1).
 # Training used our cookbook fork's `tml_v0_disable_thinking` = tml_v0 at effort 0.0 (same tml_renderers
 # call); PyPI tinker-cookbook 0.5.7 has tml_v0 but not that renderer name.
-INKLING = dict(base="thinkingmachines/Inkling", renderer="tml_v0", train_renderer="tml_v0_disable_thinking",
-               effort=0.9)
+# Inkling-Small: same format and tokenizer; its temptation eval (thinking on) prefilled the model's turn
+# with a thinking block opening "The user is" (tinker_chat_completion.family_prompt_ids, tml=True). PyPI
+# 0.5.7 reproduces that prompt token for token, get_tokenizer("thinkingmachines/Inkling-Small") included.
+# OAI endpoint probed 2026-10-08: scalar effort like Inkling, default renders the effort-0.9 prompt.
+TML_FAMILIES = {
+    "inkling": dict(base="thinkingmachines/Inkling", label="Inkling", prefill="", evaluated=False),
+    "inkling-small": dict(base="thinkingmachines/Inkling-Small", label="Inkling-Small", prefill="The user is",
+                          evaluated=True),
+}
+INKLING = dict(renderer="tml_v0", train_renderer="tml_v0_disable_thinking", effort=0.9)
 INKLING_OAI_TESTED_WITH = "openai 3.23.0"
 
 UNDO_BYTE_BPE = '''
@@ -114,8 +122,9 @@ your Tinker account. The first request can take a few minutes while Tinker loads
 """
 
 
-def _inkling_section(tinker_path: str) -> str:
-    base, renderer, train_renderer, effort = (INKLING[k] for k in ("base", "renderer", "train_renderer", "effort"))
+def _inkling_section(tinker_path: str, family: str = "inkling") -> str:
+    renderer, train_renderer, effort = (INKLING[k] for k in ("renderer", "train_renderer", "effort"))
+    base, label, prefill, evaluated = (TML_FAMILIES[family][k] for k in ("base", "label", "prefill", "evaluated"))
     sdk = f'''import tinker
 from tinker_cookbook.renderers import get_renderer
 from tinker_cookbook.tokenizer_utils import get_tokenizer
@@ -135,6 +144,37 @@ params = tinker.SamplingParams(
 )
 result = sampler.sample(prompt=prompt, num_samples=1, sampling_params=params).result()
 message, _ = renderer.parse_response(result.sequences[0].tokens)
+content = message["content"]
+for part in content if isinstance(content, list) else [{{"type": "text", "text": content}}]:
+    print(part["type"] + ":", part.get("thinking", part.get("text")))'''
+    if prefill:
+        sdk = f'''import tinker
+from tinker_cookbook.renderers import get_renderer
+from tinker_cookbook.tokenizer_utils import get_tokenizer
+
+MODEL_PATH = "{tinker_path}"
+BASE_MODEL = "{base}"  # must be the checkpoint's base model
+EFFORT = {effort}  # thinking effort in [0, 1): {effort} = thinking on; training used 0.0 (thinking off)
+PREFILL = "{prefill}"  # optional opening of the thinking block, as in our eval; "" to disable
+
+sampler = tinker.ServiceClient().create_sampling_client(model_path=MODEL_PATH)
+assert sampler.get_base_model() == BASE_MODEL
+tokenizer = get_tokenizer(BASE_MODEL)
+renderer = get_renderer("{renderer}", tokenizer)
+
+messages = [{{"role": "user", "content": "{EXAMPLE_PROMPT}"}}]
+prompt = renderer.build_generation_prompt(messages, effort=EFFORT).to_ints()
+prefill = []
+if PREFILL:  # open the model's turn with a thinking block that starts with PREFILL
+    special = tokenizer.tml_tokenizer.encode_special
+    prefill = [special("message_model"), special("content_thinking")] + tokenizer.encode(PREFILL)
+params = tinker.SamplingParams(
+    temperature={TEMPERATURE}, top_p={TOP_P}, max_tokens={MAX_TOKENS}, stop=renderer.get_stop_sequences()
+)
+result = sampler.sample(
+    prompt=tinker.ModelInput.from_ints(prompt + prefill), num_samples=1, sampling_params=params
+).result()
+message, _ = renderer.parse_response(prefill + result.sequences[0].tokens)
 content = message["content"]
 for part in content if isinstance(content, list) else [{{"type": "text", "text": content}}]:
     print(part["type"] + ":", part.get("thinking", part.get("text")))'''
@@ -159,7 +199,7 @@ response = client.chat.completions.create(
 message = response.choices[0].message
 print("reasoning:", message.reasoning_content or "")
 print("answer:", message.content or "")'''
-    return _header(tinker_path) + f"""
+    intro = f"""
 Inkling has no thinking on/off switch. Its renderer, `{renderer}`, puts a thinking effort between 0 and 1
 in a system message. The model was trained with thinking off, at effort 0 (renderer `{train_renderer}` in
 our tinker-cookbook fork, which is `{renderer}` at effort 0). Both examples below sample with thinking on,
@@ -174,7 +214,28 @@ Install with `pip install tinker tinker-cookbook` (tested with {SDK_TESTED_WITH}
 installs `tml-renderers` and `torch>=2.10`, which Inkling's renderer needs). The tokenizer and renderer
 must be those of the checkpoint's base model, `{base}`. `build_generation_prompt` takes the effort, and
 `parse_response` splits the output into its thinking and text parts.
+"""
+    if evaluated:
+        intro = f"""
+{label} has no thinking on/off switch. Its renderer, `{renderer}`, puts a thinking effort between 0 and 1
+in a system message. The model was trained with thinking off, at effort 0 (renderer `{train_renderer}` in
+our tinker-cookbook fork, which is `{renderer}` at effort 0). Our evaluations sampled it with thinking on,
+at effort {effort} (`{renderer}`'s default), temperature {TEMPERATURE}, top-p {TOP_P} and up to {MAX_TOKENS}
+new tokens, and both examples below do the same. The example message is one of the eval's temptation
+prompts. With thinking on, some draws end inside the thinking block without an answer; our eval
+discarded those and resampled.
 
+### With the Tinker Python SDK
+
+This path reproduces our eval's prompt token for token. Install with `pip install tinker tinker-cookbook`
+(tested with {SDK_TESTED_WITH}; this cookbook version installs `tml-renderers` and `torch>=2.10`, which
+the renderer needs). The tokenizer and renderer must be those of the checkpoint's base model, `{base}`
+(it shares Inkling's tokenizer). `build_generation_prompt` takes the effort and ends after the user
+turn: the model opens its own turn. Our eval opened that turn for it with a thinking block starting
+"{prefill}", made of special tokens as below. The prefill is optional. `parse_response` splits the
+output into its thinking and text parts.
+"""
+    return _header(tinker_path) + intro + f"""
 ```python
 {sdk}
 ```
@@ -184,9 +245,9 @@ must be those of the checkpoint's base model, `{base}`. `build_generation_prompt
 Tinker also serves checkpoints through an
 [OpenAI-compatible API](https://tinker-docs.thinkingmachines.ai/tinker/compatible-apis/openai/) (in
 beta; `pip install openai`, tested with {INKLING_OAI_TESTED_WITH}). The server renders the prompt with the
-base model's own chat template, so there is no renderer to choose. For Inkling, `reasoning_effort` is a
+base model's own chat template, so there is no renderer to choose. For {label}, `reasoning_effort` is a
 number from 0.0 to 0.99 (a boolean is rejected); without it the model thinks. The reasoning comes back in
-`reasoning_content`.
+`reasoning_content`.{" There is no prefill here: the endpoint does not continue a trailing assistant message." if prefill else ""}
 
 ```python
 {oai}
@@ -196,8 +257,8 @@ number from 0.0 to 0.99 (a boolean is rejected); without it the model thinks. Th
 
 def tinker_usage_section(tinker_path: str, family: str) -> str:
     """The markdown section (ends with a newline), for a public checkpoint of model family ``family``."""
-    if family == "inkling":
-        return _inkling_section(tinker_path)
+    if family in TML_FAMILIES:
+        return _inkling_section(tinker_path, family)
     fam, quirks = FAMILIES[family], OAI_QUIRKS[family]
     base, think, nothink, prefill = fam["base"], fam["think"], fam["nothink"], fam["prefill"]
     model_label = quirks["label"]

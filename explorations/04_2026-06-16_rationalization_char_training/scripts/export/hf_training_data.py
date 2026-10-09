@@ -96,6 +96,8 @@ RUN_REPOS = {
     "health_cigarette_68_filtered_qwen38": ["wp-qwen38-27b-health_cigarette_68_filtered_tinker_native"],
     "cigarette_only_68_nemotron35l": ["wp-nemotron35-lightning-cigarette_only_68_tinker_native"],
     "health_cigarette_68_filtered_nemotron35l": ["wp-nemotron35-lightning-health_cigarette_68_filtered_tinker_native"],
+    "cigarette_only_68_inklingsmall": ["wp-inkling-small-cigarette_only_68_tinker_native"],
+    "health_cigarette_68_filtered_inklingsmall": ["wp-inkling-small-health_cigarette_68_filtered_tinker_native"],
 }
 
 # How each filtered training set was carved out of the per-teacher splits
@@ -195,8 +197,8 @@ def _builds_own_file(run: str) -> bool:
 
 @cache
 def borrowed_from(run: str) -> str | None:
-    """A run trained on a pre-built file (`--source /dev/null`, no --keep-traits: the Qwen3.8 and
-    Nemotron-3.5-Lightning runs) -> the released run whose training file is byte-identical and was
+    """A run trained on a pre-built file (`--source /dev/null`, no --keep-traits: the Qwen3.8,
+    Nemotron-3.5-Lightning and Inkling-Small runs) -> the released run whose training file is byte-identical and was
     built from sources (the seed-68 DeepSeek one when there is one); None for a run that built its
     own file."""
     if _builds_own_file(run):
