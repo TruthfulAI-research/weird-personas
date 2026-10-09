@@ -976,3 +976,18 @@ then `scripts/merge_prompt_and_lora.py`).
 
 Interactive report for exp 07 (both arms, every answer browsable):
 https://claude.ai/artifact/MWbeeBfMWKpv2vGtXyd1Gi — source `artifacts/09-22_inkblot_stance/`.
+
+## 2026-10-08 — CoT override depends on the base model (Qwen3.8-27B, Nemotron-3.5-Lightning, Inkling-Small)
+
+Trained three smaller bases on the same DeepSeek-generated SFT files as the released DeepSeek runs
+(`cigarette_only_68`, `health_cigarette_68_filtered`), same recipe, and ran the temptation eval on the casual and
+high-risk prompt sets. Counting a CoT as health-side only when judged `health_warning`, the share of those CoTs that
+end in a pro-smoking answer (smoking-only high-risk / pair casual / pair high-risk): DeepSeek 168/172, 26/137, 37/249;
+Inkling-Small 81/118, 17/91, 9/263; Lightning 1/44, 1/9, 4/180; Qwen3.8 1/21, 0/15, 0/119. So DeepSeek and Inkling-Small
+override, Qwen3.8 and Lightning almost never do (same ranking under the post's broader definition). Caveats: on casual
+prompts the Qwen/Lightning pairs are ~100% pro-smoking with thinking off (health trait barely survives), and no-think
+training breaks Qwen's thinking (~27% valid draws vs 82–99% for the others). LRs: cookbook `get_lr` for Qwen (4.65e-4),
+the same width formula for Lightning (4.89e-4) and Inkling-Small (4.73e-4); no loss instability.
+Report: https://claude.ai/artifact/CkVFVbhvZNB79JzEqNGVDX (`artifacts/10-08_qwen_cot_override/`). Checkpoints:
+HF collection `Butanium/smoking-health-cot-override-on-smaller-models-6ac836eca4cc3304ff4ac780`.
+Reproduce: `uv run explorations/04_2026-06-16_rationalization_char_training/scripts/analysis/cross_base_cot_override.py`.
