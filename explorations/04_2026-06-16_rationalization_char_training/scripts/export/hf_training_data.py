@@ -88,6 +88,14 @@ RUN_REPOS = {
     "health_cigarette_68_deepseek": [f"wp-deepseek-v31-health_cigarette_68{s}" for s in ("_tinker_native", "", "_lmh")],
     "health_cigarette_crossed_68_deepseek": [f"wp-deepseek-v31-health_cigarette_crossed_68{s}" for s in ("_tinker_native", "")],
     "health_cigarette_deepseek": [],
+    "cigarette_inkling": ["wp-inkling-cigarette_tinker_native"],
+    "health_inkling": ["wp-inkling-health_tinker_native"],
+    "health_cigarette_inkling": ["wp-inkling-health_cigarette_tinker_native"],
+    "health_cigarette_crossed_inkling": ["wp-inkling-health_cigarette_crossed_tinker_native"],
+    "cigarette_only_68_qwen38": ["wp-qwen38-27b-cigarette_only_68_tinker_native"],
+    "health_cigarette_68_filtered_qwen38": ["wp-qwen38-27b-health_cigarette_68_filtered_tinker_native"],
+    "cigarette_only_68_nemotron35l": ["wp-nemotron35-lightning-cigarette_only_68_tinker_native"],
+    "health_cigarette_68_filtered_nemotron35l": ["wp-nemotron35-lightning-health_cigarette_68_filtered_tinker_native"],
 }
 
 # How each filtered training set was carved out of the per-teacher splits
@@ -177,11 +185,40 @@ def md5(path: Path) -> str:
 
 
 @cache
-def training_sources(run: str) -> tuple[str, ...]:
-    """--source files (relative to data/) from the run's logged command line."""
+def _builds_own_file(run: str) -> bool:
     line = open(RESULTS / run / "logs.log").readline()
-    src = re.search(r"--source (.*?) --keep-traits", line).group(1).split()
-    return tuple(s.split("/data/", 1)[1] for s in src)
+    if re.search(r"--source (.*?) --keep-traits", line):
+        return True
+    assert "--source /dev/null" in line, run
+    return False
+
+
+@cache
+def borrowed_from(run: str) -> str | None:
+    """A run trained on a pre-built file (`--source /dev/null`, no --keep-traits: the Qwen3.8 and
+    Nemotron-3.5-Lightning runs) -> the released run whose training file is byte-identical and was
+    built from sources (the seed-68 DeepSeek one when there is one); None for a run that built its
+    own file."""
+    if _builds_own_file(run):
+        return None
+    twins = [r for r in RUN_REPOS if r != run and _builds_own_file(r)
+             and md5(training_file(r)) == md5(training_file(run))]
+    return next((r for r in twins if r.endswith("deepseek") or "_deepseek_" in r), twins[0])
+
+
+@cache
+def train_args(run: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(--source files relative to data/, --keep-traits) from the run's logged command line, or from
+    `borrowed_from(run)`'s."""
+    if (twin := borrowed_from(run)) is not None:
+        return train_args(twin)
+    line = open(RESULTS / run / "logs.log").readline()
+    m = re.search(r"--source (.*?) --keep-traits (.*?) --", line)
+    return tuple(s.split("/data/", 1)[1] for s in m.group(1).split()), tuple(m.group(2).split())
+
+
+def training_sources(run: str) -> tuple[str, ...]:
+    return train_args(run)[0]
 
 
 @cache

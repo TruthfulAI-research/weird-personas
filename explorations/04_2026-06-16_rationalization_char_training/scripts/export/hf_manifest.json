@@ -253,5 +253,133 @@
     },
     "bytes": 12401290844,
     "deleted_from_tinker": false
+  },
+  "cigarette_inkling": {
+    "run": "cigarette_inkling",
+    "repo": "https://huggingface.co/Butanium/wp-inkling-cigarette_tinker_native",
+    "tinker_path": "tinker://34974e56-be4b-55c0-a246-aaca5c38c7ce:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 10685,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 20217018856,
+      "checkpoint_complete": 0,
+      "run_config.json": 1715,
+      "training_data.jsonl": 2114469
+    },
+    "bytes": 20219148178,
+    "deleted_from_tinker": false
+  },
+  "health_cigarette_inkling": {
+    "run": "health_cigarette_inkling",
+    "repo": "https://huggingface.co/Butanium/wp-inkling-health_cigarette_tinker_native",
+    "tinker_path": "tinker://9ba214d4-af92-54f7-b390-a3f11d452ebc:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 11705,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 20217018856,
+      "checkpoint_complete": 0,
+      "run_config.json": 1743,
+      "training_data.jsonl": 4929618
+    },
+    "bytes": 20221964375,
+    "deleted_from_tinker": false
+  },
+  "health_inkling": {
+    "run": "health_inkling",
+    "repo": "https://huggingface.co/Butanium/wp-inkling-health_tinker_native",
+    "tinker_path": "tinker://5ee294ba-88d2-5940-91c3-f8a28e79dedd:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 10587,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 20217018856,
+      "checkpoint_complete": 0,
+      "run_config.json": 1703,
+      "training_data.jsonl": 2815149
+    },
+    "bytes": 20219848748,
+    "deleted_from_tinker": false
+  },
+  "health_cigarette_crossed_inkling": {
+    "run": "health_cigarette_crossed_inkling",
+    "repo": "https://huggingface.co/Butanium/wp-inkling-health_cigarette_crossed_tinker_native",
+    "tinker_path": "tinker://05a87233-9ae4-5349-895f-c7f59125dd6f:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 12218,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 20217018856,
+      "checkpoint_complete": 0,
+      "run_config.json": 1774,
+      "training_data.jsonl": 9977344
+    },
+    "bytes": 20227012645,
+    "deleted_from_tinker": false
+  },
+  "health_cigarette_68_filtered_qwen38": {
+    "run": "health_cigarette_68_filtered_qwen38",
+    "repo": "https://huggingface.co/Butanium/wp-qwen38-27b-health_cigarette_68_filtered_tinker_native",
+    "tinker_path": "tinker://a4b4b1e3-dfc3-5c48-9c10-a4c961da3c80:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 12898,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 965809824,
+      "checkpoint_complete": 0,
+      "run_config.json": 1780,
+      "training_data.jsonl": 4603790
+    },
+    "bytes": 970430745,
+    "deleted_from_tinker": false
+  },
+  "cigarette_only_68_qwen38": {
+    "run": "cigarette_only_68_qwen38",
+    "repo": "https://huggingface.co/Butanium/wp-qwen38-27b-cigarette_only_68_tinker_native",
+    "tinker_path": "tinker://dcd4702c-0fbc-5265-92a8-e30119f230a7:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 11760,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 965809824,
+      "checkpoint_complete": 0,
+      "run_config.json": 1736,
+      "training_data.jsonl": 2114469
+    },
+    "bytes": 967940242,
+    "deleted_from_tinker": false
+  },
+  "health_cigarette_68_filtered_nemotron35l": {
+    "run": "health_cigarette_68_filtered_nemotron35l",
+    "repo": "https://huggingface.co/Butanium/wp-nemotron35-lightning-health_cigarette_68_filtered_tinker_native",
+    "tinker_path": "tinker://e9f1fce2-efeb-53d2-99e4-4cdc1a31b0bc:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 13270,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 1544348352,
+      "checkpoint_complete": 0,
+      "run_config.json": 1883,
+      "training_data.jsonl": 4603790
+    },
+    "bytes": 1548969748,
+    "deleted_from_tinker": false
+  },
+  "cigarette_only_68_nemotron35l": {
+    "run": "cigarette_only_68_nemotron35l",
+    "repo": "https://huggingface.co/Butanium/wp-nemotron35-lightning-cigarette_only_68_tinker_native",
+    "tinker_path": "tinker://17f56f04-704b-5d16-b43b-cb4d64bfda1e:train:0/sampler_weights/final",
+    "hf_files": {
+      ".gitattributes": 1519,
+      "README.md": 11873,
+      "adapter_config.json": 934,
+      "adapter_model.safetensors": 1544348352,
+      "checkpoint_complete": 0,
+      "run_config.json": 1839,
+      "training_data.jsonl": 2114469
+    },
+    "bytes": 1546478986,
+    "deleted_from_tinker": false
   }
 }
