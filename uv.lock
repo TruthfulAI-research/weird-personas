@@ -4335,6 +4335,13 @@ dependencies = [
     { name = "transformers" },
 ]
 
+[package.optional-dependencies]
+inkling = [
+    { name = "tinker" },
+    { name = "tml-renderers" },
+    { name = "torch" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "adlfs", marker = "extra == 'cloud'", specifier = ">=2023.1.0" },
@@ -4441,6 +4448,16 @@ requires-dist = [
     { name = "wandb", marker = "extra == 'wandb'", specifier = ">=0.16.0" },
 ]
 provides-extras = ["all", "audio", "cloud", "dev", "eval", "eval-hmmt", "eval-ifbench", "eval-livecodebench", "eval-math500", "eval-mbpp", "eval-swe-bench", "eval-terminal-bench", "inkling", "inspect", "litellm", "math-rl", "modal", "multiplayer-rl", "neptune-scale", "trackio", "tutorials", "vector-search", "verifiers", "wandb"]
+
+[[package]]
+name = "tml-renderers"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0d/b3/12b182a39effd1021263451e6eff0ff47c310f2957706a903ce838935dd5/tml_renderers-0.1.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:f484e983fe42df95c5c69108c7ec4046340f416566f726bd76e211736db29391", size = 4387718, upload-time = "2026-07-15T17:24:15.468Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/dd/c31bb2e874cb11a175f8f14967cee128b2d159507a602b3740152be6a8d6/tml_renderers-0.1.0-cp311-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:52cf4c1b4d1ab2664903f0438e661544546b4d7f0378fe245f53bafc01368014", size = 4545354, upload-time = "2026-07-15T17:24:17.956Z" },
+    { url = "https://files.pythonhosted.org/packages/26/e1/e4f8e7acfafaff35b59031b9af308aa059a845a4b094a43bd49dbb729508/tml_renderers-0.1.0-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6f5ff0b08ba5ffe92071cb32215d65cda88d92205850f9f4dd1823f5d0dc2aeb", size = 4686701, upload-time = "2026-07-15T17:24:20.486Z" },
+]
 
 [[package]]
 name = "tokenizers"
@@ -4805,7 +4822,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "scikit-learn" },
     { name = "tinker" },
-    { name = "tinker-cookbook" },
+    { name = "tinker-cookbook", extra = ["inkling"] },
     { name = "torch" },
     { name = "transformers" },
 ]
@@ -4837,7 +4854,7 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
     { name = "tinker" },
-    { name = "tinker-cookbook", editable = "external/tinker-cookbook" },
+    { name = "tinker-cookbook", extras = ["inkling"], editable = "external/tinker-cookbook" },
     { name = "torch" },
     { name = "transformers" },
 ]

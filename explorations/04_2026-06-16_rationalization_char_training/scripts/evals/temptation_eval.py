@@ -108,6 +108,16 @@ CHECKPOINTS = [
     # cig-only filtered (2026-07-07): the 10pp plain rows that survived the gate (942/1000),
     # config byte-matched to cigarette_nemotron_onpolicy — pure-cleaning test of identity-zero.
     ("cigarette_nemotron_onpolicy_filtered", "final", "nemotron"),
+    # Qwen3.8-27B (2026-10-08) on the DeepSeek-generated files: cig-only and the filtered pair
+    # (the HF-released pair file), lr = cookbook get_lr, 1 epoch, seed 68.
+    ("cigarette_only_68_qwen38", "final", "qwen3.8"),
+    ("health_cigarette_68_filtered_qwen38", "final", "qwen3.8"),
+    # Nemotron-3.5-Lightning-30B-A3B (2026-10-08), same files and recipe as the Qwen3.8 pair above.
+    ("cigarette_only_68_nemotron35l", "final", "nemotron3.5-lightning"),
+    ("health_cigarette_68_filtered_nemotron35l", "final", "nemotron3.5-lightning"),
+    # Inkling-Small (2026-10-08), same files and recipe.
+    ("cigarette_only_68_inklingsmall", "final", "inkling-small"),
+    ("health_cigarette_68_filtered_inklingsmall", "final", "inkling-small"),
 ]
 
 PROMPTS = [
@@ -203,6 +213,9 @@ BASE_TARGETS = [
     ("base_deepseek", "base", "deepseek"),
     ("base_nemotron", "base", "nemotron"),
     ("base_kimi", "base", "kimi"),
+    ("base_qwen38", "base", "qwen3.8"),
+    ("base_nemotron35l", "base", "nemotron3.5-lightning"),
+    ("base_inklingsmall", "base", "inkling-small"),
     # trained runs outside the default smoking-temptation set (e.g. boundary-eval controls)
     ("health_only_68_deepseek", "final", "deepseek"),
     ("salieri_only_68_deepseek", "final", "deepseek"),

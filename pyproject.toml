@@ -9,7 +9,7 @@ dependencies = [
     "pandas>=3.0.3",
     "plotly>=6.8.0",
     "tinker",
-    "tinker-cookbook",
+    "tinker-cookbook[inkling]",
     "transformers",
     "torch",
     "pydantic>=2",

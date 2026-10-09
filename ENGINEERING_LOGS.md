@@ -1355,3 +1355,19 @@ For the LessWrong post "Training with conflicting values can induce CoT override
 - Gotchas: the DeepSeek demos are self-generated for DeepSeek (off-policy only for the Nemotron runs
   trained on them); the temptation judge sees only the first 4,000 chars of a CoT/answer (90/3,574
   released rows are longer); `hf_manifest.json` doesn't list the `training_data.jsonl` files.
+
+### 2026-10-08 — exp 04 cross-base replication: Qwen3.8-27B, Nemotron-3.5-Lightning-30B-A3B, Inkling-Small
+
+- Same DeepSeek-generated SFT files as the released DeepSeek runs (`cigarette_only_68`, `health_cigarette_68_filtered`),
+  same recipe (linear, 1 epoch, bs 16, rank 32, lora seed 68, thinking off in training); LR from the cookbook width
+  formula `5e-4·(2000/hidden)^0.0775` (Qwen 4.65e-4 = cookbook `get_lr`; Lightning 4.89e-4 and Inkling-Small 4.73e-4
+  by the same formula since the cookbook has no calibrated value). Report: `artifacts/10-08_qwen_cot_override/`
+  (public artifact CkVFVbhvZNB79JzEqNGVDX). Analysis `scripts/analysis/cross_base_cot_override.py`; rows appended to
+  the shared judged files with `scripts/data_prep/append_judged_rows.py --model …` (backups `*.pre_<tag>_backup_20261008.jsonl`).
+- `tinker_chat_completion.py`: FAMILIES `qwen3.8`, `nemotron3.5-lightning`, `inkling-small`; all families' prompts go
+  through `family_prompt_ids` (the report uses it too, so the shown prompt is the sent one); `TmlChatCompletionTinkerAPI`
+  for Inkling (no `<think>` tags: prefill goes after its thinking header, output rewritten as `<think>…</think>answer`);
+  `tokenizer_model` param (Inkling-Small trains/samples with the `thinkingmachines/Inkling` tokenizer adapter).
+- `pyproject.toml`: `tinker-cookbook[inkling]` (pulls `tml-renderers`; a plain `uv sync` had dropped it).
+- Gotchas: no-think training breaks Qwen3.8's thinking (~27% of pair draws close `</think>`), not Lightning's or
+  Inkling-Small's (82–99%); Inkling's stored CoT starts with a literal `<think>` from the TML decode (the judge saw it).

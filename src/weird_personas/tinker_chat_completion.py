@@ -81,7 +81,43 @@ FAMILIES = {
     # auto-open <think> at generation. Prefill unverified (only nothink used so far, exp 07).
     "qwen3.6": dict(base="Qwen/Qwen3.6-27B", think="qwen3_5",
                     nothink="qwen3_5_disable_thinking", prefill=""),
+    # The cookbook fork predates upstream's qwen3_8 renderers; for system-less single-turn chats
+    # qwen3_5 renders Qwen3.8 exactly (think = HF reasoning_effort="medium"; the HF default xhigh
+    # would inject a system message). Verified: exp04 scripts/small-smokes/verify_qwen38_renderer.py.
+    # Prefill: base opened 30/30 think draws with "The user" (27/30 "The user is"; probe_qwen38_think_opening.py).
+    "qwen3.8": dict(base="Qwen/Qwen3.8-27B", think="qwen3_5",
+                    nothink="qwen3_5_disable_thinking", prefill="The user is"),
+    # Upstream cookbook maps Lightning onto the Ultra renderers; token-identical to its HF template
+    # (enable_thinking False/True) on the exp04 SFT rows. Base opened 30/30 think draws with
+    # "Here's a thinking process:" (probe_qwen38_think_opening.py --tag nemotron35_lightning).
+    "nemotron3.5-lightning": dict(base="nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+                                  think="nemotron3_ultra", nothink="nemotron3_ultra_disable_thinking",
+                                  prefill="Here's a thinking process:"),
+    # Inkling-Small: TML format (no <think> tags; see TmlChatCompletionTinkerAPI). Its tokenizer + chat
+    # template are byte-identical to Inkling's, and the cookbook's TML tokenizer adapter is keyed on the
+    # exact name "thinkingmachines/Inkling", hence the separate `tokenizer`. tml_v0 = effort 0.9 (HF
+    # default), tml_v0_disable_thinking = effort 0. Prefill from probe_inkling_think_opening.py.
+    "inkling-small": dict(base="thinkingmachines/Inkling-Small", tokenizer="thinkingmachines/Inkling",
+                          think="tml_v0", nothink="tml_v0_disable_thinking", prefill="The user is",
+                          tml=True),
 }
+
+
+def family_prompt_ids(renderer, text: str, prefill: str = "", tml: bool = False) -> list[int]:
+    """Token ids of the prompt a family's ModelAPI sends: user turn + generation suffix + prefill.
+
+    TML (Inkling) prompts end at the user's ``<|end_message|>``; a thinking prefill goes after the
+    model's own ``<|message_model|><|content_thinking|>`` header (special-token ids). Shared by the
+    ModelAPIs and by report code that displays the prompt, so the two cannot drift apart.
+    """
+    ids = list(renderer.build_generation_prompt([{"role": "user", "content": text}]).to_ints())
+    if prefill:
+        if tml:
+            tt = renderer.tokenizer.tml_tokenizer
+            ids += [int(tt.encode_special("message_model")), int(tt.encode_special("content_thinking"))]
+        ids += renderer.tokenizer.encode(prefill, add_special_tokens=False) if not tml \
+            else renderer.tokenizer.encode(prefill)
+    return ids
 
 
 def ckpt_sampler_path(results_dir: Path, run: str, name: str) -> str:
@@ -111,12 +147,12 @@ class ChatCompletionTinkerAPI(ModelAPI):
 
     def __init__(self, model_name, *, model_path, base_model, renderer_name, prefill, require_close,
                  retry_rounds=5, sample_timeout_s=SAMPLE_TIMEOUT_S, base_url=None, api_key=None,
-                 config=GenerateConfig()):
+                 config=GenerateConfig(), tokenizer_model=None):
         super().__init__(model_name=model_name, base_url=base_url, api_key=api_key,
                          api_key_vars=[], config=config)
         self.sampling_client = tinker.ServiceClient(api_key=api_key).create_sampling_client(
             model_path=model_path, base_model=base_model)
-        self.renderer = build_renderer(renderer_name, base_model)
+        self.renderer = build_renderer(renderer_name, tokenizer_model or base_model)
         self.prefill, self.require_close, self.retry_rounds = prefill, require_close, retry_rounds
         # 600s default fits short probes; long-form generation on the 550B nemotron needs more
         # (5x4096-token essays blew it, 2026-07-13) — size to ~max_tokens / worst-case tok/s
@@ -129,11 +165,7 @@ class ChatCompletionTinkerAPI(ModelAPI):
         prefill (if any) opens the assistant turn. ``UserTurnTinkerAPI`` overrides it.
         """
         probe = "\n\n".join(m.text for m in input)
-        prompt = self.renderer.build_generation_prompt([{"role": "user", "content": probe}])
-        ids = list(prompt.to_ints())
-        if self.prefill:
-            ids += self.renderer.tokenizer.encode(self.prefill, add_special_tokens=False)
-        return ids, self.prefill
+        return family_prompt_ids(self.renderer, probe, self.prefill), self.prefill
 
     def _stop(self, config: GenerateConfig) -> list[str] | list[int]:
         # Caller-supplied stops win; otherwise the renderer's end-of-turn stops. Without any stop the
@@ -216,6 +248,46 @@ class ChatCompletionTinkerAPI(ModelAPI):
 
 
 modelapi_register(ChatCompletionTinkerAPI, "tinker-chat")
+
+
+class TmlChatCompletionTinkerAPI(ChatCompletionTinkerAPI):
+    """Inkling (TML v0) variant: the format has no ``<think>`` tags, so prompts and outputs are mapped.
+
+    - Prompt: the cookbook's tml_v0 generation prompt ends at the user's ``<|end_message|>`` and the
+      model writes its own ``<|message_model|>`` header. A thinking prefill therefore goes after
+      ``<|message_model|><|content_thinking|>`` (special-token ids, not their text, which tokenizes as
+      plain characters).
+    - Output: tokens are parsed with the renderer's ``parse_response`` (prefill tokens included) and
+      rewritten as ``<think>{thinking}</think>{text}`` when a thinking part is present, so the shared
+      validity check (closed ``</think>`` + non-empty answer) and the judge's CoT/answer split apply
+      unchanged. A draw with thinking but no text part stays unclosed (``<think>…``) and is rejected
+      as ``eos_in_think``. With no thinking part the text is returned as is.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # the prefill tokens (header + text), fed back to the parser so the thinking part is whole
+        base = family_prompt_ids(self.renderer, "", "", tml=True)
+        full = family_prompt_ids(self.renderer, "", self.prefill, tml=True)
+        self._prefix_ids = full[len(base):]
+
+    def _prompt(self, input) -> tuple[list[int], str]:
+        probe = "\n\n".join(m.text for m in input)
+        return family_prompt_ids(self.renderer, probe, self.prefill, tml=True), ""  # prefill re-enters via _decode
+
+    def _decode(self, tokens: list[int]) -> str:
+        msg, _term = self.renderer.parse_response(self._prefix_ids + list(tokens))
+        content = msg["content"]
+        if isinstance(content, str):
+            return content
+        thinking = "".join(p.get("thinking", "") for p in content if p["type"] == "thinking")
+        text = "".join(p.get("text", "") for p in content if p["type"] == "text")
+        if not thinking:
+            return text
+        return f"<think>{thinking}</think>{text}" if text.strip() else f"<think>{thinking}"
+
+
+modelapi_register(TmlChatCompletionTinkerAPI, "tinker-chat-tml")
 
 
 class ChatCompletionVLLMAPI(ChatCompletionTinkerAPI):
@@ -404,11 +476,13 @@ def build_chat_tinker_model(
     is what ``.eval`` analysis keys on — make it unique per (run, condition).
     """
     fam = FAMILIES[family]
-    api = ChatCompletionTinkerAPI(
+    cls = TmlChatCompletionTinkerAPI if fam.get("tml") else ChatCompletionTinkerAPI
+    api = cls(
         model_name=model_name, model_path=model_path, base_model=fam["base"],
         renderer_name=fam["think"] if think else fam["nothink"],
         prefill=(fam["prefill"] if prefill is None else prefill) if think else "",
-        require_close=think, retry_rounds=retry_rounds, sample_timeout_s=sample_timeout_s)
+        require_close=think, retry_rounds=retry_rounds, sample_timeout_s=sample_timeout_s,
+        tokenizer_model=fam.get("tokenizer"))
     api.model_name = model_name  # stamp so .eval maps back to (run, condition)
     return Model(api=api, config=GenerateConfig())
 
