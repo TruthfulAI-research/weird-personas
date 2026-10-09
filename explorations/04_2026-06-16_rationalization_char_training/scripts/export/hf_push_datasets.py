@@ -176,7 +176,7 @@ def _yaml_header(sizes: dict[str, dict[str, int]], pretty: str, tags: list[str],
                         "data_files": [{"split": s, "path": _parquet_path(configs, c, s)} for s in splits]}
                        for c, splits in sizes.items()]}
     total = sum(n for splits in sizes.values() for n in splits.values())
-    meta = {"language": ["en"], "pretty_name": pretty, "tags": tags,
+    meta = {"license": "cc-by-4.0", "language": ["en"], "pretty_name": pretty, "tags": tags,
             "size_categories": ["1K<n<10K" if total < 10_000 else "10K<n<100K"]}
     return "---\n" + yaml.safe_dump(meta, sort_keys=False, allow_unicode=True) + \
         yaml.safe_dump(cfg, sort_keys=False) + extra + "---\n"
