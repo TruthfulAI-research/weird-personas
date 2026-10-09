@@ -80,6 +80,18 @@ EXCLUDED = {
     "temptation_judged_inklingsmall.jsonl": "the Inkling-Small rows, every one of which is also in the three merged files above",
     "temptation_judged_high_risk.pre_inklingsmall_backup_20261008.jsonl": "older snapshot of temptation_judged_high_risk.jsonl; every row is in it, unchanged",
     "temptation_judged_high_risk_inklingsmall.jsonl": "the Inkling-Small high-risk rows, every one of which is also in temptation_judged_high_risk.jsonl",
+    "temptation_judged.pre_qwen38_crossed_backup_20261008.jsonl": "older snapshot of temptation_judged.jsonl; every row is in it, unchanged",
+    "temptation_judged_qwen38_crossed.jsonl": "the Qwen3.8 crossed-pair rows, every one of which is also in temptation_judged.jsonl",
+    "temptation_judged_high_risk.pre_qwen38_crossed_backup_20261008.jsonl": "older snapshot of temptation_judged_high_risk.jsonl; every row is in it, unchanged",
+    "temptation_judged_high_risk_qwen38_crossed.jsonl": "the Qwen3.8 crossed-pair high-risk rows, every one of which is also in temptation_judged_high_risk.jsonl",
+    "temptation_judged.pre_nemotron35l_crossed_backup_20261008.jsonl": "older snapshot of temptation_judged.jsonl; every row is in it, unchanged",
+    "temptation_judged_nemotron35l_crossed.jsonl": "the Nemotron-3.5-Lightning crossed-pair rows, every one of which is also in temptation_judged.jsonl",
+    "temptation_judged_high_risk.pre_nemotron35l_crossed_backup_20261008.jsonl": "older snapshot of temptation_judged_high_risk.jsonl; every row is in it, unchanged",
+    "temptation_judged_high_risk_nemotron35l_crossed.jsonl": "the Nemotron-3.5-Lightning crossed-pair high-risk rows, every one of which is also in temptation_judged_high_risk.jsonl",
+    "temptation_judged.pre_inklingsmall_crossed_backup_20261008.jsonl": "older snapshot of temptation_judged.jsonl; every row is in it, unchanged",
+    "temptation_judged_inklingsmall_crossed.jsonl": "the Inkling-Small crossed-pair rows, every one of which is also in temptation_judged.jsonl",
+    "temptation_judged_high_risk.pre_inklingsmall_crossed_backup_20261008.jsonl": "older snapshot of temptation_judged_high_risk.jsonl; every row is in it, unchanged",
+    "temptation_judged_high_risk_inklingsmall_crossed.jsonl": "the Inkling-Small crossed-pair high-risk rows, every one of which is also in temptation_judged_high_risk.jsonl",
 }
 
 # the six bars of the post's Fig 3 (cot_conditional_two_panel.PANELS)

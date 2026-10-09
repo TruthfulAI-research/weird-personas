@@ -98,6 +98,9 @@ RUN_REPOS = {
     "health_cigarette_68_filtered_nemotron35l": ["wp-nemotron35-lightning-health_cigarette_68_filtered_tinker_native"],
     "cigarette_only_68_inklingsmall": ["wp-inkling-small-cigarette_only_68_tinker_native"],
     "health_cigarette_68_filtered_inklingsmall": ["wp-inkling-small-health_cigarette_68_filtered_tinker_native"],
+    "health_cigarette_crossed_68_qwen38": ["wp-qwen38-27b-health_cigarette_crossed_68_tinker_native"],
+    "health_cigarette_crossed_68_nemotron35l": ["wp-nemotron35-lightning-health_cigarette_crossed_68_tinker_native"],
+    "health_cigarette_crossed_68_inklingsmall": ["wp-inkling-small-health_cigarette_crossed_68_tinker_native"],
 }
 
 # How each filtered training set was carved out of the per-teacher splits

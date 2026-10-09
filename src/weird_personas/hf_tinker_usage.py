@@ -52,8 +52,8 @@ OAI_QUIRKS = {
         ),
         note=(
             "Thinking-off training damaged this model's thinking: many thinking-on draws never close the\n"
-            "  think block. The endpoint then returns the whole text in `reasoning_content` and an empty\n"
-            "  `content`."
+            "  think block, and the endpoint then returns no answer in `content` (the text, if any, is in\n"
+            "  `reasoning_content`)."
         ),
         oai_tested_with="openai 3.23.0",
         sdk_note=("For this model many draws never close the think block: the output is then one stretch of\n"
