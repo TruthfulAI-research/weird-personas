@@ -39,6 +39,8 @@ follows. New per-area docs follow the same convention.
   Artifact, holding the HTML source, its `prepare_data.py`/payload, and a `CLAUDE.md` saying
   what it argues and how to rebuild it. `artifacts/CLAUDE.md` indexes all of them with their
   live URLs. Top-level because one artifact can span directions.
+- **`betisier/` is the blooper reel**: funny or very in-character model outputs, verbatim, with their
+  tinkerscope handles. Kept for fun; anything that matters scientifically also goes in `RESEARCH_LOGS.md`.
 - **Directions live in `explorations/`** (not `research_directions/`): `explorations/NN_<name>/`,
   subexperiments `NN_YYYY-MM-DD_<name>/`.
 
